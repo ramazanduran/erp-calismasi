@@ -1,66 +1,13 @@
 'use client';
 
 import { useState } from 'react';
-import { Search, Plus, Building2, User } from 'lucide-react';
+import { Search, Plus, Building2, User, Pencil, Trash2 } from 'lucide-react';
+import { toast } from 'sonner';
+import { useCustomers, useDeleteCustomer } from '@/lib/api/hooks';
+import { CustomerModal } from '@/components/modals/customer-modal';
 
 type CustomerType = 'corporate' | 'individual';
 type CustomerStatus = 'active' | 'passive' | 'blocked';
-
-interface Customer {
-  id: string;
-  code: string;
-  name: string;
-  email: string | null;
-  phone: string | null;
-  taxNumber: string | null;
-  type: CustomerType;
-  status: CustomerStatus;
-  creditLimit: number;
-  balance: number;
-  createdAt: string;
-}
-
-const MOCK_CUSTOMERS: Customer[] = [
-  {
-    id: '1',
-    code: 'MUS-001',
-    name: 'ABC Teknoloji A.Ş.',
-    email: 'info@abc.com',
-    phone: '0212 555 0101',
-    taxNumber: '1234567890',
-    type: 'corporate',
-    status: 'active',
-    creditLimit: 50000,
-    balance: 12500,
-    createdAt: '2024-01-15',
-  },
-  {
-    id: '2',
-    code: 'MUS-002',
-    name: 'Mehmet Yılmaz',
-    email: 'mehmet@example.com',
-    phone: '0532 111 2233',
-    taxNumber: null,
-    type: 'individual',
-    status: 'active',
-    creditLimit: 5000,
-    balance: 0,
-    createdAt: '2024-02-10',
-  },
-  {
-    id: '3',
-    code: 'MUS-003',
-    name: 'XYZ Ticaret Ltd. Şti.',
-    email: 'contact@xyz.com',
-    phone: '0216 444 5566',
-    taxNumber: '9876543210',
-    type: 'corporate',
-    status: 'passive',
-    creditLimit: 25000,
-    balance: -3200,
-    createdAt: '2024-03-05',
-  },
-];
 
 const STATUS_LABELS: Record<CustomerStatus, string> = {
   active: 'Aktif',
@@ -79,23 +26,50 @@ const TYPE_LABELS: Record<CustomerType, string> = {
   individual: 'Bireysel',
 };
 
+function SkeletonRows() {
+  return (
+    <>
+      {Array.from({ length: 5 }).map((_, i) => (
+        <tr key={i} className="border-b border-border">
+          {Array.from({ length: 7 }).map((_, j) => (
+            <td key={j} className="px-4 py-3">
+              <div className="animate-pulse bg-muted rounded h-4 w-full" />
+            </td>
+          ))}
+        </tr>
+      ))}
+    </>
+  );
+}
+
 export default function CustomersPage() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editData, setEditData] = useState<Record<string, unknown> | null>(null);
 
-  const filtered = MOCK_CUSTOMERS.filter((c) => {
-    const matchSearch =
-      !search ||
-      c.name.toLowerCase().includes(search.toLowerCase()) ||
-      c.code.toLowerCase().includes(search.toLowerCase()) ||
-      (c.email ?? '').toLowerCase().includes(search.toLowerCase());
-    const matchStatus = !statusFilter || c.status === statusFilter;
-    return matchSearch && matchStatus;
-  });
+  const { data: customers, isLoading } = useCustomers({ search, status: statusFilter || undefined });
+  const deleteCustomer = useDeleteCustomer();
+
+  const customersList = Array.isArray(customers) ? customers : [];
+
+  const handleEdit = (customer: Record<string, unknown>) => {
+    setEditData(customer);
+    setModalOpen(true);
+  };
+
+  const handleDelete = async (id: string, name: string) => {
+    if (!confirm(`"${name}" müşterisini silmek istediğinizden emin misiniz?`)) return;
+    try {
+      await deleteCustomer.mutateAsync(id);
+      toast.success('Müşteri silindi');
+    } catch {
+      toast.error('Müşteri silinemedi');
+    }
+  };
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Müşteriler</h1>
@@ -103,13 +77,15 @@ export default function CustomersPage() {
             Tüm müşterileri yönetin ve takip edin
           </p>
         </div>
-        <button className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors">
+        <button
+          onClick={() => { setEditData(null); setModalOpen(true); }}
+          className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+        >
           <Plus className="h-4 w-4" />
           Yeni Müşteri
         </button>
       </div>
 
-      {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -133,7 +109,6 @@ export default function CustomersPage() {
         </select>
       </div>
 
-      {/* Table */}
       <div className="rounded-lg border border-border bg-card overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -146,23 +121,34 @@ export default function CustomersPage() {
                 <th className="text-left px-4 py-3 font-medium text-muted-foreground">Telefon</th>
                 <th className="text-right px-4 py-3 font-medium text-muted-foreground">Bakiye</th>
                 <th className="text-left px-4 py-3 font-medium text-muted-foreground">Durum</th>
+                <th className="text-left px-4 py-3 font-medium text-muted-foreground">İşlemler</th>
               </tr>
             </thead>
             <tbody>
-              {filtered.length === 0 ? (
+              {isLoading ? (
+                <SkeletonRows />
+              ) : customersList.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="text-center py-12 text-muted-foreground">
-                    Müşteri bulunamadı
+                  <td colSpan={8} className="text-center py-12 text-muted-foreground">
+                    <div className="space-y-2">
+                      <p>Henüz kayıt yok</p>
+                      <button
+                        onClick={() => { setEditData(null); setModalOpen(true); }}
+                        className="text-primary hover:underline text-sm"
+                      >
+                        Yeni Müşteri Ekle
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ) : (
-                filtered.map((customer) => (
+                customersList.map((customer: Record<string, unknown>) => (
                   <tr
-                    key={customer.id}
-                    className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors cursor-pointer"
+                    key={customer.id as string}
+                    className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors"
                   >
                     <td className="px-4 py-3 font-mono text-xs text-muted-foreground">
-                      {customer.code}
+                      {customer.code as string}
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
@@ -174,33 +160,47 @@ export default function CustomersPage() {
                           )}
                         </div>
                         <div>
-                          <div className="font-medium text-foreground">{customer.name}</div>
+                          <div className="font-medium text-foreground">{customer.name as string}</div>
                           {customer.taxNumber && (
-                            <div className="text-xs text-muted-foreground">VKN: {customer.taxNumber}</div>
+                            <div className="text-xs text-muted-foreground">VKN: {customer.taxNumber as string}</div>
                           )}
                         </div>
                       </div>
                     </td>
                     <td className="px-4 py-3 text-muted-foreground">
-                      {TYPE_LABELS[customer.type]}
+                      {TYPE_LABELS[(customer.type as CustomerType)] ?? customer.type as string}
                     </td>
                     <td className="px-4 py-3 text-muted-foreground">
-                      {customer.email ?? '-'}
+                      {(customer.email as string) ?? '-'}
                     </td>
                     <td className="px-4 py-3 text-muted-foreground">
-                      {customer.phone ?? '-'}
+                      {(customer.phone as string) ?? '-'}
                     </td>
                     <td className="px-4 py-3 text-right">
-                      <span className={customer.balance < 0 ? 'text-red-600' : 'text-foreground'}>
-                        {customer.balance.toLocaleString('tr-TR', { style: 'currency', currency: 'TRY' })}
+                      <span className={(customer.balance as number) < 0 ? 'text-red-600' : 'text-foreground'}>
+                        {Number(customer.balance ?? 0).toLocaleString('tr-TR', { style: 'currency', currency: 'TRY' })}
                       </span>
                     </td>
                     <td className="px-4 py-3">
-                      <span
-                        className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${STATUS_CLASSES[customer.status]}`}
-                      >
-                        {STATUS_LABELS[customer.status]}
+                      <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${STATUS_CLASSES[(customer.status as CustomerStatus)] ?? ''}`}>
+                        {STATUS_LABELS[(customer.status as CustomerStatus)] ?? customer.status as string}
                       </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => handleEdit(customer)}
+                          className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(customer.id as string, customer.name as string)}
+                          className="p-1 rounded hover:bg-red-50 text-muted-foreground hover:text-red-600 transition-colors"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -208,11 +208,18 @@ export default function CustomersPage() {
             </tbody>
           </table>
         </div>
-        <div className="border-t border-border px-4 py-3 flex items-center justify-between text-sm text-muted-foreground">
-          <span>{filtered.length} müşteri gösteriliyor</span>
-          <span>Toplam: {MOCK_CUSTOMERS.length}</span>
-        </div>
+        {!isLoading && (
+          <div className="border-t border-border px-4 py-3 flex items-center justify-between text-sm text-muted-foreground">
+            <span>{customersList.length} müşteri gösteriliyor</span>
+          </div>
+        )}
       </div>
+
+      <CustomerModal
+        open={modalOpen}
+        onClose={() => { setModalOpen(false); setEditData(null); }}
+        editData={editData as Parameters<typeof CustomerModal>[0]['editData']}
+      />
     </div>
   );
 }

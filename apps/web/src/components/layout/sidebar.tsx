@@ -223,18 +223,49 @@ export function Sidebar({ collapsed, mobileOpen, onMobileClose, user: _user }: S
 
         {/* Settings link */}
         <div className="border-t border-border p-2">
-          <Link
-            href="/settings"
+          <button
+            onClick={() => toggleExpanded('settings')}
             className={cn(
-              'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+              'w-full flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
               pathname.startsWith('/settings')
-                ? 'bg-primary text-primary-foreground'
+                ? 'bg-muted text-foreground'
                 : 'text-muted-foreground hover:bg-muted hover:text-foreground'
             )}
           >
             <Settings className="h-4 w-4 shrink-0" />
-            {!collapsed && <span>Ayarlar</span>}
-          </Link>
+            {!collapsed && (
+              <>
+                <span className="flex-1 text-left">Ayarlar</span>
+                {expandedItems.includes('settings') ? (
+                  <ChevronDown className="h-3 w-3" />
+                ) : (
+                  <ChevronRight className="h-3 w-3" />
+                )}
+              </>
+            )}
+          </button>
+          {!collapsed && expandedItems.includes('settings') && (
+            <div className="ml-4 mt-1 space-y-1 border-l border-border pl-3">
+              {[
+                { label: 'Profil', href: '/settings/profile' },
+                { label: 'Organizasyon', href: '/settings/organization' },
+                { label: 'Kullanıcılar', href: '/settings/admin/users' },
+              ].map((child) => (
+                <Link
+                  key={child.href}
+                  href={child.href}
+                  className={cn(
+                    'block rounded-md px-3 py-1.5 text-sm transition-colors',
+                    pathname === child.href
+                      ? 'text-primary font-medium'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                  )}
+                >
+                  {child.label}
+                </Link>
+              ))}
+            </div>
+          )}
         </div>
       </aside>
     </>

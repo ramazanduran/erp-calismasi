@@ -1,88 +1,12 @@
 'use client';
 
 import { useState } from 'react';
-import { Search, Plus, User, Phone, Mail } from 'lucide-react';
+import { Search, Plus, User, Phone, Mail, Pencil, Trash2 } from 'lucide-react';
+import { toast } from 'sonner';
+import { useEmployees, useDeleteEmployee } from '@/lib/api/hooks';
+import { EmployeeModal } from '@/components/modals/employee-modal';
 
 type EmployeeStatus = 'active' | 'inactive' | 'terminated';
-
-interface Employee {
-  id: string;
-  employeeNumber: string;
-  firstName: string;
-  lastName: string;
-  email: string;
-  phone: string | null;
-  departmentId: string | null;
-  departmentName: string | null;
-  position: string | null;
-  startDate: string;
-  status: EmployeeStatus;
-  salary: number;
-  salaryType: 'monthly' | 'hourly';
-}
-
-const MOCK_EMPLOYEES: Employee[] = [
-  {
-    id: '1',
-    employeeNumber: 'EMP-001',
-    firstName: 'Ahmet',
-    lastName: 'Yıldız',
-    email: 'ahmet.yildiz@sirket.com',
-    phone: '0532 111 2233',
-    departmentId: 'dept-1',
-    departmentName: 'Yazılım Geliştirme',
-    position: 'Kıdemli Yazılım Mühendisi',
-    startDate: '2020-03-01',
-    status: 'active',
-    salary: 55000,
-    salaryType: 'monthly',
-  },
-  {
-    id: '2',
-    employeeNumber: 'EMP-002',
-    firstName: 'Fatma',
-    lastName: 'Demir',
-    email: 'fatma.demir@sirket.com',
-    phone: '0533 444 5566',
-    departmentId: 'dept-2',
-    departmentName: 'İnsan Kaynakları',
-    position: 'İK Uzmanı',
-    startDate: '2021-06-15',
-    status: 'active',
-    salary: 35000,
-    salaryType: 'monthly',
-  },
-  {
-    id: '3',
-    employeeNumber: 'EMP-003',
-    firstName: 'Mustafa',
-    lastName: 'Kaya',
-    email: 'mustafa.kaya@sirket.com',
-    phone: null,
-    departmentId: 'dept-3',
-    departmentName: 'Satış',
-    position: 'Satış Temsilcisi',
-    startDate: '2022-01-10',
-    status: 'active',
-    salary: 28000,
-    salaryType: 'monthly',
-  },
-  {
-    id: '4',
-    employeeNumber: 'EMP-004',
-    firstName: 'Zeynep',
-    lastName: 'Arslan',
-    email: 'zeynep.arslan@sirket.com',
-    phone: '0535 777 8899',
-    departmentId: 'dept-1',
-    departmentName: 'Yazılım Geliştirme',
-    position: 'Frontend Geliştirici',
-    startDate: '2023-02-20',
-    status: 'inactive',
-    salary: 40000,
-    salaryType: 'monthly',
-  },
-];
 
 const STATUS_LABELS: Record<EmployeeStatus, string> = {
   active: 'Aktif',
@@ -96,56 +20,66 @@ const STATUS_CLASSES: Record<EmployeeStatus, string> = {
   terminated: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
 };
 
+function SkeletonRows() {
+  return (
+    <>
+      {Array.from({ length: 5 }).map((_, i) => (
+        <tr key={i} className="border-b border-border">
+          {Array.from({ length: 8 }).map((_, j) => (
+            <td key={j} className="px-4 py-3">
+              <div className="animate-pulse bg-muted rounded h-4 w-full" />
+            </td>
+          ))}
+        </tr>
+      ))}
+    </>
+  );
+}
+
 export default function EmployeesPage() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editData, setEditData] = useState<Record<string, unknown> | null>(null);
 
-  const filtered = MOCK_EMPLOYEES.filter((e) => {
-    const fullName = `${e.firstName} ${e.lastName}`.toLowerCase();
-    const matchSearch =
-      !search ||
-      fullName.includes(search.toLowerCase()) ||
-      e.employeeNumber.toLowerCase().includes(search.toLowerCase()) ||
-      e.email.toLowerCase().includes(search.toLowerCase()) ||
-      (e.position ?? '').toLowerCase().includes(search.toLowerCase());
-    const matchStatus = !statusFilter || e.status === statusFilter;
-    return matchSearch && matchStatus;
-  });
+  const { data: employees, isLoading } = useEmployees({ search, status: statusFilter || undefined });
+  const deleteEmployee = useDeleteEmployee();
 
-  const activeCount = MOCK_EMPLOYEES.filter((e) => e.status === 'active').length;
+  const employeesList = Array.isArray(employees) ? employees : [];
+
+  const handleEdit = (employee: Record<string, unknown>) => {
+    setEditData(employee);
+    setModalOpen(true);
+  };
+
+  const handleDelete = async (id: string, name: string) => {
+    if (!confirm(`"${name}" çalışanını silmek istediğinizden emin misiniz?`)) return;
+    try {
+      await deleteEmployee.mutateAsync(id);
+      toast.success('Çalışan silindi');
+    } catch {
+      toast.error('Çalışan silinemedi');
+    }
+  };
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Çalışanlar</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            {activeCount} aktif çalışan — personel bilgilerini yönetin
+            Personel bilgilerini yönetin
           </p>
         </div>
-        <button className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors">
+        <button
+          onClick={() => { setEditData(null); setModalOpen(true); }}
+          className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+        >
           <Plus className="h-4 w-4" />
           Yeni Çalışan
         </button>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        {[
-          { label: 'Toplam Çalışan', value: MOCK_EMPLOYEES.length },
-          { label: 'Aktif', value: MOCK_EMPLOYEES.filter(e => e.status === 'active').length },
-          { label: 'Departman', value: new Set(MOCK_EMPLOYEES.map(e => e.departmentId).filter(Boolean)).size },
-          { label: 'Bu Ay İşe Başlayan', value: 1 },
-        ].map((stat) => (
-          <div key={stat.label} className="rounded-lg border border-border bg-card p-4">
-            <p className="text-xs text-muted-foreground">{stat.label}</p>
-            <p className="text-xl font-bold text-foreground mt-1">{stat.value}</p>
-          </div>
-        ))}
-      </div>
-
-      {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -169,7 +103,6 @@ export default function EmployeesPage() {
         </select>
       </div>
 
-      {/* Table */}
       <div className="rounded-lg border border-border bg-card overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -182,72 +115,97 @@ export default function EmployeesPage() {
                 <th className="text-left px-4 py-3 font-medium text-muted-foreground">İşe Başlama</th>
                 <th className="text-right px-4 py-3 font-medium text-muted-foreground">Maaş</th>
                 <th className="text-left px-4 py-3 font-medium text-muted-foreground">Durum</th>
+                <th className="text-left px-4 py-3 font-medium text-muted-foreground">İşlemler</th>
               </tr>
             </thead>
             <tbody>
-              {filtered.length === 0 ? (
+              {isLoading ? (
+                <SkeletonRows />
+              ) : employeesList.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="text-center py-12 text-muted-foreground">
+                  <td colSpan={8} className="text-center py-12 text-muted-foreground">
                     <User className="h-8 w-8 mx-auto mb-2 opacity-40" />
-                    Çalışan bulunamadı
+                    <div className="space-y-2">
+                      <p>Henüz kayıt yok</p>
+                      <button
+                        onClick={() => { setEditData(null); setModalOpen(true); }}
+                        className="text-primary hover:underline text-sm"
+                      >
+                        Yeni Çalışan Ekle
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ) : (
-                filtered.map((employee) => (
+                employeesList.map((employee: Record<string, unknown>) => (
                   <tr
-                    key={employee.id}
-                    className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors cursor-pointer"
+                    key={employee.id as string}
+                    className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors"
                   >
                     <td className="px-4 py-3 font-mono text-xs text-muted-foreground">
-                      {employee.employeeNumber}
+                      {employee.employeeNumber as string}
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
                         <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
                           <span className="text-xs font-semibold text-primary">
-                            {employee.firstName[0]}{employee.lastName[0]}
+                            {(employee.firstName as string)?.[0]}{(employee.lastName as string)?.[0]}
                           </span>
                         </div>
                         <div>
                           <div className="font-medium text-foreground">
-                            {employee.firstName} {employee.lastName}
+                            {employee.firstName as string} {employee.lastName as string}
                           </div>
                         </div>
                       </div>
                     </td>
                     <td className="px-4 py-3">
-                      <div className="text-foreground text-sm">{employee.position ?? '-'}</div>
-                      <div className="text-xs text-muted-foreground">{employee.departmentName ?? '-'}</div>
+                      <div className="text-foreground text-sm">{(employee.position as string) ?? '-'}</div>
+                      <div className="text-xs text-muted-foreground">{(employee.departmentName as string) ?? '-'}</div>
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex flex-col gap-0.5">
                         <div className="flex items-center gap-1 text-xs text-muted-foreground">
                           <Mail className="h-3 w-3" />
-                          {employee.email}
+                          {employee.email as string}
                         </div>
                         {employee.phone && (
                           <div className="flex items-center gap-1 text-xs text-muted-foreground">
                             <Phone className="h-3 w-3" />
-                            {employee.phone}
+                            {employee.phone as string}
                           </div>
                         )}
                       </div>
                     </td>
                     <td className="px-4 py-3 text-muted-foreground">
-                      {new Date(employee.startDate).toLocaleDateString('tr-TR')}
+                      {new Date(employee.startDate as string).toLocaleDateString('tr-TR')}
                     </td>
                     <td className="px-4 py-3 text-right font-medium text-foreground">
-                      {employee.salary.toLocaleString('tr-TR', { style: 'currency', currency: 'TRY' })}
+                      {Number(employee.salary ?? 0).toLocaleString('tr-TR', { style: 'currency', currency: 'TRY' })}
                       <div className="text-xs text-muted-foreground font-normal">
                         {employee.salaryType === 'monthly' ? 'aylık' : 'saatlik'}
                       </div>
                     </td>
                     <td className="px-4 py-3">
-                      <span
-                        className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${STATUS_CLASSES[employee.status]}`}
-                      >
-                        {STATUS_LABELS[employee.status]}
+                      <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${STATUS_CLASSES[(employee.status as EmployeeStatus)] ?? ''}`}>
+                        {STATUS_LABELS[(employee.status as EmployeeStatus)] ?? employee.status as string}
                       </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => handleEdit(employee)}
+                          className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(employee.id as string, `${employee.firstName} ${employee.lastName}`)}
+                          className="p-1 rounded hover:bg-red-50 text-muted-foreground hover:text-red-600 transition-colors"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -255,11 +213,18 @@ export default function EmployeesPage() {
             </tbody>
           </table>
         </div>
-        <div className="border-t border-border px-4 py-3 flex items-center justify-between text-sm text-muted-foreground">
-          <span>{filtered.length} çalışan gösteriliyor</span>
-          <span>Toplam: {MOCK_EMPLOYEES.length}</span>
-        </div>
+        {!isLoading && (
+          <div className="border-t border-border px-4 py-3 flex items-center justify-between text-sm text-muted-foreground">
+            <span>{employeesList.length} çalışan gösteriliyor</span>
+          </div>
+        )}
       </div>
+
+      <EmployeeModal
+        open={modalOpen}
+        onClose={() => { setModalOpen(false); setEditData(null); }}
+        editData={editData as Parameters<typeof EmployeeModal>[0]['editData']}
+      />
     </div>
   );
 }

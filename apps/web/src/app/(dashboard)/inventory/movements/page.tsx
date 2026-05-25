@@ -2,62 +2,10 @@
 
 import { useState } from 'react';
 import { Search, Plus, ArrowUpCircle, ArrowDownCircle, RefreshCw } from 'lucide-react';
+import { useMovements } from '@/lib/api/hooks';
+import { MovementModal } from '@/components/modals/movement-modal';
 
 type MovementType = 'in' | 'out' | 'adjustment' | 'transfer';
-
-interface StockMovement {
-  id: string;
-  product: { code: string; name: string; unit: string };
-  type: MovementType;
-  quantity: number;
-  unitCost: number | null;
-  reference: string | null;
-  notes: string | null;
-  createdAt: string;
-}
-
-const MOCK_MOVEMENTS: StockMovement[] = [
-  {
-    id: '1',
-    product: { code: 'URN-001', name: 'Laptop Dell Inspiron 15', unit: 'adet' },
-    type: 'in',
-    quantity: 10,
-    unitCost: 20000,
-    reference: 'SAL-2024-001',
-    notes: 'Satın alma girişi',
-    createdAt: '2024-03-25T10:30:00',
-  },
-  {
-    id: '2',
-    product: { code: 'URN-001', name: 'Laptop Dell Inspiron 15', unit: 'adet' },
-    type: 'out',
-    quantity: 2,
-    unitCost: null,
-    reference: 'SIP-2024-001',
-    notes: 'Sipariş sevkiyatı',
-    createdAt: '2024-03-26T14:15:00',
-  },
-  {
-    id: '3',
-    product: { code: 'URN-002', name: 'Mekanik Klavye Logitech', unit: 'adet' },
-    type: 'adjustment',
-    quantity: -5,
-    unitCost: null,
-    reference: 'SAY-2024-001',
-    notes: 'Sayım farkı düzeltmesi',
-    createdAt: '2024-03-27T09:00:00',
-  },
-  {
-    id: '4',
-    product: { code: 'URN-004', name: 'Yazıcı Mürekkebi HP 680', unit: 'adet' },
-    type: 'in',
-    quantity: 50,
-    unitCost: 280,
-    reference: 'SAL-2024-002',
-    notes: null,
-    createdAt: '2024-03-28T11:45:00',
-  },
-];
 
 const TYPE_LABELS: Record<MovementType, string> = {
   in: 'Giriş',
@@ -73,29 +21,39 @@ const TYPE_CLASSES: Record<MovementType, string> = {
   transfer: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400',
 };
 
-const TypeIcon = ({ type }: { type: MovementType }) => {
+function TypeIcon({ type }: { type: MovementType }) {
   if (type === 'in') return <ArrowUpCircle className="h-4 w-4 text-green-600" />;
   if (type === 'out') return <ArrowDownCircle className="h-4 w-4 text-red-600" />;
   return <RefreshCw className="h-4 w-4 text-blue-600" />;
-};
+}
+
+function SkeletonRows() {
+  return (
+    <>
+      {Array.from({ length: 5 }).map((_, i) => (
+        <tr key={i} className="border-b border-border">
+          {Array.from({ length: 7 }).map((_, j) => (
+            <td key={j} className="px-4 py-3">
+              <div className="animate-pulse bg-muted rounded h-4 w-full" />
+            </td>
+          ))}
+        </tr>
+      ))}
+    </>
+  );
+}
 
 export default function MovementsPage() {
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState('');
+  const [modalOpen, setModalOpen] = useState(false);
 
-  const filtered = MOCK_MOVEMENTS.filter((m) => {
-    const matchSearch =
-      !search ||
-      m.product.name.toLowerCase().includes(search.toLowerCase()) ||
-      m.product.code.toLowerCase().includes(search.toLowerCase()) ||
-      (m.reference ?? '').toLowerCase().includes(search.toLowerCase());
-    const matchType = !typeFilter || m.type === typeFilter;
-    return matchSearch && matchType;
-  });
+  const { data: movements, isLoading } = useMovements({ search, type: typeFilter || undefined });
+
+  const movementsList = Array.isArray(movements) ? movements : [];
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Stok Hareketleri</h1>
@@ -103,34 +61,15 @@ export default function MovementsPage() {
             Stok giriş, çıkış ve düzeltme işlemlerini takip edin
           </p>
         </div>
-        <button className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors">
+        <button
+          onClick={() => setModalOpen(true)}
+          className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+        >
           <Plus className="h-4 w-4" />
           Yeni Hareket
         </button>
       </div>
 
-      {/* Summary */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        {[
-          { label: 'Toplam Hareket', value: MOCK_MOVEMENTS.length, icon: RefreshCw, color: 'text-foreground' },
-          { label: 'Stok Giriş', value: MOCK_MOVEMENTS.filter(m => m.type === 'in').length, icon: ArrowUpCircle, color: 'text-green-600' },
-          { label: 'Stok Çıkış', value: MOCK_MOVEMENTS.filter(m => m.type === 'out').length, icon: ArrowDownCircle, color: 'text-red-600' },
-          { label: 'Düzeltme', value: MOCK_MOVEMENTS.filter(m => m.type === 'adjustment').length, icon: RefreshCw, color: 'text-blue-600' },
-        ].map((card) => {
-          const Icon = card.icon;
-          return (
-            <div key={card.label} className="rounded-lg border border-border bg-card p-4">
-              <div className="flex items-center justify-between">
-                <p className="text-xs text-muted-foreground">{card.label}</p>
-                <Icon className={`h-4 w-4 ${card.color}`} />
-              </div>
-              <p className={`text-xl font-bold mt-1 ${card.color}`}>{card.value}</p>
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -155,7 +94,6 @@ export default function MovementsPage() {
         </select>
       </div>
 
-      {/* Table */}
       <div className="rounded-lg border border-border bg-card overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -171,62 +109,77 @@ export default function MovementsPage() {
               </tr>
             </thead>
             <tbody>
-              {filtered.length === 0 ? (
+              {isLoading ? (
+                <SkeletonRows />
+              ) : movementsList.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="text-center py-12 text-muted-foreground">
-                    Stok hareketi bulunamadı
+                    <div className="space-y-2">
+                      <p>Henüz kayıt yok</p>
+                      <button
+                        onClick={() => setModalOpen(true)}
+                        className="text-primary hover:underline text-sm"
+                      >
+                        Yeni Hareket Ekle
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ) : (
-                filtered.map((movement) => (
-                  <tr
-                    key={movement.id}
-                    className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors"
-                  >
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-2">
-                        <TypeIcon type={movement.type} />
-                        <span
-                          className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${TYPE_CLASSES[movement.type]}`}
-                        >
-                          {TYPE_LABELS[movement.type]}
+                movementsList.map((movement: Record<string, unknown>) => {
+                  const product = movement.product as Record<string, unknown> | undefined;
+                  const qty = Number(movement.quantity ?? 0);
+                  return (
+                    <tr
+                      key={movement.id as string}
+                      className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors"
+                    >
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          <TypeIcon type={movement.type as MovementType} />
+                          <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${TYPE_CLASSES[(movement.type as MovementType)] ?? ''}`}>
+                            {TYPE_LABELS[(movement.type as MovementType)] ?? movement.type as string}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="font-medium text-foreground">{product?.name as string ?? '-'}</div>
+                        <div className="text-xs text-muted-foreground font-mono">{product?.code as string ?? ''}</div>
+                      </td>
+                      <td className="px-4 py-3 text-right font-medium">
+                        <span className={qty < 0 ? 'text-red-600' : 'text-foreground'}>
+                          {qty > 0 ? '+' : ''}{qty.toLocaleString('tr-TR')} {product?.unit as string ?? ''}
                         </span>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="font-medium text-foreground">{movement.product.name}</div>
-                      <div className="text-xs text-muted-foreground font-mono">{movement.product.code}</div>
-                    </td>
-                    <td className="px-4 py-3 text-right font-medium">
-                      <span className={movement.quantity < 0 ? 'text-red-600' : 'text-foreground'}>
-                        {movement.quantity > 0 ? '+' : ''}{Number(movement.quantity).toLocaleString('tr-TR')} {movement.product.unit}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-right text-muted-foreground">
-                      {movement.unitCost != null
-                        ? movement.unitCost.toLocaleString('tr-TR', { style: 'currency', currency: 'TRY' })
-                        : '-'}
-                    </td>
-                    <td className="px-4 py-3 font-mono text-xs text-muted-foreground">
-                      {movement.reference ?? '-'}
-                    </td>
-                    <td className="px-4 py-3 text-muted-foreground">
-                      {movement.notes ?? '-'}
-                    </td>
-                    <td className="px-4 py-3 text-muted-foreground">
-                      {new Date(movement.createdAt).toLocaleString('tr-TR', { dateStyle: 'short', timeStyle: 'short' })}
-                    </td>
-                  </tr>
-                ))
+                      </td>
+                      <td className="px-4 py-3 text-right text-muted-foreground">
+                        {movement.unitCost != null
+                          ? Number(movement.unitCost).toLocaleString('tr-TR', { style: 'currency', currency: 'TRY' })
+                          : '-'}
+                      </td>
+                      <td className="px-4 py-3 font-mono text-xs text-muted-foreground">
+                        {(movement.reference as string) ?? '-'}
+                      </td>
+                      <td className="px-4 py-3 text-muted-foreground">
+                        {(movement.notes as string) ?? '-'}
+                      </td>
+                      <td className="px-4 py-3 text-muted-foreground">
+                        {new Date(movement.createdAt as string).toLocaleString('tr-TR', { dateStyle: 'short', timeStyle: 'short' })}
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
         </div>
-        <div className="border-t border-border px-4 py-3 flex items-center justify-between text-sm text-muted-foreground">
-          <span>{filtered.length} hareket gösteriliyor</span>
-          <span>Toplam: {MOCK_MOVEMENTS.length}</span>
-        </div>
+        {!isLoading && (
+          <div className="border-t border-border px-4 py-3 flex items-center justify-between text-sm text-muted-foreground">
+            <span>{movementsList.length} hareket gösteriliyor</span>
+          </div>
+        )}
       </div>
+
+      <MovementModal open={modalOpen} onClose={() => setModalOpen(false)} />
     </div>
   );
 }

@@ -1,84 +1,13 @@
 'use client';
 
 import { useState } from 'react';
-import { Search, Plus, FileText } from 'lucide-react';
+import { Search, Plus, FileText, Trash2 } from 'lucide-react';
+import { toast } from 'sonner';
+import { useInvoices, useDeleteInvoice } from '@/lib/api/hooks';
+import { InvoiceModal } from '@/components/modals/invoice-modal';
 
 type InvoiceStatus = 'draft' | 'sent' | 'paid' | 'overdue' | 'cancelled';
 type InvoiceType = 'sale' | 'purchase' | 'refund';
-
-interface Invoice {
-  id: string;
-  invoiceNumber: string;
-  customer: { name: string };
-  type: InvoiceType;
-  status: InvoiceStatus;
-  netAmount: number;
-  taxAmount: number;
-  totalAmount: number;
-  currency: string;
-  issueDate: string;
-  dueDate: string | null;
-  paidAt: string | null;
-}
-
-const MOCK_INVOICES: Invoice[] = [
-  {
-    id: '1',
-    invoiceNumber: 'FAT-2024-001',
-    customer: { name: 'ABC Teknoloji A.Ş.' },
-    type: 'sale',
-    status: 'paid',
-    netAmount: 20762.71,
-    taxAmount: 3737.29,
-    totalAmount: 24500,
-    currency: 'TRY',
-    issueDate: '2024-03-01',
-    dueDate: '2024-03-31',
-    paidAt: '2024-03-28',
-  },
-  {
-    id: '2',
-    invoiceNumber: 'FAT-2024-002',
-    customer: { name: 'Mehmet Yılmaz' },
-    type: 'sale',
-    status: 'sent',
-    netAmount: 1567.80,
-    taxAmount: 282.20,
-    totalAmount: 1850,
-    currency: 'TRY',
-    issueDate: '2024-03-15',
-    dueDate: '2024-04-15',
-    paidAt: null,
-  },
-  {
-    id: '3',
-    invoiceNumber: 'FAT-2024-003',
-    customer: { name: 'XYZ Ticaret Ltd. Şti.' },
-    type: 'sale',
-    status: 'overdue',
-    netAmount: 7372.88,
-    taxAmount: 1327.12,
-    totalAmount: 8700,
-    currency: 'TRY',
-    issueDate: '2024-02-20',
-    dueDate: '2024-03-20',
-    paidAt: null,
-  },
-  {
-    id: '4',
-    invoiceNumber: 'FAT-2024-004',
-    customer: { name: 'ABC Teknoloji A.Ş.' },
-    type: 'sale',
-    status: 'draft',
-    netAmount: 12966.10,
-    taxAmount: 2333.90,
-    totalAmount: 15300,
-    currency: 'TRY',
-    issueDate: '2024-03-28',
-    dueDate: '2024-04-28',
-    paidAt: null,
-  },
-];
 
 const STATUS_LABELS: Record<InvoiceStatus, string> = {
   draft: 'Taslak',
@@ -102,26 +31,44 @@ const TYPE_LABELS: Record<InvoiceType, string> = {
   refund: 'İade',
 };
 
+function SkeletonRows() {
+  return (
+    <>
+      {Array.from({ length: 5 }).map((_, i) => (
+        <tr key={i} className="border-b border-border">
+          {Array.from({ length: 8 }).map((_, j) => (
+            <td key={j} className="px-4 py-3">
+              <div className="animate-pulse bg-muted rounded h-4 w-full" />
+            </td>
+          ))}
+        </tr>
+      ))}
+    </>
+  );
+}
+
 export default function SalesInvoicesPage() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [modalOpen, setModalOpen] = useState(false);
 
-  const filtered = MOCK_INVOICES.filter((inv) => {
-    const matchSearch =
-      !search ||
-      inv.invoiceNumber.toLowerCase().includes(search.toLowerCase()) ||
-      inv.customer.name.toLowerCase().includes(search.toLowerCase());
-    const matchStatus = !statusFilter || inv.status === statusFilter;
-    return matchSearch && matchStatus;
-  });
+  const { data: invoices, isLoading } = useInvoices({ search, status: statusFilter || undefined });
+  const deleteInvoice = useDeleteInvoice();
 
-  const totalPending = MOCK_INVOICES
-    .filter((i) => i.status === 'sent' || i.status === 'overdue')
-    .reduce((sum, i) => sum + i.totalAmount, 0);
+  const invoicesList = Array.isArray(invoices) ? invoices : [];
+
+  const handleDelete = async (id: string, invoiceNumber: string) => {
+    if (!confirm(`"${invoiceNumber}" faturasını silmek istediğinizden emin misiniz?`)) return;
+    try {
+      await deleteInvoice.mutateAsync(id);
+      toast.success('Fatura silindi');
+    } catch {
+      toast.error('Fatura silinemedi');
+    }
+  };
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Faturalar</h1>
@@ -129,30 +76,15 @@ export default function SalesInvoicesPage() {
             Satış faturalarını oluşturun ve yönetin
           </p>
         </div>
-        <button className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors">
+        <button
+          onClick={() => setModalOpen(true)}
+          className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+        >
           <Plus className="h-4 w-4" />
           Yeni Fatura
         </button>
       </div>
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        {[
-          { label: 'Toplam Fatura', value: MOCK_INVOICES.length, suffix: 'adet', color: 'text-foreground' },
-          { label: 'Bekleyen Tahsilat', value: totalPending.toLocaleString('tr-TR'), suffix: '₺', color: 'text-yellow-600' },
-          { label: 'Vadesi Geçmiş', value: MOCK_INVOICES.filter(i => i.status === 'overdue').length, suffix: 'adet', color: 'text-red-600' },
-          { label: 'Bu Ay Ödenen', value: MOCK_INVOICES.filter(i => i.status === 'paid').length, suffix: 'adet', color: 'text-green-600' },
-        ].map((card) => (
-          <div key={card.label} className="rounded-lg border border-border bg-card p-4">
-            <p className="text-xs text-muted-foreground">{card.label}</p>
-            <p className={`text-xl font-bold mt-1 ${card.color}`}>
-              {card.value} <span className="text-sm font-normal">{card.suffix}</span>
-            </p>
-          </div>
-        ))}
-      </div>
-
-      {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -178,7 +110,6 @@ export default function SalesInvoicesPage() {
         </select>
       </div>
 
-      {/* Table */}
       <div className="rounded-lg border border-border bg-card overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -191,60 +122,83 @@ export default function SalesInvoicesPage() {
                 <th className="text-right px-4 py-3 font-medium text-muted-foreground">Toplam</th>
                 <th className="text-left px-4 py-3 font-medium text-muted-foreground">Vade</th>
                 <th className="text-left px-4 py-3 font-medium text-muted-foreground">Durum</th>
+                <th className="text-left px-4 py-3 font-medium text-muted-foreground">İşlemler</th>
               </tr>
             </thead>
             <tbody>
-              {filtered.length === 0 ? (
+              {isLoading ? (
+                <SkeletonRows />
+              ) : invoicesList.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="text-center py-12 text-muted-foreground">
+                  <td colSpan={8} className="text-center py-12 text-muted-foreground">
                     <FileText className="h-8 w-8 mx-auto mb-2 opacity-40" />
-                    Fatura bulunamadı
+                    <div className="space-y-2">
+                      <p>Henüz kayıt yok</p>
+                      <button
+                        onClick={() => setModalOpen(true)}
+                        className="text-primary hover:underline text-sm"
+                      >
+                        Yeni Fatura Ekle
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ) : (
-                filtered.map((invoice) => (
-                  <tr
-                    key={invoice.id}
-                    className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors cursor-pointer"
-                  >
-                    <td className="px-4 py-3 font-mono text-xs font-medium text-primary">
-                      {invoice.invoiceNumber}
-                    </td>
-                    <td className="px-4 py-3 font-medium text-foreground">
-                      {invoice.customer.name}
-                    </td>
-                    <td className="px-4 py-3 text-muted-foreground">
-                      {TYPE_LABELS[invoice.type]}
-                    </td>
-                    <td className="px-4 py-3 text-right text-muted-foreground">
-                      {invoice.netAmount.toLocaleString('tr-TR', { style: 'currency', currency: invoice.currency })}
-                    </td>
-                    <td className="px-4 py-3 text-right font-medium text-foreground">
-                      {invoice.totalAmount.toLocaleString('tr-TR', { style: 'currency', currency: invoice.currency })}
-                    </td>
-                    <td className="px-4 py-3 text-muted-foreground">
-                      {invoice.dueDate
-                        ? new Date(invoice.dueDate).toLocaleDateString('tr-TR')
-                        : '-'}
-                    </td>
-                    <td className="px-4 py-3">
-                      <span
-                        className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${STATUS_CLASSES[invoice.status]}`}
-                      >
-                        {STATUS_LABELS[invoice.status]}
-                      </span>
-                    </td>
-                  </tr>
-                ))
+                invoicesList.map((invoice: Record<string, unknown>) => {
+                  const customer = invoice.customer as Record<string, unknown> | undefined;
+                  return (
+                    <tr
+                      key={invoice.id as string}
+                      className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors"
+                    >
+                      <td className="px-4 py-3 font-mono text-xs font-medium text-primary">
+                        {invoice.invoiceNumber as string}
+                      </td>
+                      <td className="px-4 py-3 font-medium text-foreground">
+                        {customer?.name as string ?? '-'}
+                      </td>
+                      <td className="px-4 py-3 text-muted-foreground">
+                        {TYPE_LABELS[(invoice.type as InvoiceType)] ?? invoice.type as string}
+                      </td>
+                      <td className="px-4 py-3 text-right text-muted-foreground">
+                        {Number(invoice.netAmount ?? 0).toLocaleString('tr-TR', { style: 'currency', currency: (invoice.currency as string) ?? 'TRY' })}
+                      </td>
+                      <td className="px-4 py-3 text-right font-medium text-foreground">
+                        {Number(invoice.totalAmount ?? 0).toLocaleString('tr-TR', { style: 'currency', currency: (invoice.currency as string) ?? 'TRY' })}
+                      </td>
+                      <td className="px-4 py-3 text-muted-foreground">
+                        {invoice.dueDate
+                          ? new Date(invoice.dueDate as string).toLocaleDateString('tr-TR')
+                          : '-'}
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${STATUS_CLASSES[(invoice.status as InvoiceStatus)] ?? ''}`}>
+                          {STATUS_LABELS[(invoice.status as InvoiceStatus)] ?? invoice.status as string}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <button
+                          onClick={() => handleDelete(invoice.id as string, invoice.invoiceNumber as string)}
+                          className="p-1 rounded hover:bg-red-50 text-muted-foreground hover:text-red-600 transition-colors"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
         </div>
-        <div className="border-t border-border px-4 py-3 flex items-center justify-between text-sm text-muted-foreground">
-          <span>{filtered.length} fatura gösteriliyor</span>
-          <span>Toplam: {MOCK_INVOICES.length}</span>
-        </div>
+        {!isLoading && (
+          <div className="border-t border-border px-4 py-3 flex items-center justify-between text-sm text-muted-foreground">
+            <span>{invoicesList.length} fatura gösteriliyor</span>
+          </div>
+        )}
       </div>
+
+      <InvoiceModal open={modalOpen} onClose={() => setModalOpen(false)} />
     </div>
   );
 }
