@@ -24,8 +24,18 @@ export const useAuthStore = create<AuthState>()(
       setUser: (user) => set({ user }),
       setAccessToken: (token) => {
         set({ accessToken: token });
-        if (token) localStorage.setItem('access_token', token);
-        else localStorage.removeItem('access_token');
+        if (token) {
+          localStorage.setItem('access_token', token);
+          // Also write to cookie for server-side middleware access
+          if (typeof document !== 'undefined') {
+            document.cookie = `accessToken=${token}; path=/; max-age=900; SameSite=Lax`;
+          }
+        } else {
+          localStorage.removeItem('access_token');
+          if (typeof document !== 'undefined') {
+            document.cookie = 'accessToken=; path=/; max-age=0; SameSite=Lax';
+          }
+        }
       },
 
       login: async (email, password, organizationSlug, twoFactorCode) => {
@@ -58,6 +68,9 @@ export const useAuthStore = create<AuthState>()(
         } finally {
           set({ user: null, accessToken: null });
           localStorage.removeItem('access_token');
+          if (typeof document !== 'undefined') {
+            document.cookie = 'accessToken=; path=/; max-age=0; SameSite=Lax';
+          }
         }
       },
 
