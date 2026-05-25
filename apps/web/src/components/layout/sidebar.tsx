@@ -80,10 +80,10 @@ const navigation = [
   },
   {
     id: 'analytics',
-    label: 'Raporlama & BI',
+    label: 'Analitik & Raporlama',
     icon: BarChart3,
     children: [
-      { label: 'Dashboardlar', href: '/analytics/dashboards' },
+      { label: 'Genel Bakış', href: '/analytics' },
       { label: 'Raporlar', href: '/analytics/reports' },
     ],
   },

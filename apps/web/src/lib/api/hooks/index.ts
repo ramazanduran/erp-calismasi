@@ -8,3 +8,5 @@ export * from './use-accounts';
 export * from './use-transactions';
 export * from './use-employees';
 export * from './use-leaves';
+export * from './use-analytics';
+export * from './use-notifications';

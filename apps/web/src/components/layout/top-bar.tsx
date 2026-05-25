@@ -1,12 +1,15 @@
 'use client';
 
-import { Menu, Bell, Search, Sun, Moon, LogOut, User, Settings, ChevronDown } from 'lucide-react';
+import { Menu, Bell, Sun, Moon, LogOut, User, Settings, ChevronDown } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import Link from 'next/link';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { getInitials } from '@/lib/utils';
 import type { AuthUser } from '@erp/shared-types';
+import { SearchBar } from './search-bar';
+import { NotificationPanel } from './notification-panel';
+import { useUnreadNotificationCount } from '@/lib/api/hooks/use-notifications';
 
 interface TopBarProps {
   onMenuClick: () => void;
@@ -16,7 +19,9 @@ interface TopBarProps {
 export function TopBar({ onMenuClick, user }: TopBarProps) {
   const { theme, setTheme } = useTheme();
   const [userMenuOpen, setUserMenuOpen] = useState(false);
-  const [searchOpen, setSearchOpen] = useState(false);
+  const [notifOpen, setNotifOpen] = useState(false);
+  const { data: countData } = useUnreadNotificationCount();
+  const unreadCount = (countData as { count?: number })?.count ?? 0;
 
   return (
     <header className="flex h-16 shrink-0 items-center gap-4 border-b border-border bg-card px-4 md:px-6">
@@ -31,16 +36,7 @@ export function TopBar({ onMenuClick, user }: TopBarProps) {
 
       {/* Search */}
       <div className="flex-1 max-w-xl">
-        <button
-          onClick={() => setSearchOpen(true)}
-          className="flex w-full items-center gap-2 rounded-lg border border-input bg-background px-3 py-2 text-sm text-muted-foreground hover:bg-muted transition-colors"
-        >
-          <Search className="h-4 w-4" />
-          <span>Ara... (Ctrl+K)</span>
-          <kbd className="ml-auto hidden sm:inline-flex h-5 select-none items-center gap-1 rounded border border-input bg-muted px-1.5 text-[10px] font-medium">
-            ⌘K
-          </kbd>
-        </button>
+        <SearchBar />
       </div>
 
       {/* Right actions */}
@@ -56,13 +52,21 @@ export function TopBar({ onMenuClick, user }: TopBarProps) {
         </button>
 
         {/* Notifications */}
-        <Link
-          href="/notifications"
-          className="relative p-2 rounded-lg hover:bg-muted transition-colors"
-        >
-          <Bell className="h-4 w-4" />
-          <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-destructive" />
-        </Link>
+        <div className="relative">
+          <button
+            onClick={() => setNotifOpen((v) => !v)}
+            className="relative p-2 rounded-lg hover:bg-muted transition-colors"
+            aria-label="Bildirimler"
+          >
+            <Bell className="h-4 w-4" />
+            {unreadCount > 0 && (
+              <span className="absolute top-1 right-1 h-4 min-w-4 rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold flex items-center justify-center px-0.5">
+                {unreadCount > 99 ? '99+' : unreadCount}
+              </span>
+            )}
+          </button>
+          <NotificationPanel open={notifOpen} onClose={() => setNotifOpen(false)} />
+        </div>
 
         {/* User menu */}
         <div className="relative">
@@ -133,32 +137,6 @@ export function TopBar({ onMenuClick, user }: TopBarProps) {
           )}
         </div>
       </div>
-
-      {/* Command palette placeholder */}
-      {searchOpen && (
-        <div className="fixed inset-0 z-50 flex items-start justify-center pt-20 bg-black/50">
-          <div className="w-full max-w-xl bg-card border border-border rounded-xl shadow-2xl">
-            <div className="flex items-center gap-2 p-4 border-b border-border">
-              <Search className="h-5 w-5 text-muted-foreground" />
-              <input
-                autoFocus
-                className="flex-1 bg-transparent outline-none text-sm"
-                placeholder="Ne aramak istiyorsunuz?"
-                onKeyDown={(e) => e.key === 'Escape' && setSearchOpen(false)}
-              />
-              <kbd
-                className="text-xs text-muted-foreground cursor-pointer"
-                onClick={() => setSearchOpen(false)}
-              >
-                ESC
-              </kbd>
-            </div>
-            <div className="p-4 text-sm text-muted-foreground text-center py-8">
-              Arama sonuçları burada görünecek
-            </div>
-          </div>
-        </div>
-      )}
     </header>
   );
 }
