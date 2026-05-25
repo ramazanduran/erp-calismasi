@@ -21,6 +21,10 @@ import { FinanceModule } from './modules/finance/finance.module';
 import { HrModule } from './modules/hr/hr.module';
 import { AnalyticsModule } from './modules/analytics/analytics.module';
 import { DepartmentsModule } from './modules/departments/departments.module';
+import { SequenceModule } from './modules/sequences/sequence.module';
+import { PurchasingModule } from './modules/purchasing/purchasing.module';
+import { TasksModule } from './modules/tasks/tasks.module';
+import { ImportModule } from './modules/import/import.module';
 
 @Module({
   imports: [
@@ -76,6 +80,12 @@ import { DepartmentsModule } from './modules/departments/departments.module';
 
     // Departments - Faz 5
     DepartmentsModule,
+
+    // Faz 6
+    SequenceModule,
+    PurchasingModule,
+    TasksModule,
+    ImportModule,
   ],
 })
 export class AppModule {}

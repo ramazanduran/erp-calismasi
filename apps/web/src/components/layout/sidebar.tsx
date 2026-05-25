@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard, DollarSign, Package, ShoppingCart, Truck as PurchaseIcon,
   Factory, Users, Truck, BarChart3, FolderKanban, FileText, Bell, Settings,
-  ChevronDown, ChevronRight, X, GitBranch,
+  ChevronDown, ChevronRight, X, GitBranch, CheckSquare,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { AuthUser } from '@erp/shared-types';
@@ -88,6 +88,7 @@ const navigation = [
       { label: 'Raporlar', href: '/analytics/reports' },
     ],
   },
+  { id: 'tasks', label: 'Görevler', icon: CheckSquare, href: '/tasks' },
   { id: 'workflows', label: 'İş Akışları', icon: GitBranch, href: '/workflows' },
   { id: 'projects', label: 'Projeler', icon: FolderKanban, href: '/projects' },
   { id: 'documents', label: 'Dokümanlar', icon: FileText, href: '/documents' },
@@ -255,6 +256,7 @@ export function Sidebar({ collapsed, mobileOpen, onMobileClose, user: _user }: S
                 { label: 'Roller', href: '/settings/admin/roles' },
                 { label: 'Departmanlar', href: '/settings/admin/departments' },
                 { label: 'Audit Loglar', href: '/settings/admin/audit-logs' },
+                { label: 'Veri İçe Aktarma', href: '/settings/admin/import' },
               ].map((child) => (
                 <Link
                   key={child.href}

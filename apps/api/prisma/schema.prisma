@@ -45,6 +45,10 @@ model Organization {
   leaveRequests     LeaveRequest[]
   financialAccounts FinancialAccount[]
   transactions      Transaction[]
+  suppliers         Supplier[]
+  purchaseOrders    PurchaseOrder[]
+  tasks             Task[]
+  sequences         Sequence[]
 
   @@map("organizations")
 }
@@ -598,6 +602,124 @@ model Transaction {
   @@index([organizationId])
   @@index([accountId])
   @@map("transactions")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PURCHASING MODULE
+// ─────────────────────────────────────────────────────────────────────────────
+model Supplier {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  code           String   @db.VarChar(50)
+  name           String   @db.VarChar(255)
+  email          String?  @db.VarChar(255)
+  phone          String?  @db.VarChar(20)
+  taxNumber      String?  @map("tax_number") @db.VarChar(20)
+  taxOffice      String?  @map("tax_office") @db.VarChar(100)
+  address        Json?
+  contactPerson  String?  @map("contact_person") @db.VarChar(100)
+  paymentTerms   Int      @default(30) @map("payment_terms")
+  currency       String   @default("TRY") @db.VarChar(3)
+  balance        Decimal  @default(0) @db.Decimal(15, 2)
+  status         String   @default("active") @db.VarChar(20)
+  notes          String?
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  organization   Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  purchaseOrders PurchaseOrder[]
+
+  @@unique([organizationId, code])
+  @@index([organizationId])
+  @@map("suppliers")
+}
+
+model PurchaseOrder {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String    @map("organization_id") @db.Uuid
+  orderNumber    String    @map("order_number") @db.VarChar(50)
+  supplierId     String    @map("supplier_id") @db.Uuid
+  status         String    @default("draft") @db.VarChar(20)
+  totalAmount    Decimal   @default(0) @map("total_amount") @db.Decimal(15, 2)
+  taxAmount      Decimal   @default(0) @map("tax_amount") @db.Decimal(15, 2)
+  netAmount      Decimal   @default(0) @map("net_amount") @db.Decimal(15, 2)
+  currency       String    @default("TRY") @db.VarChar(3)
+  notes          String?
+  expectedDate   DateTime? @map("expected_date") @db.Timestamptz
+  receivedAt     DateTime? @map("received_at") @db.Timestamptz
+  createdById    String    @map("created_by_id") @db.Uuid
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+
+  organization Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  supplier     Supplier            @relation(fields: [supplierId], references: [id])
+  items        PurchaseOrderItem[]
+
+  @@unique([organizationId, orderNumber])
+  @@index([organizationId])
+  @@map("purchase_orders")
+}
+
+model PurchaseOrderItem {
+  id              String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  purchaseOrderId String  @map("purchase_order_id") @db.Uuid
+  productId       String? @map("product_id") @db.Uuid
+  description     String?
+  quantity        Decimal @db.Decimal(15, 4)
+  unitPrice       Decimal @map("unit_price") @db.Decimal(15, 4)
+  taxRate         Decimal @default(18) @map("tax_rate") @db.Decimal(5, 2)
+  totalPrice      Decimal @map("total_price") @db.Decimal(15, 2)
+  receivedQty     Decimal @default(0) @map("received_qty") @db.Decimal(15, 4)
+
+  purchaseOrder PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+
+  @@index([purchaseOrderId])
+  @@map("purchase_order_items")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// TASKS / ACTIVITIES
+// ─────────────────────────────────────────────────────────────────────────────
+model Task {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String    @map("organization_id") @db.Uuid
+  title          String    @db.VarChar(255)
+  description    String?
+  assignedToId   String?   @map("assigned_to_id") @db.Uuid
+  createdById    String    @map("created_by_id") @db.Uuid
+  entityType     String?   @map("entity_type") @db.VarChar(50)
+  entityId       String?   @map("entity_id") @db.Uuid
+  priority       String    @default("medium") @db.VarChar(20)
+  status         String    @default("todo") @db.VarChar(20)
+  dueDate        DateTime? @map("due_date") @db.Timestamptz
+  completedAt    DateTime? @map("completed_at") @db.Timestamptz
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([assignedToId])
+  @@index([entityType, entityId])
+  @@map("tasks")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SEQUENCES (Auto-numbering)
+// ─────────────────────────────────────────────────────────────────────────────
+model Sequence {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  type           String   @db.VarChar(50)
+  prefix         String   @default("") @db.VarChar(10)
+  currentValue   Int      @default(0) @map("current_value")
+  padding        Int      @default(6)
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, type])
+  @@map("sequences")
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

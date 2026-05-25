@@ -62,7 +62,8 @@
     "pino": "^9.6.0",
     "pino-pretty": "^13.0.0",
     "date-fns": "^4.1.0",
-    "@erp/shared-types": "*"
+    "@erp/shared-types": "*",
+    "csv-parse": "^5.5.3"
   },
   "devDependencies": {
     "@nestjs/cli": "^11.0.0",
