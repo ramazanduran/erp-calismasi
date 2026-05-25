@@ -8,12 +8,24 @@ export class WorkflowsService {
   async findAll(organizationId: string) {
     return this.prisma.workflow.findMany({
       where: { organizationId },
+      include: {
+        _count: { select: { instances: true } },
+      },
       orderBy: { createdAt: 'desc' },
     });
   }
 
   async findOne(id: string, organizationId: string) {
-    const workflow = await this.prisma.workflow.findFirst({ where: { id, organizationId } });
+    const workflow = await this.prisma.workflow.findFirst({
+      where: { id, organizationId },
+      include: {
+        instances: {
+          orderBy: { startedAt: 'desc' },
+          take: 10,
+        },
+        _count: { select: { instances: true } },
+      },
+    });
     if (!workflow) throw new NotFoundException('İş akışı bulunamadı');
     return workflow;
   }
@@ -25,19 +37,33 @@ export class WorkflowsService {
   }
 
   async update(id: string, organizationId: string, data: Record<string, unknown>) {
-    await this.findOne(id, organizationId);
+    await this.findOneBasic(id, organizationId);
     return this.prisma.workflow.update({
       where: { id },
       data: data as Parameters<typeof this.prisma.workflow.update>[0]['data'],
     });
   }
 
+  async toggle(id: string, organizationId: string) {
+    const workflow = await this.findOneBasic(id, organizationId);
+    return this.prisma.workflow.update({
+      where: { id },
+      data: { isActive: !workflow.isActive },
+    });
+  }
+
   async getInstances(workflowId: string, organizationId: string) {
-    await this.findOne(workflowId, organizationId);
+    await this.findOneBasic(workflowId, organizationId);
     return this.prisma.workflowInstance.findMany({
       where: { workflowId },
       orderBy: { startedAt: 'desc' },
       take: 50,
     });
+  }
+
+  private async findOneBasic(id: string, organizationId: string) {
+    const workflow = await this.prisma.workflow.findFirst({ where: { id, organizationId } });
+    if (!workflow) throw new NotFoundException('İş akışı bulunamadı');
+    return workflow;
   }
 }

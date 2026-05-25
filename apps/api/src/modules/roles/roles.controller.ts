@@ -5,6 +5,15 @@ import { RequirePermissions } from '../../common/decorators/permissions.decorato
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { RolesService } from './roles.service';
 
+const AVAILABLE_PERMISSIONS = [
+  'dashboard.read',
+  'sales.read', 'sales.write', 'sales.delete',
+  'inventory.read', 'inventory.write', 'inventory.delete',
+  'finance.read', 'finance.write', 'finance.delete',
+  'hr.read', 'hr.write', 'hr.delete',
+  'admin.users', 'admin.roles', 'admin.settings',
+];
+
 @ApiTags('roles')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
@@ -13,14 +22,21 @@ export class RolesController {
   constructor(private rolesService: RolesService) {}
 
   @Get()
-  @RequirePermissions('roles.read')
+  @RequirePermissions('admin.roles')
   @ApiOperation({ summary: 'Rolleri listele' })
   findAll(@CurrentUser() user: { organizationId: string }) {
     return this.rolesService.findAll(user.organizationId);
   }
 
+  @Get('permissions')
+  @RequirePermissions('admin.roles')
+  @ApiOperation({ summary: 'Kullanılabilir izin listesi' })
+  getPermissions() {
+    return { data: AVAILABLE_PERMISSIONS };
+  }
+
   @Post()
-  @RequirePermissions('roles.write')
+  @RequirePermissions('admin.roles')
   @ApiOperation({ summary: 'Rol oluştur' })
   create(
     @CurrentUser() user: { organizationId: string },
@@ -30,7 +46,7 @@ export class RolesController {
   }
 
   @Patch(':id')
-  @RequirePermissions('roles.write')
+  @RequirePermissions('admin.roles')
   @ApiOperation({ summary: 'Rol güncelle' })
   update(
     @Param('id') id: string,
@@ -41,7 +57,7 @@ export class RolesController {
   }
 
   @Delete(':id')
-  @RequirePermissions('roles.delete')
+  @RequirePermissions('admin.roles')
   @ApiOperation({ summary: 'Rol sil' })
   remove(@Param('id') id: string, @CurrentUser() user: { organizationId: string }) {
     return this.rolesService.remove(id, user.organizationId);

@@ -17,6 +17,15 @@ export class WorkflowsController {
     return this.workflowsService.findAll(user.organizationId);
   }
 
+  @Get(':id')
+  @ApiOperation({ summary: 'İş akışı detayı' })
+  findOne(
+    @Param('id') id: string,
+    @CurrentUser() user: { organizationId: string }
+  ) {
+    return this.workflowsService.findOne(id, user.organizationId);
+  }
+
   @Post()
   @ApiOperation({ summary: 'İş akışı oluştur' })
   create(
@@ -34,6 +43,15 @@ export class WorkflowsController {
     @CurrentUser() user: { organizationId: string }
   ) {
     return this.workflowsService.update(id, user.organizationId, body);
+  }
+
+  @Patch(':id/toggle')
+  @ApiOperation({ summary: 'İş akışı aktif/pasif' })
+  toggle(
+    @Param('id') id: string,
+    @CurrentUser() user: { organizationId: string }
+  ) {
+    return this.workflowsService.toggle(id, user.organizationId);
   }
 
   @Get(':id/instances')
