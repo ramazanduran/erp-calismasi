@@ -1,0 +1,321 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MULTI-TENANT: Organization (Tenant)
+// ─────────────────────────────────────────────────────────────────────────────
+model Organization {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name        String   @db.VarChar(255)
+  slug        String   @unique @db.VarChar(100)
+  logoUrl     String?  @map("logo_url")
+  domain      String?  @db.VarChar(255)
+  plan        String   @default("free") @db.VarChar(50)
+  settings    Json     @default("{}")
+  theme       Json     @default("{}")
+  locale      String   @default("tr") @db.VarChar(10)
+  timezone    String   @default("Europe/Istanbul") @db.VarChar(50)
+  currency    String   @default("TRY") @db.VarChar(3)
+  status      String   @default("active") @db.VarChar(20)
+  trialEndsAt DateTime? @map("trial_ends_at") @db.Timestamptz
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  // Relations
+  users             User[]
+  roles             Role[]
+  departments       Department[]
+  entityDefinitions EntityDefinition[]
+  auditLogs         AuditLog[]
+  notifications     Notification[]
+  workflows         Workflow[]
+
+  @@map("organizations")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// USER
+// ─────────────────────────────────────────────────────────────────────────────
+model User {
+  id             String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String        @map("organization_id") @db.Uuid
+  email          String        @db.VarChar(255)
+  passwordHash   String        @map("password_hash")
+  firstName      String?       @map("first_name") @db.VarChar(100)
+  lastName       String?       @map("last_name") @db.VarChar(100)
+  avatarUrl      String?       @map("avatar_url")
+  phone          String?       @db.VarChar(20)
+  roleId         String?       @map("role_id") @db.Uuid
+  departmentId   String?       @map("department_id") @db.Uuid
+  locale         String        @default("tr") @db.VarChar(10)
+  timezone       String?       @db.VarChar(50)
+  lastLoginAt    DateTime?     @map("last_login_at") @db.Timestamptz
+  status         String        @default("active") @db.VarChar(20)
+  preferences    Json          @default("{}")
+  twoFactorSecret String?      @map("two_factor_secret")
+  twoFactorEnabled Boolean     @default(false) @map("two_factor_enabled")
+  backupCodes    String[]      @map("backup_codes")
+  oauthProviders Json          @default("[]") @map("oauth_providers")
+  emailVerifiedAt DateTime?    @map("email_verified_at") @db.Timestamptz
+  createdAt      DateTime      @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime      @updatedAt @map("updated_at") @db.Timestamptz
+
+  // Relations
+  organization Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  role         Role?         @relation(fields: [roleId], references: [id])
+  department   Department?   @relation(fields: [departmentId], references: [id])
+  sessions     UserSession[]
+  auditLogs    AuditLog[]    @relation("AuditUser")
+  notifications Notification[]
+
+  @@unique([organizationId, email])
+  @@index([organizationId])
+  @@index([email])
+  @@map("users")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// USER SESSION
+// ─────────────────────────────────────────────────────────────────────────────
+model UserSession {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId       String   @map("user_id") @db.Uuid
+  refreshToken String   @map("refresh_token")
+  deviceInfo   Json?    @map("device_info")
+  ipAddress    String?  @map("ip_address") @db.VarChar(45)
+  userAgent    String?  @map("user_agent")
+  expiresAt    DateTime @map("expires_at") @db.Timestamptz
+  isRevoked    Boolean  @default(false) @map("is_revoked")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([refreshToken])
+  @@map("user_sessions")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ROLE & PERMISSIONS
+// ─────────────────────────────────────────────────────────────────────────────
+model Role {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  name           String   @db.VarChar(100)
+  slug           String   @db.VarChar(100)
+  description    String?
+  permissions    String[] // ["sales.read", "sales.write", "inventory.read"]
+  isSystem       Boolean  @default(false) @map("is_system")
+  parentId       String?  @map("parent_id") @db.Uuid
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  parent       Role?        @relation("RoleHierarchy", fields: [parentId], references: [id])
+  children     Role[]       @relation("RoleHierarchy")
+  users        User[]
+
+  @@unique([organizationId, slug])
+  @@index([organizationId])
+  @@map("roles")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// DEPARTMENT
+// ─────────────────────────────────────────────────────────────────────────────
+model Department {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  name           String   @db.VarChar(255)
+  code           String?  @db.VarChar(50)
+  description    String?
+  parentId       String?  @map("parent_id") @db.Uuid
+  managerId      String?  @map("manager_id") @db.Uuid
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  parent       Department?  @relation("DeptHierarchy", fields: [parentId], references: [id])
+  children     Department[] @relation("DeptHierarchy")
+  users        User[]
+
+  @@unique([organizationId, code])
+  @@index([organizationId])
+  @@map("departments")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// DYNAMIC ENTITY SYSTEM
+// ─────────────────────────────────────────────────────────────────────────────
+model EntityDefinition {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  moduleId       String   @map("module_id") @db.VarChar(100)
+  name           String   @db.VarChar(100)
+  tableName      String   @map("table_name") @db.VarChar(100)
+  displayName    Json     @map("display_name")
+  icon           String?  @db.VarChar(50)
+  description    Json?
+  behaviors      Json     @default("{}")
+  views          Json     @default("{}")
+  lifecycle      Json     @default("{}")
+  isSystem       Boolean  @default(false) @map("is_system")
+  status         String   @default("active") @db.VarChar(20)
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  organization Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  fields       FieldDefinition[]
+
+  @@unique([organizationId, tableName])
+  @@index([organizationId])
+  @@map("entity_definitions")
+}
+
+model FieldDefinition {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  entityId       String   @map("entity_id") @db.Uuid
+  name           String   @db.VarChar(100)
+  columnName     String   @map("column_name") @db.VarChar(100)
+  displayName    Json     @map("display_name")
+  fieldType      String   @map("field_type") @db.VarChar(50)
+  required       Boolean  @default(false)
+  uniqueField    Boolean  @default(false) @map("unique_field")
+  defaultValue   Json?    @map("default_value")
+  config         Json     @default("{}")
+  visibility     Json     @default("{}")
+  conditional    Json?
+  computed       Json?
+  sortOrder      Int      @default(0) @map("sort_order")
+  isSystem       Boolean  @default(false) @map("is_system")
+  status         String   @default("active") @db.VarChar(20)
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  entity EntityDefinition @relation(fields: [entityId], references: [id], onDelete: Cascade)
+
+  @@index([entityId])
+  @@map("field_definitions")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// WORKFLOW
+// ─────────────────────────────────────────────────────────────────────────────
+model Workflow {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  name           Json
+  description    Json?
+  entityId       String?  @map("entity_id") @db.VarChar(100)
+  triggerType    String   @map("trigger_type") @db.VarChar(50)
+  trigger        Json
+  nodes          Json     @default("[]")
+  edges          Json     @default("[]")
+  settings       Json     @default("{}")
+  isActive       Boolean  @default(true) @map("is_active")
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  organization      Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  instances         WorkflowInstance[]
+
+  @@index([organizationId])
+  @@map("workflows")
+}
+
+model WorkflowInstance {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  workflowId  String   @map("workflow_id") @db.Uuid
+  entityType  String?  @map("entity_type") @db.VarChar(100)
+  entityId    String?  @map("entity_id") @db.Uuid
+  status      String   @default("running") @db.VarChar(20)
+  currentNode String?  @map("current_node") @db.VarChar(100)
+  context     Json     @default("{}")
+  startedAt   DateTime @default(now()) @map("started_at") @db.Timestamptz
+  completedAt DateTime? @map("completed_at") @db.Timestamptz
+
+  workflow Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+
+  @@index([workflowId])
+  @@index([entityType, entityId])
+  @@map("workflow_instances")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// NOTIFICATION
+// ─────────────────────────────────────────────────────────────────────────────
+model Notification {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  userId         String   @map("user_id") @db.Uuid
+  type           String   @db.VarChar(50)
+  title          String
+  body           String?
+  data           Json?
+  isRead         Boolean  @default(false) @map("is_read")
+  readAt         DateTime? @map("read_at") @db.Timestamptz
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, userId])
+  @@index([userId, isRead])
+  @@map("notifications")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// AUDIT LOG
+// ─────────────────────────────────────────────────────────────────────────────
+model AuditLog {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  userId         String?  @map("user_id") @db.Uuid
+  entityType     String?  @map("entity_type") @db.VarChar(100)
+  entityId       String?  @map("entity_id") @db.Uuid
+  action         String   @db.VarChar(20)
+  changes        Json?
+  metadata       Json?
+  ipAddress      String?  @map("ip_address") @db.VarChar(45)
+  userAgent      String?  @map("user_agent")
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User?        @relation("AuditUser", fields: [userId], references: [id])
+
+  @@index([organizationId])
+  @@index([entityType, entityId])
+  @@index([userId])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// FILE STORAGE
+// ─────────────────────────────────────────────────────────────────────────────
+model File {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  uploadedById   String   @map("uploaded_by_id") @db.Uuid
+  filename       String
+  originalName   String   @map("original_name")
+  mimeType       String   @map("mime_type") @db.VarChar(100)
+  size           BigInt
+  bucketName     String   @map("bucket_name") @db.VarChar(100)
+  objectKey      String   @map("object_key")
+  thumbnailKey   String?  @map("thumbnail_key")
+  entityType     String?  @map("entity_type") @db.VarChar(100)
+  entityId       String?  @map("entity_id") @db.Uuid
+  isPublic       Boolean  @default(false) @map("is_public")
+  metadata       Json     @default("{}")
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  @@index([organizationId])
+  @@index([entityType, entityId])
+  @@map("files")
+}
