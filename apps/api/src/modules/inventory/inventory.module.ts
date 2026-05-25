@@ -6,11 +6,13 @@ import { CategoriesController } from './categories.controller';
 import { CategoriesService } from './categories.service';
 import { MovementsController } from './movements.controller';
 import { MovementsService } from './movements.service';
+import { StockCountController } from './stock-count.controller';
+import { StockCountService } from './stock-count.service';
 
 @Module({
   imports: [DatabaseModule],
-  controllers: [ProductsController, CategoriesController, MovementsController],
-  providers: [ProductsService, CategoriesService, MovementsService],
-  exports: [ProductsService, CategoriesService, MovementsService],
+  controllers: [ProductsController, CategoriesController, MovementsController, StockCountController],
+  providers: [ProductsService, CategoriesService, MovementsService, StockCountService],
+  exports: [ProductsService, CategoriesService, MovementsService, StockCountService],
 })
 export class InventoryModule {}

@@ -6,11 +6,13 @@ import { LeavesController } from './leaves.controller';
 import { LeavesService } from './leaves.service';
 import { PerformanceController } from './performance.controller';
 import { PerformanceService } from './performance.service';
+import { PayrollController } from './payroll.controller';
+import { PayrollService } from './payroll.service';
 
 @Module({
   imports: [DatabaseModule],
-  controllers: [EmployeesController, LeavesController, PerformanceController],
-  providers: [EmployeesService, LeavesService, PerformanceService],
-  exports: [EmployeesService, LeavesService, PerformanceService],
+  controllers: [EmployeesController, LeavesController, PerformanceController, PayrollController],
+  providers: [EmployeesService, LeavesService, PerformanceService, PayrollService],
+  exports: [EmployeesService, LeavesService, PerformanceService, PayrollService],
 })
 export class HrModule {}

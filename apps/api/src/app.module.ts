@@ -29,6 +29,7 @@ import { AccountingModule } from './modules/accounting/accounting.module';
 import { HealthModule } from './modules/health/health.module';
 import { CrmModule } from './modules/crm/crm.module';
 import { QueueModule } from './modules/queue/queue.module';
+import { PricingModule } from './modules/pricing/pricing.module';
 
 @Module({
   imports: [
@@ -98,6 +99,9 @@ import { QueueModule } from './modules/queue/queue.module';
     HealthModule,
     CrmModule,
     QueueModule,
+
+    // Faz 9
+    PricingModule,
   ],
 })
 export class AppModule {}

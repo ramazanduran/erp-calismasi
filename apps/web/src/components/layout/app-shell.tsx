@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Sidebar } from './sidebar';
 import { TopBar } from './top-bar';
+import { Breadcrumb } from './breadcrumb';
 import type { AuthUser } from '@erp/shared-types';
 
 interface AppShellProps {
@@ -34,7 +35,10 @@ export function AppShell({ children, user }: AppShellProps) {
           user={user}
         />
         <main className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8">
-          <div className="mx-auto max-w-screen-2xl">{children}</div>
+          <div className="mx-auto max-w-screen-2xl">
+            <Breadcrumb />
+            {children}
+          </div>
         </main>
       </div>
     </div>

@@ -53,6 +53,9 @@ model Organization {
   journalEntries    JournalEntry[]
   performanceReviews PerformanceReview[]
   leads             Lead[]
+  payrolls          Payroll[]
+  stockCounts       StockCount[]
+  priceLists        PriceList[]
 
   @@map("organizations")
 }
@@ -859,4 +862,103 @@ model Lead {
 
   @@index([organizationId])
   @@map("leads")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PAYROLL (Bordro)
+// ─────────────────────────────────────────────────────────────────────────────
+model Payroll {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  employeeId     String   @map("employee_id") @db.Uuid
+  period         String   @db.VarChar(7) // "2024-01"
+  grossSalary    Decimal  @map("gross_salary") @db.Decimal(15, 2)
+  sgkEmployee    Decimal  @map("sgk_employee") @db.Decimal(15, 2) // %14
+  sgkEmployer    Decimal  @map("sgk_employer") @db.Decimal(15, 2) // %20.5
+  incomeTax      Decimal  @map("income_tax") @db.Decimal(15, 2)
+  stampTax       Decimal  @default(0) @map("stamp_tax") @db.Decimal(15, 2)
+  netSalary      Decimal  @map("net_salary") @db.Decimal(15, 2)
+  deductions     Json     @default("[]") // ek kesintiler
+  additions      Json     @default("[]") // ek ödemeler (ikramiye vb.)
+  status         String   @default("draft") @db.VarChar(20) // draft, approved, paid
+  paidAt         DateTime? @map("paid_at") @db.Timestamptz
+  notes          String?
+  createdById    String   @map("created_by_id") @db.Uuid
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, employeeId, period])
+  @@index([organizationId])
+  @@map("payrolls")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// STOCK COUNT (Stok Sayım)
+// ─────────────────────────────────────────────────────────────────────────────
+model StockCount {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  countNumber    String   @map("count_number") @db.VarChar(50)
+  status         String   @default("open") @db.VarChar(20) // open, in_progress, completed, cancelled
+  notes          String?
+  startedAt      DateTime? @map("started_at") @db.Timestamptz
+  completedAt    DateTime? @map("completed_at") @db.Timestamptz
+  createdById    String   @map("created_by_id") @db.Uuid
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  organization Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  lines        StockCountLine[]
+
+  @@index([organizationId])
+  @@map("stock_counts")
+}
+
+model StockCountLine {
+  id           String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  stockCountId String  @map("stock_count_id") @db.Uuid
+  productId    String  @map("product_id") @db.Uuid
+  expectedQty  Decimal @map("expected_qty") @db.Decimal(15, 4)
+  countedQty   Decimal? @map("counted_qty") @db.Decimal(15, 4)
+  difference   Decimal? @db.Decimal(15, 4)
+  notes        String?
+
+  stockCount StockCount @relation(fields: [stockCountId], references: [id], onDelete: Cascade)
+
+  @@index([stockCountId])
+  @@map("stock_count_lines")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PRICE LIST (Fiyat Listesi)
+// ─────────────────────────────────────────────────────────────────────────────
+model PriceList {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  name           String   @db.VarChar(100)
+  currency       String   @default("TRY") @db.VarChar(3)
+  isDefault      Boolean  @default(false) @map("is_default")
+  validFrom      DateTime? @map("valid_from") @db.Timestamptz
+  validTo        DateTime? @map("valid_to") @db.Timestamptz
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  items        PriceListItem[]
+
+  @@index([organizationId])
+  @@map("price_lists")
+}
+
+model PriceListItem {
+  id          String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  priceListId String  @map("price_list_id") @db.Uuid
+  productId   String  @map("product_id") @db.Uuid
+  price       Decimal @db.Decimal(15, 4)
+  discountRate Decimal @default(0) @map("discount_rate") @db.Decimal(5, 2)
+
+  priceList PriceList @relation(fields: [priceListId], references: [id], onDelete: Cascade)
+
+  @@unique([priceListId, productId])
+  @@index([priceListId])
+  @@map("price_list_items")
 }

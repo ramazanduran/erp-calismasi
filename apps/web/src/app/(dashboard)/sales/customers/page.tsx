@@ -5,6 +5,7 @@ import { Search, Plus, Building2, User, Pencil, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useCustomers, useDeleteCustomer } from '@/lib/api/hooks';
 import { CustomerModal } from '@/components/modals/customer-modal';
+import { Pagination } from '@/components/ui/pagination';
 
 type CustomerType = 'corporate' | 'individual';
 type CustomerStatus = 'active' | 'passive' | 'blocked';
@@ -47,11 +48,14 @@ export default function CustomersPage() {
   const [statusFilter, setStatusFilter] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
   const [editData, setEditData] = useState<Record<string, unknown> | null>(null);
+  const [page, setPage] = useState(1);
 
-  const { data: customers, isLoading } = useCustomers({ search, status: statusFilter || undefined });
+  const { data: customers, isLoading } = useCustomers({ search, status: statusFilter || undefined, page, limit: 20 } as any);
   const deleteCustomer = useDeleteCustomer();
 
-  const customersList = Array.isArray(customers) ? customers : [];
+  const customersData = customers as any;
+  const customersList = customersData?.data ?? (Array.isArray(customers) ? customers : []);
+  const totalPages = customersData?.meta?.totalPages || 1;
 
   const handleEdit = (customer: Record<string, unknown>) => {
     setEditData(customer);
@@ -210,7 +214,8 @@ export default function CustomersPage() {
         </div>
         {!isLoading && (
           <div className="border-t border-border px-4 py-3 flex items-center justify-between text-sm text-muted-foreground">
-            <span>{customersList.length} müşteri gösteriliyor</span>
+            <span>{customersData?.meta?.total ?? customersList.length} müşteri</span>
+            <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
           </div>
         )}
       </div>

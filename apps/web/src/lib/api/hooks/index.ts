@@ -20,3 +20,6 @@ export * from './use-tasks';
 export * from './use-accounting';
 export * from './use-performance';
 export * from './use-leads';
+export * from './use-payroll';
+export * from './use-stock-count';
+export * from './use-price-lists';

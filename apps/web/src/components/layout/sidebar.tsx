@@ -33,7 +33,8 @@ const navigation = [
       { label: 'Ürünler', href: '/inventory/products' },
       { label: 'Depolar', href: '/inventory/warehouses' },
       { label: 'Stok Hareketleri', href: '/inventory/movements' },
-      { label: 'Sayım', href: '/inventory/counts' },
+      { label: 'Stok Sayım', href: '/inventory/stock-counts' },
+      { label: 'Fiyat Listesi', href: '/inventory/price-lists' },
     ],
   },
   {
