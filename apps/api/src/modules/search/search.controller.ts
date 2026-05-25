@@ -7,7 +7,7 @@ import { SearchService } from './search.service';
 @ApiTags('search')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
-@Controller('search')
+@Controller('api/v1/search')
 export class SearchController {
   constructor(private searchService: SearchService) {}
 
@@ -15,10 +15,8 @@ export class SearchController {
   @ApiOperation({ summary: 'Global arama' })
   search(
     @Query('q') query: string,
-    @Query('indexes') indexes: string,
-    @CurrentUser() user: { organizationId: string }
+    @CurrentUser() user: { organizationId: string },
   ) {
-    const indexList = indexes ? indexes.split(',') : undefined;
-    return this.searchService.search(query, user.organizationId, indexList);
+    return this.searchService.search(user.organizationId, query);
   }
 }
