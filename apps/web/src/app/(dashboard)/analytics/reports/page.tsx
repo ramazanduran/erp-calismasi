@@ -6,6 +6,7 @@ import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api/client';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import { downloadCSV } from '@/lib/utils/export';
+import { exportToExcel } from '@/lib/utils/excel-export';
 
 const REPORT_TYPES = [
   { value: 'sales', label: 'Satış Raporu' },
@@ -73,11 +74,9 @@ export default function ReportsPage() {
   const headers = REPORT_HEADERS[reportType];
 
   function handleExport() {
-    downloadCSV(
-      rows,
-      `${REPORT_TYPES.find((r) => r.value === reportType)?.label ?? reportType}-${new Date().toISOString().split('T')[0]}`,
-      headers,
-    );
+    const filename = `${REPORT_TYPES.find((r) => r.value === reportType)?.label ?? reportType}-${new Date().toISOString().split('T')[0]}`;
+    const columns = Object.entries(headers).map(([key, header]) => ({ key, header, width: 18 }));
+    exportToExcel(rows, columns, filename, REPORT_TYPES.find((r) => r.value === reportType)?.label ?? 'Rapor');
   }
 
   return (

@@ -1,10 +1,12 @@
 'use client';
 
 import { useState } from 'react';
-import { Search, Plus, User, Phone, Mail, Pencil, Trash2 } from 'lucide-react';
+import { Search, Plus, User, Phone, Mail, Pencil, Trash2, FileDown } from 'lucide-react';
 import { toast } from 'sonner';
 import { useEmployees, useDeleteEmployee } from '@/lib/api/hooks';
 import { EmployeeModal } from '@/components/modals/employee-modal';
+import { BulkActionsBar } from '@/components/ui/bulk-actions-bar';
+import { exportToExcel } from '@/lib/utils/excel-export';
 
 type EmployeeStatus = 'active' | 'inactive' | 'terminated';
 
@@ -25,7 +27,7 @@ function SkeletonRows() {
     <>
       {Array.from({ length: 5 }).map((_, i) => (
         <tr key={i} className="border-b border-border">
-          {Array.from({ length: 8 }).map((_, j) => (
+          {Array.from({ length: 9 }).map((_, j) => (
             <td key={j} className="px-4 py-3">
               <div className="animate-pulse bg-muted rounded h-4 w-full" />
             </td>
@@ -41,11 +43,25 @@ export default function EmployeesPage() {
   const [statusFilter, setStatusFilter] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
   const [editData, setEditData] = useState<Record<string, unknown> | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   const { data: employees, isLoading } = useEmployees({ search, status: statusFilter || undefined });
   const deleteEmployee = useDeleteEmployee();
 
   const employeesList = Array.isArray(employees) ? employees : [];
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleAll = () => {
+    if (selectedIds.size === employeesList.length) setSelectedIds(new Set());
+    else setSelectedIds(new Set((employeesList as any[])?.map((e: any) => e.id) || []));
+  };
 
   const handleEdit = (employee: Record<string, unknown>) => {
     setEditData(employee);
@@ -71,13 +87,34 @@ export default function EmployeesPage() {
             Personel bilgilerini yönetin
           </p>
         </div>
-        <button
-          onClick={() => { setEditData(null); setModalOpen(true); }}
-          className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
-        >
-          <Plus className="h-4 w-4" />
-          Yeni Çalışan
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => exportToExcel(
+              employeesList as any[] || [],
+              [
+                { key: 'employeeNumber', header: 'Sicil No', width: 12 },
+                { key: 'firstName', header: 'Ad', width: 15 },
+                { key: 'lastName', header: 'Soyad', width: 15 },
+                { key: 'email', header: 'E-posta', width: 25 },
+                { key: 'phone', header: 'Telefon', width: 15 },
+                { key: 'position', header: 'Pozisyon', width: 20 },
+                { key: 'status', header: 'Durum', width: 10 },
+              ],
+              'calisanlar',
+              'Çalışanlar'
+            )}
+            className="flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm hover:bg-muted"
+          >
+            <FileDown className="h-4 w-4" /> Excel
+          </button>
+          <button
+            onClick={() => { setEditData(null); setModalOpen(true); }}
+            className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+          >
+            <Plus className="h-4 w-4" />
+            Yeni Çalışan
+          </button>
+        </div>
       </div>
 
       <div className="flex flex-col sm:flex-row gap-3">
@@ -108,6 +145,14 @@ export default function EmployeesPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border bg-muted/50">
+                <th className="px-4 py-3">
+                  <input
+                    type="checkbox"
+                    checked={employeesList.length > 0 && selectedIds.size === employeesList.length}
+                    onChange={toggleAll}
+                    className="rounded"
+                  />
+                </th>
                 <th className="text-left px-4 py-3 font-medium text-muted-foreground">Sicil No</th>
                 <th className="text-left px-4 py-3 font-medium text-muted-foreground">Çalışan</th>
                 <th className="text-left px-4 py-3 font-medium text-muted-foreground">Departman / Pozisyon</th>
@@ -123,7 +168,7 @@ export default function EmployeesPage() {
                 <SkeletonRows />
               ) : employeesList.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="text-center py-12 text-muted-foreground">
+                  <td colSpan={9} className="text-center py-12 text-muted-foreground">
                     <User className="h-8 w-8 mx-auto mb-2 opacity-40" />
                     <div className="space-y-2">
                       <p>Henüz kayıt yok</p>
@@ -142,6 +187,14 @@ export default function EmployeesPage() {
                     key={employee.id as string}
                     className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors"
                   >
+                    <td className="px-4 py-3">
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.has(employee.id as string)}
+                        onChange={() => toggleSelect(employee.id as string)}
+                        className="rounded"
+                      />
+                    </td>
                     <td className="px-4 py-3 font-mono text-xs text-muted-foreground">
                       {employee.employeeNumber as string}
                     </td>
@@ -219,6 +272,24 @@ export default function EmployeesPage() {
           </div>
         )}
       </div>
+
+      <BulkActionsBar
+        selectedCount={selectedIds.size}
+        onClearSelection={() => setSelectedIds(new Set())}
+        actions={[
+          {
+            label: 'Sil',
+            icon: <Trash2 className="h-3.5 w-3.5" />,
+            variant: 'danger',
+            onClick: async () => {
+              if (!confirm(`${selectedIds.size} çalışan silinecek, emin misiniz?`)) return;
+              await Promise.all([...selectedIds].map(id => deleteEmployee.mutateAsync(id)));
+              setSelectedIds(new Set());
+              toast.success(`${selectedIds.size} çalışan silindi`);
+            },
+          },
+        ]}
+      />
 
       <EmployeeModal
         open={modalOpen}

@@ -5,6 +5,7 @@ import { Sidebar } from './sidebar';
 import { TopBar } from './top-bar';
 import { Breadcrumb } from './breadcrumb';
 import type { AuthUser } from '@erp/shared-types';
+import { useKeyboardShortcuts } from '@/lib/hooks/use-keyboard-shortcuts';
 
 interface AppShellProps {
   children: React.ReactNode;
@@ -14,6 +15,7 @@ interface AppShellProps {
 export function AppShell({ children, user }: AppShellProps) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  useKeyboardShortcuts();
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">

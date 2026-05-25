@@ -1,11 +1,13 @@
 'use client';
 
 import { useState } from 'react';
-import { Search, Plus, Building2, User, Pencil, Trash2 } from 'lucide-react';
+import { Search, Plus, Building2, User, Pencil, Trash2, FileDown } from 'lucide-react';
 import { toast } from 'sonner';
 import { useCustomers, useDeleteCustomer } from '@/lib/api/hooks';
 import { CustomerModal } from '@/components/modals/customer-modal';
 import { Pagination } from '@/components/ui/pagination';
+import { BulkActionsBar } from '@/components/ui/bulk-actions-bar';
+import { exportToExcel } from '@/lib/utils/excel-export';
 
 type CustomerType = 'corporate' | 'individual';
 type CustomerStatus = 'active' | 'passive' | 'blocked';
@@ -32,7 +34,7 @@ function SkeletonRows() {
     <>
       {Array.from({ length: 5 }).map((_, i) => (
         <tr key={i} className="border-b border-border">
-          {Array.from({ length: 7 }).map((_, j) => (
+          {Array.from({ length: 9 }).map((_, j) => (
             <td key={j} className="px-4 py-3">
               <div className="animate-pulse bg-muted rounded h-4 w-full" />
             </td>
@@ -49,6 +51,7 @@ export default function CustomersPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editData, setEditData] = useState<Record<string, unknown> | null>(null);
   const [page, setPage] = useState(1);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   const { data: customers, isLoading } = useCustomers({ search, status: statusFilter || undefined, page, limit: 20 } as any);
   const deleteCustomer = useDeleteCustomer();
@@ -56,6 +59,19 @@ export default function CustomersPage() {
   const customersData = customers as any;
   const customersList = customersData?.data ?? (Array.isArray(customers) ? customers : []);
   const totalPages = customersData?.meta?.totalPages || 1;
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleAll = () => {
+    if (selectedIds.size === customersList.length) setSelectedIds(new Set());
+    else setSelectedIds(new Set((customersList as any[])?.map((c: any) => c.id) || []));
+  };
 
   const handleEdit = (customer: Record<string, unknown>) => {
     setEditData(customer);
@@ -81,13 +97,33 @@ export default function CustomersPage() {
             Tüm müşterileri yönetin ve takip edin
           </p>
         </div>
-        <button
-          onClick={() => { setEditData(null); setModalOpen(true); }}
-          className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
-        >
-          <Plus className="h-4 w-4" />
-          Yeni Müşteri
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => exportToExcel(
+              customersList as any[] || [],
+              [
+                { key: 'code', header: 'Kod', width: 12 },
+                { key: 'name', header: 'Ad', width: 30 },
+                { key: 'email', header: 'E-posta', width: 25 },
+                { key: 'phone', header: 'Telefon', width: 15 },
+                { key: 'type', header: 'Tür', width: 12 },
+                { key: 'status', header: 'Durum', width: 10 },
+              ],
+              'musteriler',
+              'Müşteriler'
+            )}
+            className="flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm hover:bg-muted"
+          >
+            <FileDown className="h-4 w-4" /> Excel
+          </button>
+          <button
+            onClick={() => { setEditData(null); setModalOpen(true); }}
+            className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+          >
+            <Plus className="h-4 w-4" />
+            Yeni Müşteri
+          </button>
+        </div>
       </div>
 
       <div className="flex flex-col sm:flex-row gap-3">
@@ -118,6 +154,14 @@ export default function CustomersPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border bg-muted/50">
+                <th className="px-4 py-3">
+                  <input
+                    type="checkbox"
+                    checked={customersList.length > 0 && selectedIds.size === customersList.length}
+                    onChange={toggleAll}
+                    className="rounded"
+                  />
+                </th>
                 <th className="text-left px-4 py-3 font-medium text-muted-foreground">Kod</th>
                 <th className="text-left px-4 py-3 font-medium text-muted-foreground">Müşteri</th>
                 <th className="text-left px-4 py-3 font-medium text-muted-foreground">Tip</th>
@@ -133,7 +177,7 @@ export default function CustomersPage() {
                 <SkeletonRows />
               ) : customersList.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="text-center py-12 text-muted-foreground">
+                  <td colSpan={9} className="text-center py-12 text-muted-foreground">
                     <div className="space-y-2">
                       <p>Henüz kayıt yok</p>
                       <button
@@ -151,6 +195,14 @@ export default function CustomersPage() {
                     key={customer.id as string}
                     className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors"
                   >
+                    <td className="px-4 py-3">
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.has(customer.id as string)}
+                        onChange={() => toggleSelect(customer.id as string)}
+                        className="rounded"
+                      />
+                    </td>
                     <td className="px-4 py-3 font-mono text-xs text-muted-foreground">
                       {customer.code as string}
                     </td>
@@ -219,6 +271,24 @@ export default function CustomersPage() {
           </div>
         )}
       </div>
+
+      <BulkActionsBar
+        selectedCount={selectedIds.size}
+        onClearSelection={() => setSelectedIds(new Set())}
+        actions={[
+          {
+            label: 'Sil',
+            icon: <Trash2 className="h-3.5 w-3.5" />,
+            variant: 'danger',
+            onClick: async () => {
+              if (!confirm(`${selectedIds.size} müşteri silinecek, emin misiniz?`)) return;
+              await Promise.all([...selectedIds].map(id => deleteCustomer.mutateAsync(id)));
+              setSelectedIds(new Set());
+              toast.success(`${selectedIds.size} müşteri silindi`);
+            },
+          },
+        ]}
+      />
 
       <CustomerModal
         open={modalOpen}

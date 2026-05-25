@@ -30,6 +30,7 @@ import { HealthModule } from './modules/health/health.module';
 import { CrmModule } from './modules/crm/crm.module';
 import { QueueModule } from './modules/queue/queue.module';
 import { PricingModule } from './modules/pricing/pricing.module';
+import { ApiTokensModule } from './modules/api-tokens/api-tokens.module';
 
 @Module({
   imports: [
@@ -102,6 +103,9 @@ import { PricingModule } from './modules/pricing/pricing.module';
 
     // Faz 9
     PricingModule,
+
+    // Faz 10
+    ApiTokensModule,
   ],
 })
 export class AppModule {}

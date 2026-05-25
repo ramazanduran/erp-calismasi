@@ -68,6 +68,7 @@ export function SearchBar() {
       {/* Trigger Button */}
       <button
         onClick={openModal}
+        data-search-input
         className="flex w-full items-center gap-2 rounded-lg border border-input bg-background px-3 py-2 text-sm text-muted-foreground hover:bg-muted transition-colors"
       >
         <Search className="h-4 w-4 shrink-0" />

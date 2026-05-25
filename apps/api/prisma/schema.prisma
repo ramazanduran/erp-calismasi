@@ -56,6 +56,7 @@ model Organization {
   payrolls          Payroll[]
   stockCounts       StockCount[]
   priceLists        PriceList[]
+  apiTokens         ApiToken[]
 
   @@map("organizations")
 }
@@ -961,4 +962,25 @@ model PriceListItem {
   @@unique([priceListId, productId])
   @@index([priceListId])
   @@map("price_list_items")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// API TOKENS
+// ─────────────────────────────────────────────────────────────────────────────
+model ApiToken {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String    @map("organization_id") @db.Uuid
+  userId         String    @map("user_id") @db.Uuid
+  name           String    @db.VarChar(100)
+  tokenHash      String    @unique @map("token_hash")
+  lastUsedAt     DateTime? @map("last_used_at") @db.Timestamptz
+  expiresAt      DateTime? @map("expires_at") @db.Timestamptz
+  scopes         String[]
+  isActive       Boolean   @default(true) @map("is_active")
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, userId])
+  @@map("api_tokens")
 }

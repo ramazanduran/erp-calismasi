@@ -276,6 +276,7 @@ export function Sidebar({ collapsed, mobileOpen, onMobileClose, user: _user }: S
                 { label: 'Departmanlar', href: '/settings/admin/departments' },
                 { label: 'Audit Loglar', href: '/settings/admin/audit-logs' },
                 { label: 'Veri İçe Aktarma', href: '/settings/admin/import' },
+                { label: 'API Token\'ları', href: '/settings/api-tokens' },
               ].map((child) => (
                 <Link
                   key={child.href}

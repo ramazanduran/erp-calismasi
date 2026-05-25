@@ -1,17 +1,19 @@
 'use client';
 
 import { useState } from 'react';
-import { Search, Plus, Package, AlertTriangle, Pencil, Trash2 } from 'lucide-react';
+import { Search, Plus, Package, AlertTriangle, Pencil, Trash2, FileDown } from 'lucide-react';
 import { toast } from 'sonner';
 import { useProducts, useDeleteProduct } from '@/lib/api/hooks';
 import { ProductModal } from '@/components/modals/product-modal';
+import { BulkActionsBar } from '@/components/ui/bulk-actions-bar';
+import { exportToExcel } from '@/lib/utils/excel-export';
 
 function SkeletonRows() {
   return (
     <>
       {Array.from({ length: 5 }).map((_, i) => (
         <tr key={i} className="border-b border-border">
-          {Array.from({ length: 8 }).map((_, j) => (
+          {Array.from({ length: 9 }).map((_, j) => (
             <td key={j} className="px-4 py-3">
               <div className="animate-pulse bg-muted rounded h-4 w-full" />
             </td>
@@ -27,6 +29,7 @@ export default function ProductsPage() {
   const [activeFilter, setActiveFilter] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
   const [editData, setEditData] = useState<Record<string, unknown> | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   const { data: products, isLoading } = useProducts({ search });
   const deleteProduct = useDeleteProduct();
@@ -39,6 +42,19 @@ export default function ProductsPage() {
     if (activeFilter === 'inactive') return !p.isActive;
     return true;
   });
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleAll = () => {
+    if (selectedIds.size === filteredProducts.length) setSelectedIds(new Set());
+    else setSelectedIds(new Set((filteredProducts as any[])?.map((p: any) => p.id) || []));
+  };
 
   const handleEdit = (product: Record<string, unknown>) => {
     setEditData(product);
@@ -64,13 +80,34 @@ export default function ProductsPage() {
             Ürün kataloğunu yönetin ve stok durumunu takip edin
           </p>
         </div>
-        <button
-          onClick={() => { setEditData(null); setModalOpen(true); }}
-          className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
-        >
-          <Plus className="h-4 w-4" />
-          Yeni Ürün
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => exportToExcel(
+              filteredProducts as any[] || [],
+              [
+                { key: 'code', header: 'Kod', width: 12 },
+                { key: 'name', header: 'Ürün Adı', width: 30 },
+                { key: 'barcode', header: 'Barkod', width: 15 },
+                { key: 'purchasePrice', header: 'Alış Fiyatı', width: 15 },
+                { key: 'salePrice', header: 'Satış Fiyatı', width: 15 },
+                { key: 'currentStock', header: 'Stok', width: 10 },
+                { key: 'unit', header: 'Birim', width: 10 },
+              ],
+              'urunler',
+              'Ürünler'
+            )}
+            className="flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm hover:bg-muted"
+          >
+            <FileDown className="h-4 w-4" /> Excel
+          </button>
+          <button
+            onClick={() => { setEditData(null); setModalOpen(true); }}
+            className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+          >
+            <Plus className="h-4 w-4" />
+            Yeni Ürün
+          </button>
+        </div>
       </div>
 
       <div className="flex flex-col sm:flex-row gap-3">
@@ -100,6 +137,14 @@ export default function ProductsPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border bg-muted/50">
+                <th className="px-4 py-3">
+                  <input
+                    type="checkbox"
+                    checked={filteredProducts.length > 0 && selectedIds.size === filteredProducts.length}
+                    onChange={toggleAll}
+                    className="rounded"
+                  />
+                </th>
                 <th className="text-left px-4 py-3 font-medium text-muted-foreground">Kod</th>
                 <th className="text-left px-4 py-3 font-medium text-muted-foreground">Ürün Adı</th>
                 <th className="text-left px-4 py-3 font-medium text-muted-foreground">Kategori</th>
@@ -115,7 +160,7 @@ export default function ProductsPage() {
                 <SkeletonRows />
               ) : filteredProducts.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="text-center py-12 text-muted-foreground">
+                  <td colSpan={9} className="text-center py-12 text-muted-foreground">
                     <Package className="h-8 w-8 mx-auto mb-2 opacity-40" />
                     <div className="space-y-2">
                       <p>Henüz kayıt yok</p>
@@ -141,6 +186,14 @@ export default function ProductsPage() {
                       key={product.id as string}
                       className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors"
                     >
+                      <td className="px-4 py-3">
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.has(product.id as string)}
+                          onChange={() => toggleSelect(product.id as string)}
+                          className="rounded"
+                        />
+                      </td>
                       <td className="px-4 py-3 font-mono text-xs text-muted-foreground">
                         {product.code as string}
                       </td>
@@ -202,6 +255,24 @@ export default function ProductsPage() {
           </div>
         )}
       </div>
+
+      <BulkActionsBar
+        selectedCount={selectedIds.size}
+        onClearSelection={() => setSelectedIds(new Set())}
+        actions={[
+          {
+            label: 'Sil',
+            icon: <Trash2 className="h-3.5 w-3.5" />,
+            variant: 'danger',
+            onClick: async () => {
+              if (!confirm(`${selectedIds.size} ürün silinecek, emin misiniz?`)) return;
+              await Promise.all([...selectedIds].map(id => deleteProduct.mutateAsync(id)));
+              setSelectedIds(new Set());
+              toast.success(`${selectedIds.size} ürün silindi`);
+            },
+          },
+        ]}
+      />
 
       <ProductModal
         open={modalOpen}

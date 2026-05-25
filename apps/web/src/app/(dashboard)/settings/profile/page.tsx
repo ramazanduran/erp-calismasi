@@ -8,6 +8,8 @@ import { toast } from 'sonner';
 import { User, Lock, Shield } from 'lucide-react';
 import { useAuthStore } from '@/stores/auth.store';
 import { api } from '@/lib/api/client';
+import { TwoFactorSetupModal } from '@/components/modals/two-factor-setup-modal';
+import { useDisableTwoFactor } from '@/lib/api/hooks';
 
 const profileSchema = z.object({
   firstName: z.string().min(1, 'Ad gereklidir'),
@@ -49,6 +51,10 @@ const readonlyClass =
 export default function ProfilePage() {
   const { user } = useAuthStore();
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
+  const [showSetup2FA, setShowSetup2FA] = useState(false);
+  const [disableCode, setDisableCode] = useState('');
+  const [showDisable, setShowDisable] = useState(false);
+  const disable2FA = useDisableTwoFactor();
 
   const {
     register: registerProfile,
@@ -97,19 +103,15 @@ export default function ProfilePage() {
     }
   };
 
-  const handleToggle2FA = async () => {
+  const handleDisable2FA = async () => {
     try {
-      if (twoFactorEnabled) {
-        await api.post('/api/v1/auth/2fa/disable', {});
-        setTwoFactorEnabled(false);
-        toast.success('2FA deaktif edildi');
-      } else {
-        await api.post('/api/v1/auth/2fa/enable', {});
-        setTwoFactorEnabled(true);
-        toast.success('2FA aktifleştirildi');
-      }
+      await disable2FA.mutateAsync(disableCode);
+      setTwoFactorEnabled(false);
+      setShowDisable(false);
+      setDisableCode('');
+      toast.success('2FA deaktif edildi');
     } catch {
-      toast.error('İşlem başarısız oldu');
+      toast.error('Geçersiz kod');
     }
   };
 
@@ -206,29 +208,71 @@ export default function ProfilePage() {
           <Shield className="h-5 w-5 text-muted-foreground" />
           <h2 className="font-semibold text-foreground">İki Faktörlü Doğrulama (2FA)</h2>
         </div>
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-sm text-foreground font-medium">
-              {twoFactorEnabled ? '2FA Aktif' : '2FA Pasif'}
-            </p>
-            <p className="text-xs text-muted-foreground mt-1">
-              {twoFactorEnabled
-                ? 'Hesabınız iki faktörlü doğrulama ile korunuyor'
-                : 'Hesap güvenliğinizi artırmak için 2FA aktifleştirin'}
-            </p>
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-foreground font-medium">
+                {twoFactorEnabled ? '2FA Aktif' : '2FA Pasif'}
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                {twoFactorEnabled
+                  ? 'Hesabınız iki faktörlü doğrulama ile korunuyor'
+                  : 'Hesap güvenliğinizi artırmak için 2FA aktifleştirin'}
+              </p>
+            </div>
+            {twoFactorEnabled ? (
+              <button
+                onClick={() => setShowDisable(true)}
+                className="rounded-lg px-4 py-2 text-sm font-medium transition-colors bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-900/30 dark:text-red-400"
+              >
+                Devre Dışı Bırak
+              </button>
+            ) : (
+              <button
+                onClick={() => setShowSetup2FA(true)}
+                className="rounded-lg px-4 py-2 text-sm font-medium transition-colors bg-primary text-primary-foreground hover:bg-primary/90"
+              >
+                İki Faktörlü Doğrulamayı Etkinleştir
+              </button>
+            )}
           </div>
-          <button
-            onClick={handleToggle2FA}
-            className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
-              twoFactorEnabled
-                ? 'bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-900/30 dark:text-red-400'
-                : 'bg-primary text-primary-foreground hover:bg-primary/90'
-            }`}
-          >
-            {twoFactorEnabled ? 'Deaktif Et' : 'Aktifleştir'}
-          </button>
+
+          {showDisable && (
+            <div className="rounded-lg border border-border p-4 space-y-3">
+              <p className="text-sm font-medium">2FA Devre Dışı Bırakma</p>
+              <p className="text-xs text-muted-foreground">Authenticator uygulamanızdaki 6 haneli kodu girin:</p>
+              <input
+                value={disableCode}
+                onChange={(e) => setDisableCode(e.target.value)}
+                placeholder="123456"
+                maxLength={6}
+                className="w-full rounded-lg border border-input bg-background px-3 py-2 text-center text-lg font-mono tracking-widest outline-none focus:ring-2 focus:ring-ring"
+              />
+              <div className="flex gap-2">
+                <button
+                  onClick={handleDisable2FA}
+                  disabled={disableCode.length !== 6 || disable2FA.isPending}
+                  className="rounded-lg bg-destructive px-4 py-2 text-sm font-medium text-destructive-foreground hover:bg-destructive/90 disabled:opacity-50"
+                >
+                  Devre Dışı Bırak
+                </button>
+                <button
+                  onClick={() => { setShowDisable(false); setDisableCode(''); }}
+                  className="rounded-lg border border-border px-4 py-2 text-sm hover:bg-muted"
+                >
+                  İptal
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
+
+      <TwoFactorSetupModal
+        open={showSetup2FA}
+        onClose={() => setShowSetup2FA(false)}
+        onSuccess={() => setTwoFactorEnabled(true)}
+      />
     </div>
   );
 }
