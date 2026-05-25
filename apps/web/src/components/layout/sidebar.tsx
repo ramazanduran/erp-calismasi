@@ -19,6 +19,7 @@ const navigation = [
     icon: DollarSign,
     children: [
       { label: 'Genel Bakış', href: '/finance' },
+      { label: 'Hesaplar', href: '/finance/accounts' },
       { label: 'Faturalar', href: '/finance/invoices' },
       { label: 'Banka Hesapları', href: '/finance/bank-accounts' },
       { label: 'Raporlar', href: '/finance/reports' },
@@ -42,6 +43,7 @@ const navigation = [
     children: [
       { label: 'Müşteriler', href: '/sales/customers' },
       { label: 'Siparişler', href: '/sales/orders' },
+      { label: 'Faturalar', href: '/sales/invoices' },
       { label: 'Teklifler', href: '/sales/quotes' },
       { label: 'Fırsatlar', href: '/sales/opportunities' },
     ],

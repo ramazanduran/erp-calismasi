@@ -15,6 +15,10 @@ import { FilesModule } from './modules/files/files.module';
 import { AuditModule } from './modules/audit/audit.module';
 import { SearchModule } from './modules/search/search.module';
 import { WebsocketModule } from './websocket/websocket.module';
+import { SalesModule } from './modules/sales/sales.module';
+import { InventoryModule } from './modules/inventory/inventory.module';
+import { FinanceModule } from './modules/finance/finance.module';
+import { HrModule } from './modules/hr/hr.module';
 
 @Module({
   imports: [
@@ -58,6 +62,12 @@ import { WebsocketModule } from './websocket/websocket.module';
     FilesModule,
     AuditModule,
     SearchModule,
+
+    // Business modules - Faz 2
+    SalesModule,
+    InventoryModule,
+    FinanceModule,
+    HrModule,
   ],
 })
 export class AppModule {}
