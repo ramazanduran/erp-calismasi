@@ -5,14 +5,16 @@ import { ConfigService } from '@nestjs/config';
 import * as cookieParser from 'cookie-parser';
 import * as compression from 'compression';
 import helmet from 'helmet';
+import { WinstonModule } from 'nest-winston';
 import { AppModule } from './app.module';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { TransformInterceptor } from './common/interceptors/transform.interceptor';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
+import { winstonConfig } from './common/logger/winston.config';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
-    logger: ['error', 'warn', 'log', 'debug'],
+    logger: WinstonModule.createLogger(winstonConfig),
   });
 
   const configService = app.get(ConfigService);
@@ -52,17 +54,22 @@ async function bootstrap() {
   if (configService.get('NODE_ENV') !== 'production') {
     const config = new DocumentBuilder()
       .setTitle('ERP System API')
-      .setDescription('Evrensel Dinamik ERP Sistemi REST API')
+      .setDescription('Evrensel ERP Sistemi REST API')
       .setVersion('1.0')
       .addBearerAuth()
-      .addTag('auth', 'Authentication & Authorization')
-      .addTag('users', 'User Management')
-      .addTag('organizations', 'Organization Management')
-      .addTag('roles', 'Roles & Permissions')
-      .addTag('entities', 'Dynamic Entity System')
-      .addTag('workflows', 'Workflow Engine')
-      .addTag('notifications', 'Notification System')
-      .addTag('files', 'File Management')
+      .addTag('Auth', 'Kimlik doğrulama')
+      .addTag('Users', 'Kullanıcı yönetimi')
+      .addTag('Organizations', 'Organizasyon yönetimi')
+      .addTag('Sales', 'Satış modülü')
+      .addTag('Inventory', 'Stok modülü')
+      .addTag('Finance', 'Finans modülü')
+      .addTag('HR', 'İnsan kaynakları')
+      .addTag('Purchasing', 'Satın alma')
+      .addTag('Accounting', 'Muhasebe')
+      .addTag('Tasks', 'Görev yönetimi')
+      .addTag('Analytics', 'Analitik')
+      .addTag('Health', 'Sistem sağlığı')
+      .addTag('CRM', 'Müşteri ilişkileri')
       .build();
     const document = SwaggerModule.createDocument(app, config);
     SwaggerModule.setup('api/docs', app, document, {

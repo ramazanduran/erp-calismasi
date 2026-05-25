@@ -1,7 +1,7 @@
 'use client';
 
 import { useParams } from 'next/navigation';
-import { ArrowLeft, CheckCircle } from 'lucide-react';
+import { ArrowLeft, CheckCircle, Download } from 'lucide-react';
 import Link from 'next/link';
 import { toast } from 'sonner';
 import { useInvoice, useUpdateInvoice } from '@/lib/api/hooks';
@@ -65,6 +65,24 @@ export default function InvoiceDetailPage() {
     }
   };
 
+  const handleDownloadPdf = async () => {
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/sales/invoices/${id}/pdf`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('access_token')}` },
+      });
+      if (!response.ok) throw new Error('PDF indirilemedi');
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `fatura-${inv.invoiceNumber as string}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      toast.error('PDF indirilemedi');
+    }
+  };
+
   const netAmount = Number(inv.netAmount ?? 0);
   const taxAmount = Number(inv.taxAmount ?? 0);
   const totalAmount = Number(inv.totalAmount ?? netAmount + taxAmount);
@@ -88,16 +106,25 @@ export default function InvoiceDetailPage() {
           </span>
         </div>
 
-        {(currentStatus === 'sent' || currentStatus === 'overdue') && (
+        <div className="flex items-center gap-2">
           <button
-            onClick={handleMarkPaid}
-            disabled={updateInvoice.isPending}
-            className="flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50 transition-colors"
+            onClick={handleDownloadPdf}
+            className="flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm hover:bg-muted transition-colors"
           >
-            <CheckCircle className="h-4 w-4" />
-            Ödendi Olarak İşaretle
+            <Download className="h-4 w-4" />
+            PDF İndir
           </button>
-        )}
+          {(currentStatus === 'sent' || currentStatus === 'overdue') && (
+            <button
+              onClick={handleMarkPaid}
+              disabled={updateInvoice.isPending}
+              className="flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50 transition-colors"
+            >
+              <CheckCircle className="h-4 w-4" />
+              Ödendi Olarak İşaretle
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">

@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard, DollarSign, Package, ShoppingCart, Truck as PurchaseIcon,
   Factory, Users, Truck, BarChart3, FolderKanban, FileText, Bell, Settings,
-  ChevronDown, ChevronRight, X, GitBranch, CheckSquare, Calculator,
+  ChevronDown, ChevronRight, X, GitBranch, CheckSquare, Calculator, Target,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { AuthUser } from '@erp/shared-types';
@@ -96,6 +96,14 @@ const navigation = [
     children: [
       { label: 'Genel Bakış', href: '/analytics' },
       { label: 'Raporlar', href: '/analytics/reports' },
+    ],
+  },
+  {
+    id: 'crm',
+    label: 'CRM',
+    icon: Target,
+    children: [
+      { label: 'Leads', href: '/crm/leads' },
     ],
   },
   { id: 'tasks', label: 'Görevler', icon: CheckSquare, href: '/tasks' },

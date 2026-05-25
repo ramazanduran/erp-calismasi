@@ -6,11 +6,12 @@ import { OrdersController } from './orders.controller';
 import { OrdersService } from './orders.service';
 import { InvoicesController } from './invoices.controller';
 import { InvoicesService } from './invoices.service';
+import { PdfService } from './pdf.service';
 
 @Module({
   imports: [DatabaseModule],
   controllers: [CustomersController, OrdersController, InvoicesController],
-  providers: [CustomersService, OrdersService, InvoicesService],
-  exports: [CustomersService, OrdersService, InvoicesService],
+  providers: [CustomersService, OrdersService, InvoicesService, PdfService],
+  exports: [CustomersService, OrdersService, InvoicesService, PdfService],
 })
 export class SalesModule {}

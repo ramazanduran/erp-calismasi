@@ -26,6 +26,9 @@ import { PurchasingModule } from './modules/purchasing/purchasing.module';
 import { TasksModule } from './modules/tasks/tasks.module';
 import { ImportModule } from './modules/import/import.module';
 import { AccountingModule } from './modules/accounting/accounting.module';
+import { HealthModule } from './modules/health/health.module';
+import { CrmModule } from './modules/crm/crm.module';
+import { QueueModule } from './modules/queue/queue.module';
 
 @Module({
   imports: [
@@ -90,6 +93,11 @@ import { AccountingModule } from './modules/accounting/accounting.module';
 
     // Faz 7
     AccountingModule,
+
+    // Faz 8
+    HealthModule,
+    CrmModule,
+    QueueModule,
   ],
 })
 export class AppModule {}

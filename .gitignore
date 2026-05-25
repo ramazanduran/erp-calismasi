@@ -52,3 +52,10 @@ apps/api/prisma/dev.db-journal
 *.generated.ts
 src/graphql/generated
 apps/web/tsconfig.tsbuildinfo
+*.tsbuildinfo
+
+# API logs
+apps/api/logs/
+
+# API uploads
+apps/api/uploads/

@@ -52,6 +52,7 @@ model Organization {
   chartOfAccounts   ChartOfAccount[]
   journalEntries    JournalEntry[]
   performanceReviews PerformanceReview[]
+  leads             Lead[]
 
   @@map("organizations")
 }
@@ -833,4 +834,29 @@ model PerformanceReview {
 
   @@index([organizationId, employeeId])
   @@map("performance_reviews")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CRM MODULE
+// ─────────────────────────────────────────────────────────────────────────────
+model Lead {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  name           String   @db.VarChar(255)
+  email          String?  @db.VarChar(255)
+  phone          String?  @db.VarChar(20)
+  company        String?  @db.VarChar(255)
+  source         String?  @db.VarChar(50)
+  status         String   @default("new") @db.VarChar(20)
+  value          Decimal? @db.Decimal(15, 2)
+  notes          String?
+  assignedToId   String?  @map("assigned_to_id") @db.Uuid
+  createdById    String   @map("created_by_id") @db.Uuid
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@map("leads")
 }
