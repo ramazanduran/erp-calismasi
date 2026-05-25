@@ -17,3 +17,5 @@ export * from './use-workflows';
 export * from './use-audit-logs';
 export * from './use-purchasing';
 export * from './use-tasks';
+export * from './use-accounting';
+export * from './use-performance';

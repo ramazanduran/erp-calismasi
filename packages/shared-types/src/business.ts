@@ -237,6 +237,97 @@ export interface LeaveRequest {
   };
 }
 
+// ── ACCOUNTING MODULE ─────────────────────────────────────────────────────────
+
+export interface ChartOfAccount {
+  id: string;
+  code: string;
+  name: string;
+  type: 'asset' | 'liability' | 'equity' | 'revenue' | 'expense';
+  parentId?: string;
+  isActive: boolean;
+  children?: ChartOfAccount[];
+}
+
+export interface JournalLine {
+  id: string;
+  accountId: string;
+  debit: number;
+  credit: number;
+  description?: string;
+  account?: { code: string; name: string };
+}
+
+export interface JournalEntry {
+  id: string;
+  entryNumber: string;
+  date: string;
+  description: string;
+  reference?: string;
+  isPosted: boolean;
+  createdAt: string;
+  lines: JournalLine[];
+}
+
+export interface TrialBalanceLine {
+  code: string;
+  name: string;
+  type: string;
+  debit: number;
+  credit: number;
+}
+
+// ── PERFORMANCE MODULE ────────────────────────────────────────────────────────
+
+export interface PerformanceReview {
+  id: string;
+  employeeId: string;
+  reviewerId: string;
+  period: string;
+  score?: number;
+  ratings: Record<string, number>;
+  strengths?: string;
+  improvements?: string;
+  goals: unknown[];
+  status: 'draft' | 'submitted' | 'approved';
+  createdAt: string;
+  updatedAt: string;
+}
+
+// ── PURCHASING MODULE ─────────────────────────────────────────────────────────
+
+export interface Supplier {
+  id: string;
+  code: string;
+  name: string;
+  email?: string;
+  phone?: string;
+  paymentTerms: number;
+  currency: string;
+  balance: number;
+  status: string;
+}
+
+export interface PurchaseOrder {
+  id: string;
+  orderNumber: string;
+  supplierId: string;
+  status: string;
+  totalAmount: number;
+  expectedDate?: string;
+}
+
+// ── TASKS MODULE ──────────────────────────────────────────────────────────────
+
+export interface Task {
+  id: string;
+  title: string;
+  priority: 'low' | 'medium' | 'high' | 'urgent';
+  status: 'todo' | 'in_progress' | 'done' | 'cancelled';
+  assignedToId?: string;
+  dueDate?: string;
+}
+
 // ── PAGINATION HELPERS ────────────────────────────────────────────────────────
 
 export interface PaginationMeta {

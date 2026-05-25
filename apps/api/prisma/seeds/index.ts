@@ -4,24 +4,23 @@ import * as bcrypt from 'bcrypt';
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log('🌱 Seeding database...');
+  console.log('🌱 Seed data oluşturuluyor...');
 
-  // Create demo organization
+  // Organization
   const org = await prisma.organization.upsert({
-    where: { slug: 'demo' },
+    where: { slug: 'demo-sirket' },
     update: {},
     create: {
-      name: 'Demo Şirketi',
-      slug: 'demo',
-      plan: 'business',
+      name: 'Demo Şirket A.Ş.',
+      slug: 'demo-sirket',
+      plan: 'pro',
       locale: 'tr',
       timezone: 'Europe/Istanbul',
       currency: 'TRY',
     },
   });
-  console.log('✅ Organization created:', org.slug);
 
-  // Create roles
+  // Roles
   const adminRole = await prisma.role.upsert({
     where: { organizationId_slug: { organizationId: org.id, slug: 'admin' } },
     update: {},
@@ -29,7 +28,7 @@ async function main() {
       organizationId: org.id,
       name: 'Yönetici',
       slug: 'admin',
-      permissions: ['*'],
+      permissions: ['dashboard.read', 'sales.read', 'sales.write', 'sales.delete', 'inventory.read', 'inventory.write', 'inventory.delete', 'finance.read', 'finance.write', 'hr.read', 'hr.write', 'admin.users', 'admin.roles', 'admin.settings'],
       isSystem: true,
     },
   });
@@ -41,14 +40,13 @@ async function main() {
       organizationId: org.id,
       name: 'Üye',
       slug: 'member',
-      permissions: ['dashboard.read'],
+      permissions: ['dashboard.read', 'sales.read', 'inventory.read'],
       isSystem: true,
     },
   });
-  console.log('✅ Roles created');
 
-  // Create admin user
-  const passwordHash = await bcrypt.hash('Admin123!', 12);
+  // Admin user
+  const passwordHash = await bcrypt.hash('Admin1234!', 12);
   const adminUser = await prisma.user.upsert({
     where: { organizationId_email: { organizationId: org.id, email: 'admin@demo.com' } },
     update: {},
@@ -63,34 +61,91 @@ async function main() {
       emailVerifiedAt: new Date(),
     },
   });
-  console.log('✅ Admin user created:', adminUser.email);
 
-  // Create demo department
-  await prisma.department.upsert({
-    where: { organizationId_code: { organizationId: org.id, code: 'IT' } },
+  // Departments
+  const departments = await Promise.all([
+    prisma.department.upsert({ where: { organizationId_code: { organizationId: org.id, code: 'SATIS' } }, update: {}, create: { organizationId: org.id, name: 'Satış', code: 'SATIS' } }),
+    prisma.department.upsert({ where: { organizationId_code: { organizationId: org.id, code: 'IK' } }, update: {}, create: { organizationId: org.id, name: 'İnsan Kaynakları', code: 'IK' } }),
+    prisma.department.upsert({ where: { organizationId_code: { organizationId: org.id, code: 'MUHASEBE' } }, update: {}, create: { organizationId: org.id, name: 'Muhasebe', code: 'MUHASEBE' } }),
+    prisma.department.upsert({ where: { organizationId_code: { organizationId: org.id, code: 'DEPO' } }, update: {}, create: { organizationId: org.id, name: 'Depo', code: 'DEPO' } }),
+  ]);
+
+  // Product Categories
+  const catElektronik = await prisma.productCategory.upsert({
+    where: { organizationId_slug: { organizationId: org.id, slug: 'elektronik' } },
     update: {},
-    create: {
-      organizationId: org.id,
-      name: 'Bilgi Teknolojileri',
-      code: 'IT',
-    },
+    create: { organizationId: org.id, name: 'Elektronik', slug: 'elektronik' },
   });
-  console.log('✅ Department created');
+  const catOfis = await prisma.productCategory.upsert({
+    where: { organizationId_slug: { organizationId: org.id, slug: 'ofis' } },
+    update: {},
+    create: { organizationId: org.id, name: 'Ofis Malzemeleri', slug: 'ofis' },
+  });
 
-  console.log('🎉 Seeding complete!');
-  console.log('');
-  console.log('📝 Demo credentials:');
-  console.log('   URL: http://localhost:3000');
-  console.log('   Email: admin@demo.com');
-  console.log('   Password: Admin123!');
-  console.log('   Organization: demo');
+  // Products
+  const products = await Promise.all([
+    prisma.product.upsert({ where: { organizationId_code: { organizationId: org.id, code: 'PRD-001' } }, update: {}, create: { organizationId: org.id, code: 'PRD-001', name: 'Laptop Pro 15"', unit: 'adet', purchasePrice: 15000, salePrice: 22000, vatRate: 20, minStock: 5, currentStock: 23, categoryId: catElektronik.id, isActive: true } }),
+    prisma.product.upsert({ where: { organizationId_code: { organizationId: org.id, code: 'PRD-002' } }, update: {}, create: { organizationId: org.id, code: 'PRD-002', name: 'Kablosuz Mouse', unit: 'adet', purchasePrice: 200, salePrice: 350, vatRate: 20, minStock: 20, currentStock: 45, categoryId: catElektronik.id, isActive: true } }),
+    prisma.product.upsert({ where: { organizationId_code: { organizationId: org.id, code: 'PRD-003' } }, update: {}, create: { organizationId: org.id, code: 'PRD-003', name: 'A4 Kağıt (500 yaprak)', unit: 'paket', purchasePrice: 80, salePrice: 120, vatRate: 8, minStock: 50, currentStock: 3, categoryId: catOfis.id, isActive: true } }),
+    prisma.product.upsert({ where: { organizationId_code: { organizationId: org.id, code: 'PRD-004' } }, update: {}, create: { organizationId: org.id, code: 'PRD-004', name: 'Monitör 27"', unit: 'adet', purchasePrice: 8000, salePrice: 12500, vatRate: 20, minStock: 3, currentStock: 8, categoryId: catElektronik.id, isActive: true } }),
+  ]);
+
+  // Customers
+  const customers = await Promise.all([
+    prisma.customer.upsert({ where: { organizationId_code: { organizationId: org.id, code: 'MUS-001' } }, update: {}, create: { organizationId: org.id, code: 'MUS-001', name: 'Acme Teknoloji A.Ş.', email: 'info@acme.com', phone: '02121234567', type: 'corporate', taxNumber: '1234567890', status: 'active', creditLimit: 500000 } }),
+    prisma.customer.upsert({ where: { organizationId_code: { organizationId: org.id, code: 'MUS-002' } }, update: {}, create: { organizationId: org.id, code: 'MUS-002', name: 'Beta Yazılım Ltd.', email: 'contact@beta.com', phone: '02129876543', type: 'corporate', status: 'active', creditLimit: 250000 } }),
+    prisma.customer.upsert({ where: { organizationId_code: { organizationId: org.id, code: 'MUS-003' } }, update: {}, create: { organizationId: org.id, code: 'MUS-003', name: 'Ahmet Yılmaz', email: 'ahmet@gmail.com', phone: '05301234567', type: 'individual', status: 'active', creditLimit: 50000 } }),
+  ]);
+
+  // Suppliers
+  const suppliers = await Promise.all([
+    prisma.supplier.upsert({ where: { organizationId_code: { organizationId: org.id, code: 'TED-001' } }, update: {}, create: { organizationId: org.id, code: 'TED-001', name: 'Delta Tedarik A.Ş.', email: 'info@delta.com', phone: '02161234567', paymentTerms: 30, currency: 'TRY', status: 'active' } }),
+    prisma.supplier.upsert({ where: { organizationId_code: { organizationId: org.id, code: 'TED-002' } }, update: {}, create: { organizationId: org.id, code: 'TED-002', name: 'Epsilon İthalat Ltd.', email: 'contact@epsilon.com', phone: '02129001122', paymentTerms: 60, currency: 'USD', status: 'active' } }),
+  ]);
+
+  // Employees
+  const employees = await Promise.all([
+    prisma.employee.upsert({ where: { organizationId_employeeNumber: { organizationId: org.id, employeeNumber: 'EMP-001' } }, update: {}, create: { organizationId: org.id, employeeNumber: 'EMP-001', firstName: 'Mehmet', lastName: 'Demir', email: 'mehmet@demo.com', position: 'Satış Müdürü', departmentId: departments[0].id, startDate: new Date('2022-01-15'), salary: 25000, salaryType: 'monthly', status: 'active' } }),
+    prisma.employee.upsert({ where: { organizationId_employeeNumber: { organizationId: org.id, employeeNumber: 'EMP-002' } }, update: {}, create: { organizationId: org.id, employeeNumber: 'EMP-002', firstName: 'Ayşe', lastName: 'Kaya', email: 'ayse@demo.com', position: 'İK Uzmanı', departmentId: departments[1].id, startDate: new Date('2021-06-01'), salary: 18000, salaryType: 'monthly', status: 'active' } }),
+    prisma.employee.upsert({ where: { organizationId_employeeNumber: { organizationId: org.id, employeeNumber: 'EMP-003' } }, update: {}, create: { organizationId: org.id, employeeNumber: 'EMP-003', firstName: 'Can', lastName: 'Öztürk', email: 'can@demo.com', position: 'Muhasebe Uzmanı', departmentId: departments[2].id, startDate: new Date('2023-03-01'), salary: 20000, salaryType: 'monthly', status: 'active' } }),
+  ]);
+
+  // Chart of Accounts (Hesap Planı - Tek Düzen)
+  const coaGroups = [
+    { code: '100', name: 'Kasa', type: 'asset' },
+    { code: '102', name: 'Bankalar', type: 'asset' },
+    { code: '120', name: 'Alıcılar', type: 'asset' },
+    { code: '153', name: 'Ticari Mallar', type: 'asset' },
+    { code: '320', name: 'Satıcılar', type: 'liability' },
+    { code: '391', name: 'Hesaplanan KDV', type: 'liability' },
+    { code: '500', name: 'Sermaye', type: 'equity' },
+    { code: '600', name: 'Yurt İçi Satışlar', type: 'revenue' },
+    { code: '620', name: 'Satılan Ticari Mallar Maliyeti', type: 'expense' },
+    { code: '770', name: 'Genel Yönetim Giderleri', type: 'expense' },
+  ];
+  for (const acc of coaGroups) {
+    await prisma.chartOfAccount.upsert({
+      where: { organizationId_code: { organizationId: org.id, code: acc.code } },
+      update: {},
+      create: { organizationId: org.id, ...acc },
+    });
+  }
+
+  // Notifications (sample)
+  await prisma.notification.createMany({
+    data: [
+      { organizationId: org.id, userId: adminUser.id, type: 'stock_alert', title: 'Düşük Stok Uyarısı', body: 'A4 Kağıt stoğu kritik seviyede (3 paket)', isRead: false },
+      { organizationId: org.id, userId: adminUser.id, type: 'invoice', title: 'Yeni Fatura', body: 'Acme Teknoloji faturası oluşturuldu', isRead: true },
+    ],
+    skipDuplicates: true,
+  });
+
+  console.log('✅ Seed data başarıyla oluşturuldu!');
+  console.log(`   Org: ${org.name} (slug: ${org.slug})`);
+  console.log(`   Admin: admin@demo.com / Admin1234!`);
+  console.log(`   ${products.length} ürün, ${customers.length} müşteri, ${suppliers.length} tedarikçi, ${employees.length} çalışan`);
 }
 
 main()
-  .catch((e) => {
-    console.error(e);
-    process.exit(1);
-  })
-  .finally(async () => {
-    await prisma.$disconnect();
-  });
+  .catch(console.error)
+  .finally(() => prisma.$disconnect());

@@ -25,6 +25,7 @@ import { SequenceModule } from './modules/sequences/sequence.module';
 import { PurchasingModule } from './modules/purchasing/purchasing.module';
 import { TasksModule } from './modules/tasks/tasks.module';
 import { ImportModule } from './modules/import/import.module';
+import { AccountingModule } from './modules/accounting/accounting.module';
 
 @Module({
   imports: [
@@ -86,6 +87,9 @@ import { ImportModule } from './modules/import/import.module';
     PurchasingModule,
     TasksModule,
     ImportModule,
+
+    // Faz 7
+    AccountingModule,
   ],
 })
 export class AppModule {}

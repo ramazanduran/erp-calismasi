@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard, DollarSign, Package, ShoppingCart, Truck as PurchaseIcon,
   Factory, Users, Truck, BarChart3, FolderKanban, FileText, Bell, Settings,
-  ChevronDown, ChevronRight, X, GitBranch, CheckSquare,
+  ChevronDown, ChevronRight, X, GitBranch, CheckSquare, Calculator,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { AuthUser } from '@erp/shared-types';
@@ -56,6 +56,16 @@ const navigation = [
       { label: 'Tedarikçiler', href: '/purchasing/suppliers' },
       { label: 'Siparişler', href: '/purchasing/orders' },
       { label: 'Talepler', href: '/purchasing/requests' },
+    ],
+  },
+  {
+    id: 'accounting',
+    label: 'Muhasebe',
+    icon: Calculator,
+    children: [
+      { label: 'Hesap Planı', href: '/accounting/accounts' },
+      { label: 'Yevmiye', href: '/accounting/journal' },
+      { label: 'Mizan', href: '/accounting/trial-balance' },
     ],
   },
   {

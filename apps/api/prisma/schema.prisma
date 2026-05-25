@@ -49,6 +49,9 @@ model Organization {
   purchaseOrders    PurchaseOrder[]
   tasks             Task[]
   sequences         Sequence[]
+  chartOfAccounts   ChartOfAccount[]
+  journalEntries    JournalEntry[]
+  performanceReviews PerformanceReview[]
 
   @@map("organizations")
 }
@@ -745,4 +748,89 @@ model File {
   @@index([organizationId])
   @@index([entityType, entityId])
   @@map("files")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ACCOUNTING (Muhasebe)
+// ─────────────────────────────────────────────────────────────────────────────
+model ChartOfAccount {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  code           String   @db.VarChar(20)
+  name           String   @db.VarChar(255)
+  type           String   @db.VarChar(20) // asset, liability, equity, revenue, expense
+  parentId       String?  @map("parent_id") @db.Uuid
+  isActive       Boolean  @default(true) @map("is_active")
+  description    String?
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  organization Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  parent       ChartOfAccount?  @relation("AccountHierarchy", fields: [parentId], references: [id])
+  children     ChartOfAccount[] @relation("AccountHierarchy")
+  journalLines JournalLine[]
+
+  @@unique([organizationId, code])
+  @@index([organizationId])
+  @@map("chart_of_accounts")
+}
+
+model JournalEntry {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  entryNumber    String   @map("entry_number") @db.VarChar(50)
+  date           DateTime @db.Timestamptz
+  description    String
+  reference      String?  @db.VarChar(100)
+  entityType     String?  @map("entity_type") @db.VarChar(50)
+  entityId       String?  @map("entity_id") @db.Uuid
+  isPosted       Boolean  @default(false) @map("is_posted")
+  createdById    String   @map("created_by_id") @db.Uuid
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  organization Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  lines        JournalLine[]
+
+  @@unique([organizationId, entryNumber])
+  @@index([organizationId])
+  @@map("journal_entries")
+}
+
+model JournalLine {
+  id             String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  journalEntryId String  @map("journal_entry_id") @db.Uuid
+  accountId      String  @map("account_id") @db.Uuid
+  debit          Decimal @default(0) @db.Decimal(15, 2)
+  credit         Decimal @default(0) @db.Decimal(15, 2)
+  description    String?
+
+  journalEntry JournalEntry   @relation(fields: [journalEntryId], references: [id], onDelete: Cascade)
+  account      ChartOfAccount @relation(fields: [accountId], references: [id])
+
+  @@index([journalEntryId])
+  @@index([accountId])
+  @@map("journal_lines")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PERFORMANCE REVIEW
+// ─────────────────────────────────────────────────────────────────────────────
+model PerformanceReview {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  employeeId     String   @map("employee_id") @db.Uuid
+  reviewerId     String   @map("reviewer_id") @db.Uuid
+  period         String   @db.VarChar(20) // "2024-Q1", "2024-H1", "2024"
+  score          Decimal? @db.Decimal(4, 2) // 0-100
+  ratings        Json     @default("{}") // { leadership: 4, technical: 5, ... }
+  strengths      String?
+  improvements   String?
+  goals          Json     @default("[]")
+  status         String   @default("draft") @db.VarChar(20) // draft, submitted, approved
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, employeeId])
+  @@map("performance_reviews")
 }
