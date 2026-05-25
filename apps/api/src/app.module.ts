@@ -20,6 +20,7 @@ import { InventoryModule } from './modules/inventory/inventory.module';
 import { FinanceModule } from './modules/finance/finance.module';
 import { HrModule } from './modules/hr/hr.module';
 import { AnalyticsModule } from './modules/analytics/analytics.module';
+import { DepartmentsModule } from './modules/departments/departments.module';
 
 @Module({
   imports: [
@@ -72,6 +73,9 @@ import { AnalyticsModule } from './modules/analytics/analytics.module';
 
     // Analytics - Faz 4
     AnalyticsModule,
+
+    // Departments - Faz 5
+    DepartmentsModule,
   ],
 })
 export class AppModule {}

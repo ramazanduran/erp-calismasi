@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard, DollarSign, Package, ShoppingCart, Truck as PurchaseIcon,
   Factory, Users, Truck, BarChart3, FolderKanban, FileText, Bell, Settings,
-  ChevronDown, ChevronRight, X,
+  ChevronDown, ChevronRight, X, GitBranch,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { AuthUser } from '@erp/shared-types';
@@ -65,6 +65,7 @@ const navigation = [
     children: [
       { label: 'Personeller', href: '/hr/employees' },
       { label: 'İzinler', href: '/hr/leaves' },
+      { label: 'Takvim', href: '/hr/calendar' },
       { label: 'Bordro', href: '/hr/payroll' },
       { label: 'Performans', href: '/hr/performance' },
     ],
@@ -87,6 +88,7 @@ const navigation = [
       { label: 'Raporlar', href: '/analytics/reports' },
     ],
   },
+  { id: 'workflows', label: 'İş Akışları', icon: GitBranch, href: '/workflows' },
   { id: 'projects', label: 'Projeler', icon: FolderKanban, href: '/projects' },
   { id: 'documents', label: 'Dokümanlar', icon: FileText, href: '/documents' },
   { id: 'notifications', label: 'Bildirimler', icon: Bell, href: '/notifications' },
@@ -250,6 +252,9 @@ export function Sidebar({ collapsed, mobileOpen, onMobileClose, user: _user }: S
                 { label: 'Profil', href: '/settings/profile' },
                 { label: 'Organizasyon', href: '/settings/organization' },
                 { label: 'Kullanıcılar', href: '/settings/admin/users' },
+                { label: 'Roller', href: '/settings/admin/roles' },
+                { label: 'Departmanlar', href: '/settings/admin/departments' },
+                { label: 'Audit Loglar', href: '/settings/admin/audit-logs' },
               ].map((child) => (
                 <Link
                   key={child.href}

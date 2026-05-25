@@ -10,3 +10,8 @@ export * from './use-employees';
 export * from './use-leaves';
 export * from './use-analytics';
 export * from './use-notifications';
+export * from './use-users';
+export * from './use-roles';
+export * from './use-departments';
+export * from './use-workflows';
+export * from './use-audit-logs';
