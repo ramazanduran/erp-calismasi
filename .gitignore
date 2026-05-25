@@ -51,3 +51,4 @@ apps/api/prisma/dev.db-journal
 # Generated
 *.generated.ts
 src/graphql/generated
+apps/web/tsconfig.tsbuildinfo
