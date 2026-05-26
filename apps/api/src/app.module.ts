@@ -40,6 +40,11 @@ import { AssetsModule } from './modules/assets/assets.module';
 import { LogisticsModule } from './modules/logistics/logistics.module';
 import { DocumentTemplatesModule } from './modules/document-templates/document-templates.module';
 import { CustomReportsModule } from './modules/custom-reports/custom-reports.module';
+import { QualityControlModule } from './modules/quality-control/quality-control.module';
+import { RecruitmentModule } from './modules/recruitment/recruitment.module';
+import { TrainingModule } from './modules/training/training.module';
+import { ContractsModule } from './modules/contracts/contracts.module';
+import { MaintenanceModule } from './modules/maintenance/maintenance.module';
 
 @Module({
   imports: [
@@ -128,6 +133,13 @@ import { CustomReportsModule } from './modules/custom-reports/custom-reports.mod
     LogisticsModule,
     DocumentTemplatesModule,
     CustomReportsModule,
+
+    // Faz 13
+    QualityControlModule,
+    RecruitmentModule,
+    TrainingModule,
+    ContractsModule,
+    MaintenanceModule,
   ],
 })
 export class AppModule {}

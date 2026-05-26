@@ -7,7 +7,7 @@ import {
   LayoutDashboard, DollarSign, Package, ShoppingCart, Truck as PurchaseIcon,
   Factory, Users, Truck, BarChart3, FolderKanban, FileText, Bell, Settings,
   ChevronDown, ChevronRight, X, GitBranch, CheckSquare, Calculator, Target,
-  Layers,
+  Layers, ClipboardList, FileSignature, Wrench,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { AuthUser } from '@erp/shared-types';
@@ -80,6 +80,8 @@ const navigation = [
       { label: 'Takvim', href: '/hr/calendar' },
       { label: 'Bordro', href: '/hr/payroll' },
       { label: 'Performans', href: '/hr/performance' },
+      { label: 'İşe Alım', href: '/hr/recruitment' },
+      { label: 'Eğitim', href: '/hr/training' },
     ],
   },
   {
@@ -120,14 +122,9 @@ const navigation = [
     ],
   },
   { id: 'assets', label: 'Demirbaşlar', icon: Layers, href: '/assets' },
-  {
-    id: 'logistics',
-    label: 'Lojistik',
-    icon: Truck,
-    children: [
-      { label: 'Sevkiyatlar', href: '/logistics/shipments' },
-    ],
-  },
+  { id: 'quality-control', label: 'Kalite Kontrol', icon: ClipboardList, href: '/quality-control' },
+  { id: 'contracts', label: 'Kontratlar', icon: FileSignature, href: '/contracts' },
+  { id: 'maintenance', label: 'Bakım İstekleri', icon: Wrench, href: '/maintenance' },
   { id: 'tasks', label: 'Görevler', icon: CheckSquare, href: '/tasks' },
   { id: 'workflows', label: 'İş Akışları', icon: GitBranch, href: '/workflows' },
   { id: 'notifications', label: 'Bildirimler', icon: Bell, href: '/notifications' },

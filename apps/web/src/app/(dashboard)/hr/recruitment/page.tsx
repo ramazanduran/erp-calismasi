@@ -1,0 +1,319 @@
+'use client';
+
+import { useState } from 'react';
+import { PlusCircle, Users, Briefcase, TrendingUp, UserCheck, ChevronRight } from 'lucide-react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { api } from '@/lib/api/client';
+import { cn } from '@/lib/utils';
+
+const STAGE_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
+  applied:    { label: 'Başvurdu',    color: 'text-gray-600',   bg: 'bg-gray-100' },
+  screening:  { label: 'Ön Eleme',    color: 'text-blue-600',   bg: 'bg-blue-100' },
+  interview:  { label: 'Mülakat',     color: 'text-purple-600', bg: 'bg-purple-100' },
+  technical:  { label: 'Teknik',      color: 'text-yellow-600', bg: 'bg-yellow-100' },
+  offer:      { label: 'Teklif',      color: 'text-orange-600', bg: 'bg-orange-100' },
+  hired:      { label: 'İşe Alındı',  color: 'text-green-600',  bg: 'bg-green-100' },
+  rejected:   { label: 'Reddedildi',  color: 'text-red-600',    bg: 'bg-red-100' },
+};
+
+const STATUS_CONFIG: Record<string, { label: string; color: string }> = {
+  draft:  { label: 'Taslak',   color: 'text-gray-500' },
+  open:   { label: 'Açık',     color: 'text-green-600' },
+  paused: { label: 'Durduruldu', color: 'text-yellow-600' },
+  closed: { label: 'Kapandı',  color: 'text-gray-600' },
+  filled: { label: 'Dolduruldu', color: 'text-blue-600' },
+};
+
+interface JobPosting {
+  id: string;
+  title: string;
+  code?: string;
+  workType: string;
+  experienceLevel: string;
+  status: string;
+  headcount: number;
+  location?: string;
+  publishedAt?: string;
+  closingDate?: string;
+  department?: { name: string } | null;
+  _count?: { applications: number };
+}
+
+interface Stats {
+  totalPostings: number;
+  openPostings: number;
+  totalCandidates: number;
+  totalApplications: number;
+  hired: number;
+  conversionRate: number;
+  byStage: Record<string, number>;
+}
+
+interface Pipeline {
+  applied: any[];
+  screening: any[];
+  interview: any[];
+  technical: any[];
+  offer: any[];
+  hired: any[];
+  rejected: any[];
+}
+
+function NewPostingModal({ onClose, onSave }: { onClose: () => void; onSave: (d: any) => void }) {
+  const [form, setForm] = useState({
+    title: '', workType: 'full_time', experienceLevel: 'mid',
+    headcount: '1', location: '', description: '', status: 'open',
+  });
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+      <div className="bg-card rounded-xl shadow-xl w-full max-w-lg p-6">
+        <h2 className="text-lg font-semibold mb-4">Yeni İş İlanı</h2>
+        <form onSubmit={(e) => { e.preventDefault(); onSave({ ...form, headcount: +form.headcount }); }} className="space-y-3">
+          <div>
+            <label className="text-sm font-medium">Pozisyon Adı *</label>
+            <input className="w-full mt-1 rounded border border-border bg-background px-3 py-2 text-sm" required value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-sm font-medium">Çalışma Tipi</label>
+              <select className="w-full mt-1 rounded border border-border bg-background px-3 py-2 text-sm" value={form.workType} onChange={(e) => setForm({ ...form, workType: e.target.value })}>
+                <option value="full_time">Tam Zamanlı</option>
+                <option value="part_time">Yarı Zamanlı</option>
+                <option value="contract">Sözleşmeli</option>
+                <option value="intern">Stajyer</option>
+              </select>
+            </div>
+            <div>
+              <label className="text-sm font-medium">Deneyim Seviyesi</label>
+              <select className="w-full mt-1 rounded border border-border bg-background px-3 py-2 text-sm" value={form.experienceLevel} onChange={(e) => setForm({ ...form, experienceLevel: e.target.value })}>
+                <option value="entry">Giriş Seviye</option>
+                <option value="mid">Orta Seviye</option>
+                <option value="senior">Kıdemli</option>
+                <option value="lead">Lider</option>
+                <option value="executive">Yönetici</option>
+              </select>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-sm font-medium">Kadro Sayısı</label>
+              <input type="number" min="1" className="w-full mt-1 rounded border border-border bg-background px-3 py-2 text-sm" value={form.headcount} onChange={(e) => setForm({ ...form, headcount: e.target.value })} />
+            </div>
+            <div>
+              <label className="text-sm font-medium">Lokasyon</label>
+              <input className="w-full mt-1 rounded border border-border bg-background px-3 py-2 text-sm" value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} />
+            </div>
+          </div>
+          <div>
+            <label className="text-sm font-medium">Açıklama</label>
+            <textarea className="w-full mt-1 rounded border border-border bg-background px-3 py-2 text-sm" rows={3} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+          </div>
+          <div className="flex justify-end gap-2 pt-2">
+            <button type="button" onClick={onClose} className="px-4 py-2 text-sm border border-border rounded-lg">İptal</button>
+            <button type="submit" className="px-4 py-2 text-sm bg-primary text-primary-foreground rounded-lg">Oluştur</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+function PipelineView({ postingId, onClose }: { postingId: string; onClose: () => void }) {
+  const qc = useQueryClient();
+  const { data, isLoading } = useQuery({
+    queryKey: ['recruitment', 'pipeline', postingId],
+    queryFn: () => api.get(`/api/v1/recruitment/postings/${postingId}/pipeline`),
+  });
+
+  const moveStage = useMutation({
+    mutationFn: ({ appId, stage }: { appId: string; stage: string }) =>
+      api.put(`/api/v1/recruitment/applications/${appId}`, { stage }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['recruitment', 'pipeline', postingId] }),
+  });
+
+  if (isLoading) return null;
+  const pipeline = data as Pipeline;
+  const activeStages = ['applied', 'screening', 'interview', 'technical', 'offer', 'hired'];
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+      <div className="bg-card rounded-xl shadow-xl w-full max-w-5xl p-6 max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold">Başvuru Hattı</h2>
+          <button onClick={onClose} className="text-sm px-3 py-1.5 border border-border rounded-lg">Kapat</button>
+        </div>
+        <div className="grid grid-cols-6 gap-3">
+          {activeStages.map((stage) => {
+            const sc = STAGE_CONFIG[stage];
+            const apps = pipeline[stage as keyof Pipeline] ?? [];
+            return (
+              <div key={stage} className="space-y-2">
+                <div className={cn('rounded px-2 py-1 text-xs font-medium', sc.bg, sc.color)}>
+                  {sc.label} ({apps.length})
+                </div>
+                {apps.map((app: any) => (
+                  <div key={app.id} className="rounded-lg border border-border bg-background p-2">
+                    <p className="text-xs font-medium">{app.candidate.firstName} {app.candidate.lastName}</p>
+                    <p className="text-xs text-muted-foreground truncate">{app.candidate.email}</p>
+                    <div className="flex gap-1 mt-1.5">
+                      {activeStages.indexOf(stage) < activeStages.length - 1 && (
+                        <button onClick={() => moveStage.mutate({ appId: app.id, stage: activeStages[activeStages.indexOf(stage) + 1] })}
+                          className="text-xs text-primary hover:underline flex items-center gap-0.5">
+                          <ChevronRight className="h-3 w-3" />İlerlet
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default function RecruitmentPage() {
+  const qc = useQueryClient();
+  const [statusFilter, setStatusFilter] = useState('');
+  const [showForm, setShowForm] = useState(false);
+  const [pipelineId, setPipelineId] = useState<string | null>(null);
+
+  const { data: statsData } = useQuery({
+    queryKey: ['recruitment', 'stats'],
+    queryFn: () => api.get('/api/v1/recruitment/stats'),
+  });
+
+  const { data: postingsData = [], isLoading } = useQuery({
+    queryKey: ['recruitment', 'postings', statusFilter],
+    queryFn: () => api.get('/api/v1/recruitment/postings', statusFilter ? { status: statusFilter } : undefined),
+  });
+
+  const create = useMutation({
+    mutationFn: (data: any) => api.post('/api/v1/recruitment/postings', data),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['recruitment'] }); setShowForm(false); },
+  });
+
+  const updateStatus = useMutation({
+    mutationFn: ({ id, status }: { id: string; status: string }) => api.put(`/api/v1/recruitment/postings/${id}`, { status }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['recruitment'] }),
+  });
+
+  const stats = statsData as Stats | undefined;
+  const postings = postingsData as JobPosting[];
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold">İşe Alım</h1>
+          <p className="text-muted-foreground mt-1">İş ilanları ve aday takibi</p>
+        </div>
+        <button onClick={() => setShowForm(true)} className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-lg text-sm font-medium">
+          <PlusCircle className="h-4 w-4" />Yeni İlan
+        </button>
+      </div>
+
+      {stats && (
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          {[
+            { label: 'Açık İlanlar', value: stats.openPostings, icon: Briefcase },
+            { label: 'Toplam Aday', value: stats.totalCandidates, icon: Users },
+            { label: 'Toplam Başvuru', value: stats.totalApplications, icon: TrendingUp },
+            { label: 'İşe Alınan', value: stats.hired, icon: UserCheck },
+          ].map((card) => (
+            <div key={card.label} className="rounded-xl border border-border bg-card p-4 shadow-sm">
+              <p className="text-xs text-muted-foreground">{card.label}</p>
+              <p className="text-2xl font-bold mt-0.5">{card.value}</p>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Stage Summary */}
+      {stats?.byStage && (
+        <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
+          <p className="text-sm font-medium mb-3">Başvuru Aşamaları</p>
+          <div className="flex gap-3 flex-wrap">
+            {Object.entries(STAGE_CONFIG).map(([stage, sc]) => {
+              const count = stats.byStage[stage] ?? 0;
+              if (!count) return null;
+              return (
+                <div key={stage} className={cn('flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full', sc.bg, sc.color)}>
+                  <span className="font-medium">{sc.label}</span>
+                  <span className="font-bold">{count}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Filters */}
+      <div className="flex gap-2 flex-wrap">
+        {[{ v: '', l: 'Tümü' }, ...Object.entries(STATUS_CONFIG).map(([v, c]) => ({ v, l: c.label }))].map((f) => (
+          <button key={f.v} onClick={() => setStatusFilter(f.v)}
+            className={cn('px-3 py-1.5 rounded-lg text-sm font-medium', statusFilter === f.v ? 'bg-primary text-primary-foreground' : 'border border-border hover:bg-muted')}>
+            {f.l}
+          </button>
+        ))}
+      </div>
+
+      {/* Postings Grid */}
+      {isLoading ? (
+        <div className="py-8 text-center text-muted-foreground">Yükleniyor...</div>
+      ) : postings.length === 0 ? (
+        <div className="rounded-xl border border-dashed border-border p-12 text-center">
+          <Briefcase className="h-10 w-10 mx-auto mb-3 text-muted-foreground" />
+          <p className="font-medium">İş ilanı bulunamadı</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {postings.map((posting) => {
+            const sc = STATUS_CONFIG[posting.status];
+            return (
+              <div key={posting.id} className="rounded-xl border border-border bg-card p-5 shadow-sm hover:shadow-md transition-shadow">
+                <div className="flex items-start justify-between mb-2">
+                  <span className={cn('text-xs font-medium', sc?.color)}>{sc?.label}</span>
+                  <span className="text-xs text-muted-foreground">{posting._count?.applications ?? 0} başvuru</span>
+                </div>
+                <h3 className="font-semibold mb-1">{posting.title}</h3>
+                <div className="flex flex-wrap gap-1 mb-3">
+                  {[
+                    posting.workType === 'full_time' ? 'Tam Zamanlı' : posting.workType,
+                    posting.experienceLevel,
+                    posting.location,
+                  ].filter(Boolean).map((tag, i) => (
+                    <span key={i} className="text-xs px-2 py-0.5 bg-muted rounded-full text-muted-foreground">{tag}</span>
+                  ))}
+                </div>
+                {posting.department && <p className="text-xs text-muted-foreground mb-3">{posting.department.name}</p>}
+                <div className="flex gap-2 pt-2 border-t border-border">
+                  <button onClick={() => setPipelineId(posting.id)} className="flex-1 text-xs py-1.5 rounded border border-border hover:bg-muted">
+                    Pipeline Görüntüle
+                  </button>
+                  {posting.status === 'draft' && (
+                    <button onClick={() => updateStatus.mutate({ id: posting.id, status: 'open' })}
+                      className="text-xs px-3 py-1.5 bg-primary text-primary-foreground rounded">
+                      Yayınla
+                    </button>
+                  )}
+                  {posting.status === 'open' && (
+                    <button onClick={() => updateStatus.mutate({ id: posting.id, status: 'paused' })}
+                      className="text-xs px-3 py-1.5 border border-border rounded hover:bg-muted">
+                      Durdur
+                    </button>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {showForm && <NewPostingModal onClose={() => setShowForm(false)} onSave={(d) => create.mutate(d)} />}
+      {pipelineId && <PipelineView postingId={pipelineId} onClose={() => setPipelineId(null)} />}
+    </div>
+  );
+}

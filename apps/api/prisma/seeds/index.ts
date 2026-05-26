@@ -337,6 +337,201 @@ async function main() {
     });
   }
 
+  // ── FAZ 13: Kalite Kontrol, İşe Alım, Eğitim, Kontrat, Bakım ─────────────
+
+  // Quality Inspection
+  const existingQI = await prisma.qualityInspection.findFirst({ where: { organizationId: org.id } });
+  if (!existingQI) {
+    await prisma.qualityInspection.create({
+      data: {
+        organizationId: org.id,
+        inspectionNumber: 'QI-SEED01',
+        type: 'incoming',
+        status: 'in_progress',
+        sampleSize: 10,
+        passCount: 7,
+        failCount: 1,
+        notes: 'Periyodik kalite kontrol muayenesi',
+        inspectorId: adminUser.id,
+        checkItems: {
+          create: [
+            { criterion: 'Ambalaj bütünlüğü', checkType: 'visual', expectedValue: 'Hasarsız', result: 'pass', actualValue: 'Hasarsız', sortOrder: 0 },
+            { criterion: 'Ürün boyutu', checkType: 'measurement', expectedValue: '100±2mm', result: 'pass', actualValue: '101mm', sortOrder: 1 },
+            { criterion: 'Renk uyumu', checkType: 'visual', expectedValue: 'RAL 9003', result: 'fail', actualValue: 'RAL 9002', sortOrder: 2 },
+            { criterion: 'İşlevsellik testi', checkType: 'functional', expectedValue: 'Çalışıyor', result: 'pass', sortOrder: 3 },
+          ],
+        },
+        defects: {
+          create: [
+            { title: 'Renk uyumsuzluğu', severity: 'minor', category: 'visual', quantity: 2, status: 'open' },
+          ],
+        },
+      },
+    });
+  }
+
+  // Job Posting
+  const existingJob = await prisma.jobPosting.findFirst({ where: { organizationId: org.id } });
+  if (!existingJob) {
+    const posting = await prisma.jobPosting.create({
+      data: {
+        organizationId: org.id,
+        createdById: adminUser.id,
+        departmentId: departments[0].id,
+        title: 'Kıdemli Yazılım Geliştirici',
+        workType: 'full_time',
+        experienceLevel: 'senior',
+        headcount: 2,
+        status: 'open',
+        location: 'İstanbul (Hibrit)',
+        description: 'Node.js ve React deneyimli yazılım geliştirici aranmaktadır.',
+        requirements: 'En az 5 yıl deneyim, TypeScript bilgisi',
+        salaryMin: 50000,
+        salaryMax: 80000,
+        currency: 'TRY',
+        publishedAt: new Date(),
+      },
+    });
+    // Create a candidate and application
+    const candidate = await prisma.candidate.create({
+      data: {
+        organizationId: org.id,
+        firstName: 'Mehmet',
+        lastName: 'Çelik',
+        email: 'mehmet.celik@example.com',
+        currentTitle: 'Yazılım Geliştirici',
+        currentCompany: 'Tech Corp',
+        yearsOfExp: 6,
+        source: 'linkedin',
+        skills: ['TypeScript', 'React', 'Node.js', 'PostgreSQL'],
+      },
+    });
+    await prisma.jobApplication.create({
+      data: { postingId: posting.id, candidateId: candidate.id, stage: 'interview', rating: 4 },
+    });
+  }
+
+  // Training Program
+  const existingTraining = await prisma.trainingProgram.findFirst({ where: { organizationId: org.id } });
+  if (!existingTraining) {
+    await prisma.trainingProgram.create({
+      data: {
+        organizationId: org.id,
+        createdById: adminUser.id,
+        title: 'İş Güvenliği ve Acil Durum Prosedürleri',
+        category: 'safety',
+        format: 'classroom',
+        durationHours: 8,
+        isMandatory: true,
+        isActive: true,
+        provider: 'İç Eğitim',
+        enrollments: {
+          create: employees.slice(0, 3).map((emp) => ({
+            employeeId: emp.id,
+            status: 'enrolled',
+          })),
+        },
+      },
+    });
+    await prisma.trainingProgram.create({
+      data: {
+        organizationId: org.id,
+        createdById: adminUser.id,
+        title: 'Liderlik ve İletişim Becerileri',
+        category: 'leadership',
+        format: 'blended',
+        durationHours: 16,
+        isMandatory: false,
+        isActive: true,
+        cost: 2500,
+        provider: 'McKinsey Academy',
+      },
+    });
+  }
+
+  // Contract
+  const existingContract = await prisma.contract.findFirst({ where: { organizationId: org.id } });
+  if (!existingContract) {
+    await prisma.contract.create({
+      data: {
+        organizationId: org.id,
+        ownerId: adminUser.id,
+        customerId: customers[0].id,
+        contractNumber: 'CNT-SAL-2025-SEED1',
+        title: 'Yazılım Lisans Sözleşmesi',
+        type: 'service',
+        status: 'active',
+        partyName: customers[0].name,
+        startDate: new Date('2025-01-01'),
+        endDate: new Date('2025-12-31'),
+        value: 120000,
+        currency: 'TRY',
+        autoRenew: true,
+        renewalNoticeDays: 30,
+        paymentTerms: 'Aylık peşin',
+        signedAt: new Date('2024-12-15'),
+      },
+    });
+    await prisma.contract.create({
+      data: {
+        organizationId: org.id,
+        ownerId: adminUser.id,
+        supplierId: suppliers[0].id,
+        contractNumber: 'CNT-PUR-2025-SEED2',
+        title: 'Hammadde Tedarik Sözleşmesi',
+        type: 'purchase',
+        status: 'active',
+        partyName: suppliers[0].name,
+        startDate: new Date('2025-01-01'),
+        endDate: new Date('2025-06-30'),
+        value: 500000,
+        currency: 'TRY',
+        autoRenew: false,
+      },
+    });
+  }
+
+  // Maintenance Request
+  const existingMR = await prisma.maintenanceRequest.findFirst({ where: { organizationId: org.id } });
+  if (!existingMR) {
+    const mr = await prisma.maintenanceRequest.create({
+      data: {
+        organizationId: org.id,
+        requestedById: adminUser.id,
+        requestNumber: 'MNT-2025-SEED1',
+        title: 'Klima Bakımı - 3. Kat Ofisler',
+        category: 'hvac',
+        priority: 'medium',
+        status: 'open',
+        location: '3. Kat, Açık Ofis',
+        description: 'Klima filtreleri temizliği ve periyodik bakım yapılması gerekiyor.',
+        estimatedCost: 1500,
+      },
+    });
+    await prisma.maintenanceComment.create({
+      data: {
+        requestId: mr.id,
+        authorId: adminUser.id,
+        content: 'Servis talebi oluşturuldu, teknik ekip bilgilendirildi.',
+      },
+    });
+    await prisma.maintenanceRequest.create({
+      data: {
+        organizationId: org.id,
+        requestedById: adminUser.id,
+        requestNumber: 'MNT-2025-SEED2',
+        title: 'Sunucu Odası UPS Arızası',
+        category: 'it',
+        priority: 'critical',
+        status: 'in_progress',
+        location: 'Sunucu Odası, Bodrum Kat',
+        description: 'UPS sistemi alarm veriyor, acil müdahale gerekiyor.',
+        estimatedCost: 8000,
+        startedAt: new Date(),
+      },
+    });
+  }
+
   console.log('✅ Seed data başarıyla oluşturuldu!');
   console.log(`   Org: ${org.name} (slug: ${org.slug})`);
   console.log(`   Admin: admin@demo.com / Admin1234!`);
