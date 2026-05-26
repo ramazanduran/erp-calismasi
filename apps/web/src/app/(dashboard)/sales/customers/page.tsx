@@ -1,13 +1,14 @@
 'use client';
 
-import { useState } from 'react';
-import { Search, Plus, Building2, User, Pencil, Trash2, FileDown } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { Search, Plus, Building2, User, Pencil, Trash2, FileDown, Users, UserCheck, ShieldBan, TrendingUp } from 'lucide-react';
 import { toast } from 'sonner';
 import { useCustomers, useDeleteCustomer } from '@/lib/api/hooks';
 import { CustomerModal } from '@/components/modals/customer-modal';
 import { Pagination } from '@/components/ui/pagination';
 import { BulkActionsBar } from '@/components/ui/bulk-actions-bar';
 import { exportToExcel } from '@/lib/utils/excel-export';
+import { cn } from '@/lib/utils';
 
 type CustomerType = 'corporate' | 'individual';
 type CustomerStatus = 'active' | 'passive' | 'blocked';
@@ -59,6 +60,15 @@ export default function CustomersPage() {
   const customersData = customers as any;
   const customersList = customersData?.data ?? (Array.isArray(customers) ? customers : []);
   const totalPages = customersData?.meta?.totalPages || 1;
+
+  const customerStats = useMemo(() => {
+    const allCustomers = customersData?.allData ?? customersList;
+    const total = customersData?.meta?.total ?? customersList.length;
+    const active = (allCustomers as Record<string, unknown>[]).filter((c) => c.status === 'active').length;
+    const corporate = (allCustomers as Record<string, unknown>[]).filter((c) => c.type === 'corporate').length;
+    const blocked = (allCustomers as Record<string, unknown>[]).filter((c) => c.status === 'blocked').length;
+    return { total, active, corporate, blocked };
+  }, [customersList, customersData]);
 
   const toggleSelect = (id: string) => {
     setSelectedIds(prev => {
@@ -124,6 +134,27 @@ export default function CustomersPage() {
             Yeni Müşteri
           </button>
         </div>
+      </div>
+
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {[
+          { label: 'Toplam Müşteri', value: customerStats.total, icon: Users, color: 'text-blue-500', bg: 'bg-blue-50 dark:bg-blue-950' },
+          { label: 'Aktif', value: customerStats.active, icon: UserCheck, color: 'text-green-500', bg: 'bg-green-50 dark:bg-green-950' },
+          { label: 'Kurumsal', value: customerStats.corporate, icon: Building2, color: 'text-purple-500', bg: 'bg-purple-50 dark:bg-purple-950' },
+          { label: 'Bloke', value: customerStats.blocked, icon: ShieldBan, color: 'text-red-500', bg: 'bg-red-50 dark:bg-red-950' },
+        ].map((card) => (
+          <div key={card.label} className="rounded-xl border border-border bg-card p-4 shadow-sm">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-muted-foreground">{card.label}</p>
+                <p className="text-xl font-bold mt-0.5">{card.value}</p>
+              </div>
+              <div className={cn('p-2 rounded-lg', card.bg)}>
+                <card.icon className={cn('h-4 w-4', card.color)} />
+              </div>
+            </div>
+          </div>
+        ))}
       </div>
 
       <div className="flex flex-col sm:flex-row gap-3">

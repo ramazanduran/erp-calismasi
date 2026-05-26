@@ -1,11 +1,12 @@
 'use client';
 
-import { useState } from 'react';
-import { Search, Plus, KeyRound, ToggleLeft, ToggleRight, Pencil, Trash2, UserCircle } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { Search, Plus, KeyRound, ToggleLeft, ToggleRight, Pencil, Trash2, UserCircle, Users, UserCheck, UserX, Clock } from 'lucide-react';
 import { toast } from 'sonner';
 import { useUsers, useSetUserStatus, useDeleteUser, useResetUserPassword } from '@/lib/api/hooks/use-users';
 import { UserModal } from '@/components/modals/user-modal';
 import { Modal } from '@/components/modals/modal';
+import { cn } from '@/lib/utils';
 
 function SkeletonRows() {
   return (
@@ -38,6 +39,15 @@ export default function UsersAdminPage() {
 
   const usersData = (usersResp as Record<string, unknown>) ?? {};
   const users = Array.isArray(usersData?.data) ? usersData.data as Record<string, unknown>[] : [];
+
+  const userStats = useMemo(() => {
+    const total = users.length;
+    const active = users.filter((u) => u.status === 'active').length;
+    const inactive = users.filter((u) => u.status === 'inactive').length;
+    const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
+    const recentLogin = users.filter((u) => u.lastLoginAt && new Date(u.lastLoginAt as string).getTime() > thirtyDaysAgo).length;
+    return { total, active, inactive, recentLogin };
+  }, [users]);
 
   const handleToggleStatus = async (user: Record<string, unknown>) => {
     const newStatus = user.status === 'active' ? 'inactive' : 'active';
@@ -84,6 +94,27 @@ export default function UsersAdminPage() {
           <Plus className="h-4 w-4" />
           Yeni Kullanıcı
         </button>
+      </div>
+
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {[
+          { label: 'Toplam Kullanıcı', value: userStats.total, icon: Users, color: 'text-blue-500', bg: 'bg-blue-50 dark:bg-blue-950' },
+          { label: 'Aktif', value: userStats.active, icon: UserCheck, color: 'text-green-500', bg: 'bg-green-50 dark:bg-green-950' },
+          { label: 'Pasif', value: userStats.inactive, icon: UserX, color: 'text-gray-500', bg: 'bg-gray-50 dark:bg-gray-900' },
+          { label: 'Son 30 Gün Aktif', value: userStats.recentLogin, icon: Clock, color: 'text-purple-500', bg: 'bg-purple-50 dark:bg-purple-950' },
+        ].map((card) => (
+          <div key={card.label} className="rounded-xl border border-border bg-card p-4 shadow-sm">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-muted-foreground">{card.label}</p>
+                <p className="text-xl font-bold mt-0.5">{card.value}</p>
+              </div>
+              <div className={cn('p-2 rounded-lg', card.bg)}>
+                <card.icon className={cn('h-4 w-4', card.color)} />
+              </div>
+            </div>
+          </div>
+        ))}
       </div>
 
       <div className="flex flex-col sm:flex-row gap-3">

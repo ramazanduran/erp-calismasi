@@ -1,8 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useParams } from 'next/navigation';
-import { ArrowLeft, Pencil, Mail, Phone, Briefcase, Calendar, DollarSign, CheckCircle, XCircle, Clock } from 'lucide-react';
+import {
+  ArrowLeft, Pencil, Mail, Phone, Briefcase, Calendar,
+  DollarSign, CheckCircle, XCircle, Clock, FileText,
+  Users, TrendingUp, AlertCircle,
+} from 'lucide-react';
 import Link from 'next/link';
 import { useEmployee, useLeaves } from '@/lib/api/hooks';
 import { EmployeeModal } from '@/components/modals/employee-modal';
@@ -54,6 +58,31 @@ function InfoRow({ icon: Icon, label, value }: { icon: React.FC<{ className?: st
   );
 }
 
+/** Compute a human-readable duration between startDate and today in Turkish. */
+function computeWorkDuration(startDateStr: string | null | undefined): string {
+  if (!startDateStr) return '-';
+  const start = new Date(startDateStr);
+  const now = new Date();
+  if (isNaN(start.getTime())) return '-';
+
+  let years = now.getFullYear() - start.getFullYear();
+  let months = now.getMonth() - start.getMonth();
+
+  if (months < 0) {
+    years -= 1;
+    months += 12;
+  }
+
+  const parts: string[] = [];
+  if (years > 0) parts.push(`${years} yıl`);
+  if (months > 0) parts.push(`${months} ay`);
+  if (parts.length === 0) {
+    const days = Math.floor((now.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+    return `${days} gün`;
+  }
+  return parts.join(' ');
+}
+
 export default function EmployeeDetailPage() {
   const params = useParams();
   const id = params.id as string;
@@ -64,10 +93,28 @@ export default function EmployeeDetailPage() {
 
   const leavesList = Array.isArray(leaves) ? leaves : [];
 
+  // ── Leave summary stats ────────────────────────────────────────────────────
+  const leaveStats = useMemo(() => {
+    const total = leavesList.length;
+    const approved = leavesList.filter(
+      (l: Record<string, unknown>) => l.status === 'approved',
+    ).length;
+    const totalApprovedDays = leavesList
+      .filter((l: Record<string, unknown>) => l.status === 'approved')
+      .reduce((sum: number, l: Record<string, unknown>) => sum + (Number(l.days) || 0), 0);
+    const pending = leavesList.filter(
+      (l: Record<string, unknown>) => l.status === 'pending',
+    ).length;
+    return { total, approved, totalApprovedDays, pending };
+  }, [leavesList]);
+
   if (isLoading) {
     return (
       <div className="space-y-6 animate-pulse">
         <div className="h-8 bg-muted rounded w-1/3" />
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {[...Array(4)].map((_, i) => <div key={i} className="h-20 bg-muted rounded-lg" />)}
+        </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="h-48 bg-muted rounded-lg" />
           <div className="h-48 bg-muted rounded-lg" />
@@ -88,9 +135,11 @@ export default function EmployeeDetailPage() {
   }
 
   const e = employee as Record<string, unknown>;
+  const workDuration = computeWorkDuration(e.startDate as string | undefined);
 
   return (
     <div className="space-y-6">
+      {/* ── Header ─────────────────────────────────────────────────────────── */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Link
@@ -125,6 +174,56 @@ export default function EmployeeDetailPage() {
         </button>
       </div>
 
+      {/* ── Quick Stats Banner ──────────────────────────────────────────────── */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        {/* Çalışma Süresi */}
+        <div className="rounded-lg border border-border bg-card px-4 py-3 flex items-center gap-3">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900/30">
+            <TrendingUp className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-xs text-muted-foreground truncate">Çalışma Süresi</p>
+            <p className="text-sm font-semibold text-foreground truncate">{workDuration}</p>
+          </div>
+        </div>
+
+        {/* Pozisyon */}
+        <div className="rounded-lg border border-border bg-card px-4 py-3 flex items-center gap-3">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-purple-100 dark:bg-purple-900/30">
+            <Briefcase className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-xs text-muted-foreground truncate">Pozisyon</p>
+            <p className="text-sm font-semibold text-foreground truncate">{(e.position as string) ?? '-'}</p>
+          </div>
+        </div>
+
+        {/* Departman */}
+        <div className="rounded-lg border border-border bg-card px-4 py-3 flex items-center gap-3">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-indigo-100 dark:bg-indigo-900/30">
+            <Users className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-xs text-muted-foreground truncate">Departman</p>
+            <p className="text-sm font-semibold text-foreground truncate">{(e.departmentName as string) ?? '-'}</p>
+          </div>
+        </div>
+
+        {/* Durum */}
+        <div className="rounded-lg border border-border bg-card px-4 py-3 flex items-center gap-3">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-800">
+            <CheckCircle className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-xs text-muted-foreground truncate">Durum</p>
+            <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${EMP_STATUS_CLASSES[(e.status as EmployeeStatus)] ?? ''}`}>
+              {EMP_STATUS_LABELS[(e.status as EmployeeStatus)] ?? e.status as string}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* ── 2-column info grid ─────────────────────────────────────────────── */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="rounded-lg border border-border bg-card p-5">
           <h2 className="font-semibold text-foreground mb-3">Kişisel Bilgiler</h2>
@@ -145,6 +244,44 @@ export default function EmployeeDetailPage() {
         </div>
       </div>
 
+      {/* ── Leave Summary Stats ─────────────────────────────────────────────── */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {/* Toplam İzin Talebi */}
+        <div className="rounded-lg border border-border bg-card p-4">
+          <p className="text-xs text-muted-foreground mb-1">Toplam İzin Talebi</p>
+          <p className="text-2xl font-bold text-foreground">{leaveStats.total}</p>
+        </div>
+
+        {/* Onaylanan İzin */}
+        <div className="rounded-lg border border-border bg-card p-4">
+          <p className="text-xs text-muted-foreground mb-1">Onaylanan İzin</p>
+          <p className="text-2xl font-bold text-green-600 dark:text-green-400">{leaveStats.approved}</p>
+        </div>
+
+        {/* Toplam İzin Günü */}
+        <div className="rounded-lg border border-border bg-card p-4">
+          <p className="text-xs text-muted-foreground mb-1">Toplam İzin Günü</p>
+          <p className="text-2xl font-bold text-foreground">
+            {leaveStats.totalApprovedDays}
+            <span className="text-sm font-normal text-muted-foreground ml-1">gün</span>
+          </p>
+        </div>
+
+        {/* Bekleyen Talep */}
+        <div className="rounded-lg border border-border bg-card p-4">
+          <p className="text-xs text-muted-foreground mb-1">Bekleyen Talep</p>
+          <div className="flex items-center gap-2">
+            <p className={`text-2xl font-bold ${leaveStats.pending > 0 ? 'text-yellow-600 dark:text-yellow-400' : 'text-foreground'}`}>
+              {leaveStats.pending}
+            </p>
+            {leaveStats.pending > 0 && (
+              <AlertCircle className="h-5 w-5 text-yellow-500 dark:text-yellow-400" />
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* ── Leave Table ─────────────────────────────────────────────────────── */}
       <div className="rounded-lg border border-border bg-card overflow-hidden">
         <div className="p-4 border-b border-border">
           <h2 className="font-semibold text-foreground">İzin Talepleri</h2>
@@ -189,10 +326,36 @@ export default function EmployeeDetailPage() {
                   </tr>
                 ))}
               </tbody>
+              {leaveStats.totalApprovedDays > 0 && (
+                <tfoot>
+                  <tr className="border-t border-border bg-muted/30">
+                    <td className="px-4 py-2 text-xs font-medium text-muted-foreground" colSpan={3}>
+                      Onaylanan toplam izin günü
+                    </td>
+                    <td className="px-4 py-2 text-right text-sm font-bold text-green-600 dark:text-green-400">
+                      {leaveStats.totalApprovedDays} gün
+                    </td>
+                    <td />
+                  </tr>
+                </tfoot>
+              )}
             </table>
           </div>
         )}
       </div>
+
+      {/* ── Notes Card (shown only when e.notes is present) ─────────────────── */}
+      {e.notes && (
+        <div className="rounded-lg border border-border bg-card p-5">
+          <div className="flex items-center gap-2 mb-3">
+            <FileText className="h-4 w-4 text-muted-foreground" />
+            <h2 className="font-semibold text-foreground">Notlar</h2>
+          </div>
+          <p className="text-sm text-foreground whitespace-pre-wrap leading-relaxed">
+            {e.notes as string}
+          </p>
+        </div>
+      )}
 
       <EmployeeModal
         open={editOpen}

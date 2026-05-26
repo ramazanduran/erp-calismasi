@@ -1,8 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useParams } from 'next/navigation';
-import { ArrowLeft, Pencil, Building2, User, Mail, Phone, MapPin, CreditCard, TrendingUp } from 'lucide-react';
+import {
+  ArrowLeft, Pencil, Building2, User, Mail, Phone, MapPin,
+  CreditCard, TrendingUp, ShoppingCart, FileText, TrendingDown,
+} from 'lucide-react';
 import Link from 'next/link';
 import { useCustomer, useOrders, useInvoices } from '@/lib/api/hooks';
 import { CustomerModal } from '@/components/modals/customer-modal';
@@ -43,6 +46,30 @@ function InfoRow({ icon: Icon, label, value }: { icon: React.FC<{ className?: st
   );
 }
 
+function StatCard({
+  icon: Icon,
+  label,
+  value,
+  valueClassName,
+}: {
+  icon: React.FC<{ className?: string }>;
+  label: string;
+  value: string;
+  valueClassName?: string;
+}) {
+  return (
+    <div className="rounded-lg border border-border bg-card p-4 flex items-start gap-3">
+      <div className="h-9 w-9 rounded-md bg-primary/10 flex items-center justify-center shrink-0">
+        <Icon className="h-5 w-5 text-primary" />
+      </div>
+      <div>
+        <p className="text-xs text-muted-foreground">{label}</p>
+        <p className={`text-lg font-semibold mt-0.5 ${valueClassName ?? 'text-foreground'}`}>{value}</p>
+      </div>
+    </div>
+  );
+}
+
 export default function CustomerDetailPage() {
   const params = useParams();
   const id = params.id as string;
@@ -52,8 +79,15 @@ export default function CustomerDetailPage() {
   const { data: orders } = useOrders({ customerId: id });
   const { data: invoices } = useInvoices({ customerId: id });
 
-  const ordersList = Array.isArray(orders) ? orders.slice(0, 5) : [];
-  const invoicesList = Array.isArray(invoices) ? invoices.slice(0, 5) : [];
+  const allOrders = Array.isArray(orders) ? orders as Record<string, unknown>[] : [];
+  const allInvoices = Array.isArray(invoices) ? invoices as Record<string, unknown>[] : [];
+  const ordersList = allOrders.slice(0, 5);
+  const invoicesList = allInvoices.slice(0, 5);
+
+  const stats = useMemo(() => {
+    const totalSpend = allInvoices.reduce((sum, inv) => sum + Number(inv.totalAmount ?? 0), 0);
+    return { totalSpend };
+  }, [allInvoices]);
 
   if (customerLoading) {
     return (
@@ -82,8 +116,17 @@ export default function CustomerDetailPage() {
 
   const c = customer as Record<string, unknown>;
 
+  const balance = Number(c.balance ?? 0);
+  const creditLimit = Number(c.creditLimit ?? 0);
+  const usedCredit = Math.max(0, -balance);
+  const creditUsedPct = creditLimit > 0 ? Math.min(100, (usedCredit / creditLimit) * 100) : 0;
+
+  const fmtTRY = (n: number) =>
+    n.toLocaleString('tr-TR', { style: 'currency', currency: 'TRY' });
+
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Link
@@ -118,6 +161,32 @@ export default function CustomerDetailPage() {
         </button>
       </div>
 
+      {/* Financial Summary Stats Row */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <StatCard
+          icon={ShoppingCart}
+          label="Toplam Sipariş"
+          value={String(allOrders.length)}
+        />
+        <StatCard
+          icon={FileText}
+          label="Toplam Fatura"
+          value={String(allInvoices.length)}
+        />
+        <StatCard
+          icon={TrendingUp}
+          label="Toplam Harcama"
+          value={fmtTRY(stats.totalSpend)}
+        />
+        <StatCard
+          icon={TrendingDown}
+          label="Açık Bakiye"
+          value={fmtTRY(balance)}
+          valueClassName={balance < 0 ? 'text-red-600 dark:text-red-400' : 'text-foreground'}
+        />
+      </div>
+
+      {/* Info Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="rounded-lg border border-border bg-card p-5">
           <h2 className="font-semibold text-foreground mb-3">İletişim Bilgileri</h2>
@@ -132,18 +201,43 @@ export default function CustomerDetailPage() {
           <InfoRow
             icon={TrendingUp}
             label="Bakiye"
-            value={Number(c.balance ?? 0).toLocaleString('tr-TR', { style: 'currency', currency: 'TRY' })}
+            value={fmtTRY(balance)}
           />
           <InfoRow
             icon={CreditCard}
             label="Kredi Limiti"
-            value={Number(c.creditLimit ?? 0).toLocaleString('tr-TR', { style: 'currency', currency: 'TRY' })}
+            value={fmtTRY(creditLimit)}
           />
+          {/* Credit Limit Progress Bar */}
+          {creditLimit > 0 && (
+            <div className="mt-3">
+              <div className="flex items-center justify-between text-xs text-muted-foreground mb-1">
+                <span>Kullanılan Kredi</span>
+                <span>
+                  {fmtTRY(usedCredit)} / {fmtTRY(creditLimit)} ({creditUsedPct.toFixed(0)}%)
+                </span>
+              </div>
+              <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
+                <div
+                  className={`h-2 rounded-full transition-all ${
+                    creditUsedPct >= 90
+                      ? 'bg-red-500'
+                      : creditUsedPct >= 60
+                      ? 'bg-yellow-500'
+                      : 'bg-primary'
+                  }`}
+                  style={{ width: `${creditUsedPct}%` }}
+                />
+              </div>
+            </div>
+          )}
           {c.notes && <InfoRow icon={Building2} label="Notlar" value={c.notes as string} />}
         </div>
       </div>
 
+      {/* Recent Orders & Invoices */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Recent Orders */}
         <div className="rounded-lg border border-border bg-card overflow-hidden">
           <div className="p-4 border-b border-border">
             <h2 className="font-semibold text-foreground">Son Siparişler</h2>
@@ -151,24 +245,55 @@ export default function CustomerDetailPage() {
           {ordersList.length === 0 ? (
             <p className="text-center py-8 text-muted-foreground text-sm">Sipariş bulunamadı</p>
           ) : (
-            <table className="w-full text-sm">
-              <tbody>
-                {ordersList.map((order: Record<string, unknown>) => (
-                  <tr key={order.id as string} className="border-b border-border last:border-0 hover:bg-muted/30">
-                    <td className="px-4 py-2 font-mono text-xs text-primary">{order.orderNumber as string}</td>
-                    <td className="px-4 py-2 text-right text-foreground">
-                      {Number(order.netAmount ?? 0).toLocaleString('tr-TR', { style: 'currency', currency: 'TRY' })}
-                    </td>
-                    <td className="px-4 py-2 text-muted-foreground text-xs">
-                      {ORDER_STATUS_LABELS[order.status as string] ?? order.status as string}
-                    </td>
+            <>
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-border bg-muted/40">
+                    <th className="px-4 py-2 text-left text-xs font-medium text-muted-foreground">Sipariş No</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-muted-foreground">Tarih</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-muted-foreground">Durum</th>
+                    <th className="px-4 py-2 text-right text-xs font-medium text-muted-foreground">Tutar</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {ordersList.map((order: Record<string, unknown>) => (
+                    <tr key={order.id as string} className="border-b border-border last:border-0 hover:bg-muted/30">
+                      <td className="px-4 py-2 font-mono text-xs">
+                        <Link
+                          href={`/sales/orders/${order.id as string}`}
+                          className="text-primary hover:underline"
+                        >
+                          {order.orderNumber as string}
+                        </Link>
+                      </td>
+                      <td className="px-4 py-2 text-xs text-muted-foreground">
+                        {order.createdAt
+                          ? new Date(order.createdAt as string).toLocaleDateString('tr-TR')
+                          : '-'}
+                      </td>
+                      <td className="px-4 py-2 text-xs text-muted-foreground">
+                        {ORDER_STATUS_LABELS[order.status as string] ?? order.status as string}
+                      </td>
+                      <td className="px-4 py-2 text-right text-foreground text-xs">
+                        {fmtTRY(Number(order.netAmount ?? 0))}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <div className="px-4 py-3 border-t border-border">
+                <Link
+                  href={`/sales/orders?customerId=${id}`}
+                  className="text-xs text-primary hover:underline"
+                >
+                  Tümünü Gör →
+                </Link>
+              </div>
+            </>
           )}
         </div>
 
+        {/* Recent Invoices */}
         <div className="rounded-lg border border-border bg-card overflow-hidden">
           <div className="p-4 border-b border-border">
             <h2 className="font-semibold text-foreground">Son Faturalar</h2>
@@ -176,21 +301,51 @@ export default function CustomerDetailPage() {
           {invoicesList.length === 0 ? (
             <p className="text-center py-8 text-muted-foreground text-sm">Fatura bulunamadı</p>
           ) : (
-            <table className="w-full text-sm">
-              <tbody>
-                {invoicesList.map((invoice: Record<string, unknown>) => (
-                  <tr key={invoice.id as string} className="border-b border-border last:border-0 hover:bg-muted/30">
-                    <td className="px-4 py-2 font-mono text-xs text-primary">{invoice.invoiceNumber as string}</td>
-                    <td className="px-4 py-2 text-right text-foreground">
-                      {Number(invoice.totalAmount ?? 0).toLocaleString('tr-TR', { style: 'currency', currency: 'TRY' })}
-                    </td>
-                    <td className="px-4 py-2 text-muted-foreground text-xs">
-                      {INVOICE_STATUS_LABELS[invoice.status as string] ?? invoice.status as string}
-                    </td>
+            <>
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-border bg-muted/40">
+                    <th className="px-4 py-2 text-left text-xs font-medium text-muted-foreground">Fatura No</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-muted-foreground">Tarih</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-muted-foreground">Durum</th>
+                    <th className="px-4 py-2 text-right text-xs font-medium text-muted-foreground">Tutar</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {invoicesList.map((invoice: Record<string, unknown>) => (
+                    <tr key={invoice.id as string} className="border-b border-border last:border-0 hover:bg-muted/30">
+                      <td className="px-4 py-2 font-mono text-xs">
+                        <Link
+                          href={`/sales/invoices/${invoice.id as string}`}
+                          className="text-primary hover:underline"
+                        >
+                          {invoice.invoiceNumber as string}
+                        </Link>
+                      </td>
+                      <td className="px-4 py-2 text-xs text-muted-foreground">
+                        {invoice.issueDate
+                          ? new Date(invoice.issueDate as string).toLocaleDateString('tr-TR')
+                          : '-'}
+                      </td>
+                      <td className="px-4 py-2 text-xs text-muted-foreground">
+                        {INVOICE_STATUS_LABELS[invoice.status as string] ?? invoice.status as string}
+                      </td>
+                      <td className="px-4 py-2 text-right text-foreground text-xs">
+                        {fmtTRY(Number(invoice.totalAmount ?? 0))}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <div className="px-4 py-3 border-t border-border">
+                <Link
+                  href={`/sales/invoices?customerId=${id}`}
+                  className="text-xs text-primary hover:underline"
+                >
+                  Tümünü Gör →
+                </Link>
+              </div>
+            </>
           )}
         </div>
       </div>

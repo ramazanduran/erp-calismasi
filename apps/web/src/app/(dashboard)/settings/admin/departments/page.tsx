@@ -1,13 +1,14 @@
 'use client';
 
-import { useState } from 'react';
-import { Plus, Pencil, Trash2, Building2, ChevronRight } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { Plus, Pencil, Trash2, Building2, ChevronRight, Users, Layers } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { toast } from 'sonner';
 import { useDepartments, useCreateDepartment, useUpdateDepartment, useDeleteDepartment } from '@/lib/api/hooks/use-departments';
 import { Modal } from '@/components/modals/modal';
+import { cn } from '@/lib/utils';
 
 const schema = z.object({
   name: z.string().min(1, 'Departman adı gereklidir'),
@@ -163,6 +164,14 @@ export default function DepartmentsPage() {
   };
   flatten(departments);
 
+  const deptStats = useMemo(() => {
+    const total = allFlat.length;
+    const topLevel = departments.length;
+    const subDepts = total - topLevel;
+    const totalEmployees = allFlat.reduce((s, d) => s + (Number((d._count as Record<string, unknown>)?.users ?? 0)), 0);
+    return { total, topLevel, subDepts, totalEmployees };
+  }, [allFlat, departments]);
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -177,6 +186,27 @@ export default function DepartmentsPage() {
           <Plus className="h-4 w-4" />
           Yeni Departman
         </button>
+      </div>
+
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {[
+          { label: 'Toplam Departman', value: deptStats.total, icon: Building2, color: 'text-blue-500', bg: 'bg-blue-50 dark:bg-blue-950' },
+          { label: 'Ana Departman', value: deptStats.topLevel, icon: Layers, color: 'text-green-500', bg: 'bg-green-50 dark:bg-green-950' },
+          { label: 'Alt Departman', value: deptStats.subDepts, icon: ChevronRight, color: 'text-yellow-500', bg: 'bg-yellow-50 dark:bg-yellow-950' },
+          { label: 'Toplam Çalışan', value: deptStats.totalEmployees, icon: Users, color: 'text-purple-500', bg: 'bg-purple-50 dark:bg-purple-950' },
+        ].map((card) => (
+          <div key={card.label} className="rounded-xl border border-border bg-card p-4 shadow-sm">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-muted-foreground">{card.label}</p>
+                <p className="text-xl font-bold mt-0.5">{card.value}</p>
+              </div>
+              <div className={cn('p-2 rounded-lg', card.bg)}>
+                <card.icon className={cn('h-4 w-4', card.color)} />
+              </div>
+            </div>
+          </div>
+        ))}
       </div>
 
       <div className="rounded-lg border border-border bg-card overflow-hidden">
