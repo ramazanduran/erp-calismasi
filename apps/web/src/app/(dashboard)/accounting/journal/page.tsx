@@ -1,50 +1,332 @@
 'use client';
 
-import { useState } from 'react';
-import { Plus, BookOpen, CheckCircle, Clock } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import {
+  Plus, BookOpen, ChevronDown, ChevronRight, X, Trash2, AlertCircle, CheckCircle2,
+} from 'lucide-react';
 import { toast } from 'sonner';
-import { useJournalEntries, usePostJournalEntry } from '@/lib/api/hooks';
-import { JournalEntryModal } from '@/components/modals/journal-entry-modal';
+import { api } from '@/lib/api/client';
+
+interface Account {
+  id: string;
+  code: string;
+  name: string;
+  type: string;
+}
+
+interface JournalLine {
+  id?: string;
+  account: { code: string; name: string };
+  type: 'debit' | 'credit';
+  amount: number;
+}
+
+interface JournalEntry {
+  id: string;
+  entryNumber: string;
+  date: string;
+  description: string;
+  lines: JournalLine[];
+  createdAt: string;
+}
+
+interface JournalResponse {
+  data: JournalEntry[];
+  total: number;
+}
+
+interface NewLine {
+  accountId: string;
+  type: 'debit' | 'credit';
+  amount: string;
+}
+
+function formatAmount(n: number) {
+  return n.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' TL';
+}
+
+interface NewJournalModalProps {
+  open: boolean;
+  onClose: () => void;
+  accounts: Account[];
+}
+
+function NewJournalModal({ open, onClose, accounts }: NewJournalModalProps) {
+  const queryClient = useQueryClient();
+  const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
+  const [description, setDescription] = useState('');
+  const [lines, setLines] = useState<NewLine[]>([
+    { accountId: '', type: 'debit', amount: '' },
+    { accountId: '', type: 'credit', amount: '' },
+  ]);
+
+  const totalDebit = lines.reduce((s, l) => (l.type === 'debit' ? s + (parseFloat(l.amount) || 0) : s), 0);
+  const totalCredit = lines.reduce((s, l) => (l.type === 'credit' ? s + (parseFloat(l.amount) || 0) : s), 0);
+  const isBalanced = Math.abs(totalDebit - totalCredit) < 0.01 && totalDebit > 0;
+
+  const createMutation = useMutation({
+    mutationFn: (payload: unknown) => api.post('/api/v1/accounting/journal', payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['accounting', 'journal'] });
+      toast.success('Yevmiye kaydı oluşturuldu');
+      onClose();
+      setDate(new Date().toISOString().slice(0, 10));
+      setDescription('');
+      setLines([
+        { accountId: '', type: 'debit', amount: '' },
+        { accountId: '', type: 'credit', amount: '' },
+      ]);
+    },
+    onError: () => toast.error('Kayıt oluşturulurken hata oluştu'),
+  });
+
+  const handleAddLine = () => {
+    setLines((prev) => [...prev, { accountId: '', type: 'debit', amount: '' }]);
+  };
+
+  const handleRemoveLine = (idx: number) => {
+    if (lines.length <= 2) return;
+    setLines((prev) => prev.filter((_, i) => i !== idx));
+  };
+
+  const handleLineChange = (idx: number, field: keyof NewLine, value: string) => {
+    setLines((prev) => prev.map((l, i) => (i === idx ? { ...l, [field]: value } : l)));
+  };
+
+  const handleSubmit = () => {
+    if (!isBalanced) return;
+    createMutation.mutate({
+      date,
+      description,
+      lines: lines
+        .filter((l) => l.accountId && parseFloat(l.amount) > 0)
+        .map((l) => ({ accountId: l.accountId, type: l.type, amount: parseFloat(l.amount) })),
+    });
+  };
+
+  if (!open) return null;
+
+  const sortedAccounts = [...accounts].sort((a, b) => a.code.localeCompare(b.code));
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
+      <div className="absolute inset-0 bg-black/50" onClick={onClose} />
+      <div className="relative bg-card border border-border rounded-2xl shadow-2xl w-full max-w-2xl mx-4 flex flex-col max-h-[90vh]">
+        {/* Modal Header */}
+        <div className="flex items-center justify-between p-6 border-b border-border shrink-0">
+          <div>
+            <h2 className="text-lg font-bold">Yeni Yevmiye Kaydı</h2>
+            <p className="text-sm text-muted-foreground">Borç ve alacak kalemleri dengeli olmalıdır</p>
+          </div>
+          <button onClick={onClose} className="p-2 hover:bg-muted rounded-lg transition-colors">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        {/* Modal Body */}
+        <div className="overflow-y-auto p-6 space-y-5 flex-1">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium mb-1.5">Tarih *</label>
+              <input
+                type="date"
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+                className="w-full px-3 py-2 border border-border rounded-lg bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1.5">Açıklama *</label>
+              <input
+                type="text"
+                placeholder="Kayıt açıklaması..."
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                className="w-full px-3 py-2 border border-border rounded-lg bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+              />
+            </div>
+          </div>
+
+          {/* Lines */}
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <label className="text-sm font-medium">Yevmiye Kalemleri</label>
+              <button
+                onClick={handleAddLine}
+                className="flex items-center gap-1.5 text-xs font-medium text-primary hover:text-primary/80 transition-colors"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                Kalem Ekle
+              </button>
+            </div>
+
+            <div className="space-y-2">
+              {lines.map((line, idx) => (
+                <div key={idx} className="flex gap-2 items-start">
+                  <div className="flex-1 min-w-0">
+                    <select
+                      value={line.accountId}
+                      onChange={(e) => handleLineChange(idx, 'accountId', e.target.value)}
+                      className="w-full px-3 py-2 border border-border rounded-lg bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+                    >
+                      <option value="">— Hesap seçin —</option>
+                      {sortedAccounts.map((a) => (
+                        <option key={a.id} value={a.id}>
+                          {a.code} — {a.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="w-28 shrink-0">
+                    <select
+                      value={line.type}
+                      onChange={(e) => handleLineChange(idx, 'type', e.target.value)}
+                      className="w-full px-3 py-2 border border-border rounded-lg bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+                    >
+                      <option value="debit">Borç</option>
+                      <option value="credit">Alacak</option>
+                    </select>
+                  </div>
+                  <div className="w-32 shrink-0">
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      placeholder="0,00"
+                      value={line.amount}
+                      onChange={(e) => handleLineChange(idx, 'amount', e.target.value)}
+                      className="w-full px-3 py-2 border border-border rounded-lg bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 text-right"
+                    />
+                  </div>
+                  <button
+                    onClick={() => handleRemoveLine(idx)}
+                    disabled={lines.length <= 2}
+                    className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed shrink-0"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Running Totals */}
+          <div className={`rounded-xl border p-4 ${isBalanced ? 'border-green-200 bg-green-50 dark:border-green-900/50 dark:bg-green-900/10' : 'border-orange-200 bg-orange-50 dark:border-orange-900/50 dark:bg-orange-900/10'}`}>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4 text-sm">
+                <span>
+                  <span className="text-muted-foreground">Toplam Borç:</span>{' '}
+                  <span className="font-semibold text-blue-600 dark:text-blue-400">{formatAmount(totalDebit)}</span>
+                </span>
+                <span className="text-muted-foreground">|</span>
+                <span>
+                  <span className="text-muted-foreground">Toplam Alacak:</span>{' '}
+                  <span className="font-semibold text-red-600 dark:text-red-400">{formatAmount(totalCredit)}</span>
+                </span>
+              </div>
+              <div className="flex items-center gap-1.5 text-sm font-medium">
+                {isBalanced ? (
+                  <>
+                    <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-400" />
+                    <span className="text-green-600 dark:text-green-400">Dengeli</span>
+                  </>
+                ) : (
+                  <>
+                    <AlertCircle className="h-4 w-4 text-orange-600 dark:text-orange-400" />
+                    <span className="text-orange-600 dark:text-orange-400">
+                      Fark: {formatAmount(Math.abs(totalDebit - totalCredit))}
+                    </span>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Modal Footer */}
+        <div className="flex gap-3 p-6 border-t border-border shrink-0">
+          <button
+            onClick={onClose}
+            className="flex-1 px-4 py-2 border border-border rounded-lg text-sm font-medium hover:bg-muted transition-colors"
+          >
+            İptal
+          </button>
+          <button
+            onClick={handleSubmit}
+            disabled={!isBalanced || !description || !date || createMutation.isPending}
+            className="flex-1 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {createMutation.isPending ? 'Kaydediliyor...' : 'Kayıt Oluştur'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function JournalPage() {
   const [modalOpen, setModalOpen] = useState(false);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
-  const [postedFilter, setPostedFilter] = useState<string>('all');
+  const [search, setSearch] = useState('');
 
   const params: Record<string, unknown> = {};
   if (startDate) params.startDate = startDate;
   if (endDate) params.endDate = endDate;
-  if (postedFilter === 'posted') params.isPosted = true;
-  if (postedFilter === 'draft') params.isPosted = false;
 
-  const { data: entries, isLoading } = useJournalEntries(params);
-  const postEntry = usePostJournalEntry();
+  const { data: rawEntries, isLoading } = useQuery<JournalResponse | JournalEntry[]>({
+    queryKey: ['accounting', 'journal', params],
+    queryFn: () => api.get('/api/v1/accounting/journal', params),
+  });
 
-  const handlePost = async (id: string) => {
-    try {
-      await postEntry.mutateAsync(id);
-      toast.success('Kayıt işlendi');
-    } catch {
-      toast.error('İşlem başarısız');
-    }
+  const { data: rawAccounts } = useQuery<Account[]>({
+    queryKey: ['accounting', 'accounts'],
+    queryFn: () => api.get<Account[]>('/api/v1/accounting/accounts'),
+  });
+
+  const accounts: Account[] = Array.isArray(rawAccounts) ? rawAccounts : [];
+
+  const entries: JournalEntry[] = useMemo(() => {
+    if (!rawEntries) return [];
+    if (Array.isArray(rawEntries)) return rawEntries;
+    if ('data' in rawEntries && Array.isArray(rawEntries.data)) return rawEntries.data;
+    return [];
+  }, [rawEntries]);
+
+  const filteredEntries = useMemo(() => {
+    if (!search) return entries;
+    const q = search.toLowerCase();
+    return entries.filter(
+      (e) =>
+        e.entryNumber?.toLowerCase().includes(q) ||
+        e.description?.toLowerCase().includes(q)
+    );
+  }, [entries, search]);
+
+  const toggleRow = (id: string) => {
+    setExpandedId((prev) => (prev === id ? null : id));
   };
-
-  const list = Array.isArray(entries) ? entries : [];
 
   return (
     <div className="p-6 space-y-6">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <BookOpen className="h-6 w-6 text-primary" />
+          <div className="p-2.5 bg-primary/10 rounded-xl">
+            <BookOpen className="h-6 w-6 text-primary" />
+          </div>
           <div>
             <h1 className="text-2xl font-bold">Yevmiye Defteri</h1>
-            <p className="text-muted-foreground text-sm">Muhasebe yevmiye kayıtları</p>
+            <p className="text-muted-foreground text-sm">
+              {entries.length > 0 ? `${entries.length} kayıt` : 'Muhasebe yevmiye kayıtları'}
+            </p>
           </div>
         </div>
         <button
           onClick={() => setModalOpen(true)}
-          className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors"
+          className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors shadow-sm"
         >
           <Plus className="h-4 w-4" />
           Yeni Kayıt
@@ -54,7 +336,7 @@ export default function JournalPage() {
       {/* Filters */}
       <div className="flex flex-wrap gap-3">
         <div className="flex items-center gap-2">
-          <label className="text-sm text-muted-foreground">Başlangıç:</label>
+          <label className="text-sm font-medium text-muted-foreground whitespace-nowrap">Başlangıç:</label>
           <input
             type="date"
             value={startDate}
@@ -63,7 +345,7 @@ export default function JournalPage() {
           />
         </div>
         <div className="flex items-center gap-2">
-          <label className="text-sm text-muted-foreground">Bitiş:</label>
+          <label className="text-sm font-medium text-muted-foreground whitespace-nowrap">Bitiş:</label>
           <input
             type="date"
             value={endDate}
@@ -71,73 +353,157 @@ export default function JournalPage() {
             className="px-3 py-2 border border-border rounded-lg bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
           />
         </div>
-        <select
-          value={postedFilter}
-          onChange={(e) => setPostedFilter(e.target.value)}
-          className="px-3 py-2 border border-border rounded-lg bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
-        >
-          <option value="all">Tümü</option>
-          <option value="posted">İşlenmiş</option>
-          <option value="draft">Taslak</option>
-        </select>
+        <input
+          type="text"
+          placeholder="Fiş no veya açıklama ara..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="flex-1 min-w-48 px-3 py-2 border border-border rounded-lg bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+        />
+        {(startDate || endDate || search) && (
+          <button
+            onClick={() => { setStartDate(''); setEndDate(''); setSearch(''); }}
+            className="px-3 py-2 text-sm text-muted-foreground hover:text-foreground border border-border rounded-lg hover:bg-muted transition-colors"
+          >
+            Filtreleri Temizle
+          </button>
+        )}
       </div>
 
       {/* Table */}
       <div className="bg-card rounded-xl border border-border overflow-hidden">
         {isLoading ? (
-          <div className="p-8 text-center text-muted-foreground">Yükleniyor...</div>
-        ) : list.length === 0 ? (
-          <div className="p-8 text-center text-muted-foreground">Kayıt bulunamadı</div>
+          <div className="p-12 text-center">
+            <div className="inline-block h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent mb-3" />
+            <p className="text-muted-foreground text-sm">Kayıtlar yükleniyor...</p>
+          </div>
+        ) : filteredEntries.length === 0 ? (
+          <div className="p-12 text-center">
+            <BookOpen className="h-8 w-8 text-muted-foreground/40 mx-auto mb-3" />
+            <p className="text-muted-foreground text-sm">
+              {search || startDate || endDate ? 'Arama kriterlerine uygun kayıt bulunamadı' : 'Henüz yevmiye kaydı eklenmemiş'}
+            </p>
+          </div>
         ) : (
           <table className="w-full">
             <thead className="border-b border-border bg-muted/50">
               <tr>
-                <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wide">Kayıt No</th>
+                <th className="w-8 px-4 py-3" />
+                <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wide">Fiş No</th>
                 <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wide">Tarih</th>
                 <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wide">Açıklama</th>
-                <th className="text-right px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wide">Tutar</th>
-                <th className="text-center px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wide">Durum</th>
-                <th className="text-center px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wide">İşlem</th>
+                <th className="text-right px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wide">Borç Toplamı</th>
+                <th className="text-right px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wide">Alacak Toplamı</th>
+                <th className="text-center px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wide">Kalem Sayısı</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-border">
-              {list.map((entry: any) => {
-                const totalDebit = (entry.lines || []).reduce((s: number, l: any) => s + Number(l.debit), 0);
+            <tbody>
+              {filteredEntries.map((entry) => {
+                const lines = Array.isArray(entry.lines) ? entry.lines : [];
+                const totalDebit = lines
+                  .filter((l) => l.type === 'debit')
+                  .reduce((s, l) => s + Number(l.amount), 0);
+                const totalCredit = lines
+                  .filter((l) => l.type === 'credit')
+                  .reduce((s, l) => s + Number(l.amount), 0);
+                const isExpanded = expandedId === entry.id;
+                const isBalanced = Math.abs(totalDebit - totalCredit) < 0.01;
+
                 return (
-                  <tr key={entry.id} className="hover:bg-muted/30 transition-colors">
-                    <td className="px-4 py-3 text-sm font-mono font-medium">{entry.entryNumber}</td>
-                    <td className="px-4 py-3 text-sm text-muted-foreground">
-                      {new Date(entry.date).toLocaleDateString('tr-TR')}
-                    </td>
-                    <td className="px-4 py-3 text-sm">{entry.description}</td>
-                    <td className="px-4 py-3 text-sm text-right font-medium">
-                      {totalDebit.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} TRY
-                    </td>
-                    <td className="px-4 py-3 text-center">
-                      {entry.isPosted ? (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
-                          <CheckCircle className="h-3 w-3" />
-                          İşlenmiş
+                  <>
+                    <tr
+                      key={entry.id}
+                      onClick={() => toggleRow(entry.id)}
+                      className="border-b border-border hover:bg-muted/30 transition-colors cursor-pointer"
+                    >
+                      <td className="px-4 py-3 text-muted-foreground">
+                        {isExpanded ? (
+                          <ChevronDown className="h-4 w-4" />
+                        ) : (
+                          <ChevronRight className="h-4 w-4" />
+                        )}
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className="text-sm font-bold font-mono text-foreground">{entry.entryNumber}</span>
+                      </td>
+                      <td className="px-4 py-3 text-sm text-muted-foreground whitespace-nowrap">
+                        {new Date(entry.date).toLocaleDateString('tr-TR')}
+                      </td>
+                      <td className="px-4 py-3 text-sm">{entry.description}</td>
+                      <td className="px-4 py-3 text-sm text-right font-medium text-blue-600 dark:text-blue-400">
+                        {formatAmount(totalDebit)}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-right font-medium text-red-600 dark:text-red-400">
+                        {formatAmount(totalCredit)}
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${isBalanced ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' : 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400'}`}>
+                          {lines.length} kalem
                         </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400">
-                          <Clock className="h-3 w-3" />
-                          Taslak
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 text-center">
-                      {!entry.isPosted && (
-                        <button
-                          onClick={() => handlePost(entry.id)}
-                          disabled={postEntry.isPending}
-                          className="text-xs font-medium text-primary hover:underline disabled:opacity-50"
-                        >
-                          İşle
-                        </button>
-                      )}
-                    </td>
-                  </tr>
+                      </td>
+                    </tr>
+
+                    {/* Expanded Detail */}
+                    {isExpanded && (
+                      <tr key={`${entry.id}-detail`} className="bg-muted/20 border-b border-border">
+                        <td colSpan={7} className="px-8 py-4">
+                          <div className="rounded-lg border border-border overflow-hidden bg-card">
+                            <table className="w-full">
+                              <thead className="bg-muted/50 border-b border-border">
+                                <tr>
+                                  <th className="text-left px-4 py-2.5 text-xs font-medium text-muted-foreground uppercase tracking-wide">Hesap Kodu</th>
+                                  <th className="text-left px-4 py-2.5 text-xs font-medium text-muted-foreground uppercase tracking-wide">Hesap Adı</th>
+                                  <th className="text-right px-4 py-2.5 text-xs font-medium text-muted-foreground uppercase tracking-wide">Borç</th>
+                                  <th className="text-right px-4 py-2.5 text-xs font-medium text-muted-foreground uppercase tracking-wide">Alacak</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-border">
+                                {lines.map((line, idx) => (
+                                  <tr key={idx} className="hover:bg-muted/20">
+                                    <td className="px-4 py-2.5 text-sm font-mono font-medium text-muted-foreground">
+                                      {line.account?.code ?? '—'}
+                                    </td>
+                                    <td className="px-4 py-2.5 text-sm">{line.account?.name ?? '—'}</td>
+                                    <td className="px-4 py-2.5 text-sm text-right">
+                                      {line.type === 'debit' ? (
+                                        <span className="font-medium text-blue-600 dark:text-blue-400">
+                                          {formatAmount(Number(line.amount))}
+                                        </span>
+                                      ) : (
+                                        <span className="text-muted-foreground">—</span>
+                                      )}
+                                    </td>
+                                    <td className="px-4 py-2.5 text-sm text-right">
+                                      {line.type === 'credit' ? (
+                                        <span className="font-medium text-red-600 dark:text-red-400">
+                                          {formatAmount(Number(line.amount))}
+                                        </span>
+                                      ) : (
+                                        <span className="text-muted-foreground">—</span>
+                                      )}
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                              <tfoot className="border-t-2 border-border bg-muted/50">
+                                <tr>
+                                  <td colSpan={2} className="px-4 py-2.5 text-xs font-bold text-muted-foreground uppercase tracking-wide">
+                                    Toplam
+                                  </td>
+                                  <td className="px-4 py-2.5 text-sm font-bold text-right text-blue-600 dark:text-blue-400">
+                                    {formatAmount(totalDebit)}
+                                  </td>
+                                  <td className="px-4 py-2.5 text-sm font-bold text-right text-red-600 dark:text-red-400">
+                                    {formatAmount(totalCredit)}
+                                  </td>
+                                </tr>
+                              </tfoot>
+                            </table>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </>
                 );
               })}
             </tbody>
@@ -145,7 +511,28 @@ export default function JournalPage() {
         )}
       </div>
 
-      <JournalEntryModal open={modalOpen} onClose={() => setModalOpen(false)} />
+      {!isLoading && filteredEntries.length > 0 && (
+        <div className="flex items-center justify-between text-sm text-muted-foreground px-1">
+          <span>{filteredEntries.length} kayıt gösteriliyor</span>
+          <span>
+            Toplam:{' '}
+            <span className="font-medium text-foreground">
+              {formatAmount(
+                filteredEntries.reduce((s, e) => {
+                  const lines = Array.isArray(e.lines) ? e.lines : [];
+                  return s + lines.filter((l) => l.type === 'debit').reduce((ss, l) => ss + Number(l.amount), 0);
+                }, 0)
+              )}
+            </span>
+          </span>
+        </div>
+      )}
+
+      <NewJournalModal
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        accounts={accounts}
+      />
     </div>
   );
 }
