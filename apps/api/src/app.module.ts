@@ -45,6 +45,11 @@ import { RecruitmentModule } from './modules/recruitment/recruitment.module';
 import { TrainingModule } from './modules/training/training.module';
 import { ContractsModule } from './modules/contracts/contracts.module';
 import { MaintenanceModule } from './modules/maintenance/maintenance.module';
+import { ManufacturingModule } from './modules/manufacturing/manufacturing.module';
+import { BankReconciliationModule } from './modules/bank-reconciliation/bank-reconciliation.module';
+import { KpiModule } from './modules/kpi/kpi.module';
+import { CustomerPortalModule } from './modules/customer-portal/customer-portal.module';
+import { CalendarModule } from './modules/calendar/calendar.module';
 
 @Module({
   imports: [
@@ -140,6 +145,13 @@ import { MaintenanceModule } from './modules/maintenance/maintenance.module';
     TrainingModule,
     ContractsModule,
     MaintenanceModule,
+
+    // Faz 14
+    ManufacturingModule,
+    BankReconciliationModule,
+    KpiModule,
+    CustomerPortalModule,
+    CalendarModule,
   ],
 })
 export class AppModule {}

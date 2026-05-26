@@ -7,7 +7,7 @@ import {
   LayoutDashboard, DollarSign, Package, ShoppingCart, Truck as PurchaseIcon,
   Factory, Users, Truck, BarChart3, FolderKanban, FileText, Bell, Settings,
   ChevronDown, ChevronRight, X, GitBranch, CheckSquare, Calculator, Target,
-  Layers, ClipboardList, FileSignature, Wrench,
+  Layers, ClipboardList, FileSignature, Wrench, TrendingUp, CalendarDays, Cog,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { AuthUser } from '@erp/shared-types';
@@ -23,6 +23,7 @@ const navigation = [
       { label: 'Hesaplar', href: '/finance/accounts' },
       { label: 'Faturalar', href: '/finance/invoices' },
       { label: 'Banka Hesapları', href: '/finance/bank-accounts' },
+      { label: 'Banka Mutabakatı', href: '/finance/bank-reconciliation' },
       { label: 'Raporlar', href: '/finance/reports' },
     ],
   },
@@ -125,6 +126,19 @@ const navigation = [
   { id: 'quality-control', label: 'Kalite Kontrol', icon: ClipboardList, href: '/quality-control' },
   { id: 'contracts', label: 'Kontratlar', icon: FileSignature, href: '/contracts' },
   { id: 'maintenance', label: 'Bakım İstekleri', icon: Wrench, href: '/maintenance' },
+  {
+    id: 'manufacturing',
+    label: 'Üretim',
+    icon: Cog,
+    children: [
+      { label: 'Genel Bakış', href: '/manufacturing' },
+      { label: 'Üretim Emirleri', href: '/manufacturing?tab=orders' },
+      { label: 'Ürün Reçeteleri', href: '/manufacturing?tab=bom' },
+      { label: 'İş Merkezleri', href: '/manufacturing?tab=workcenters' },
+    ],
+  },
+  { id: 'kpi', label: 'KPI Takibi', icon: TrendingUp, href: '/kpi' },
+  { id: 'calendar', label: 'Takvim', icon: CalendarDays, href: '/calendar' },
   { id: 'tasks', label: 'Görevler', icon: CheckSquare, href: '/tasks' },
   { id: 'workflows', label: 'İş Akışları', icon: GitBranch, href: '/workflows' },
   { id: 'notifications', label: 'Bildirimler', icon: Bell, href: '/notifications' },

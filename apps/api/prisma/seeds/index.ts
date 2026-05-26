@@ -532,10 +532,246 @@ async function main() {
     });
   }
 
+  // ── Faz 14: Manufacturing ──────────────────────────────────────────────────
+  const wc1 = await prisma.workCenter.upsert({
+    where: { organizationId_code: { organizationId: org.id, code: 'WC-MONTAJ' } },
+    update: {},
+    create: {
+      organizationId: org.id,
+      code: 'WC-MONTAJ',
+      name: 'Montaj Hattı',
+      description: 'Ana montaj üretim hattı',
+      capacity: 8,
+      costPerHour: 250,
+      isActive: true,
+    },
+  });
+
+  const wc2 = await prisma.workCenter.upsert({
+    where: { organizationId_code: { organizationId: org.id, code: 'WC-TEST' } },
+    update: {},
+    create: {
+      organizationId: org.id,
+      code: 'WC-TEST',
+      name: 'Test & Kalite',
+      description: 'Ürün test ve kalite kontrol',
+      capacity: 4,
+      costPerHour: 150,
+      isActive: true,
+    },
+  });
+
+  // BOM for Laptop Pro
+  const bom = await prisma.billOfMaterial.upsert({
+    where: { organizationId_code: { organizationId: org.id, code: 'BOM-LAP-001' } },
+    update: {},
+    create: {
+      organizationId: org.id,
+      code: 'BOM-LAP-001',
+      name: 'Laptop Pro 15" Reçetesi',
+      productId: products[0].id,
+      version: '1.0',
+      status: 'active',
+      quantity: 1,
+      unit: 'adet',
+      leadTimeDays: 3,
+      items: {
+        create: [
+          { componentId: products[1].id, quantity: 1, unit: 'adet', scrapRate: 0.02, sortOrder: 1 },
+          { componentId: products[3].id, quantity: 1, unit: 'adet', scrapRate: 0.01, sortOrder: 2 },
+        ],
+      },
+    },
+  });
+
+  // Production Order
+  await prisma.productionOrder.upsert({
+    where: { organizationId_orderNumber: { organizationId: org.id, orderNumber: 'URT-2025-0001' } },
+    update: {},
+    create: {
+      organizationId: org.id,
+      orderNumber: 'URT-2025-0001',
+      productId: products[0].id,
+      bomId: bom.id,
+      quantity: 10,
+      unit: 'adet',
+      status: 'in_progress',
+      priority: 'high',
+      scheduledStart: new Date('2025-06-01'),
+      scheduledEnd: new Date('2025-06-15'),
+      actualStart: new Date('2025-06-02'),
+      producedQty: 6,
+      scrapQty: 0,
+      createdById: adminUser.id,
+      notes: 'Müşteri siparişi için acil üretim',
+      operations: {
+        create: [
+          {
+            sequence: 10,
+            name: 'Parça Montajı',
+            workCenterId: wc1.id,
+            plannedHours: 2,
+            status: 'completed',
+            startedAt: new Date('2025-06-02T08:00:00'),
+            completedAt: new Date('2025-06-02T10:00:00'),
+          },
+          {
+            sequence: 20,
+            name: 'Test & Kontrol',
+            workCenterId: wc2.id,
+            plannedHours: 1,
+            status: 'in_progress',
+            startedAt: new Date('2025-06-03T08:00:00'),
+          },
+        ],
+      },
+    },
+  });
+
+  // ── Faz 14: KPI ───────────────────────────────────────────────────────────
+  const kpiRevenue = await prisma.kpiDefinition.upsert({
+    where: { organizationId_code: { organizationId: org.id, code: 'KPI-GELIR' } },
+    update: {},
+    create: {
+      organizationId: org.id,
+      code: 'KPI-GELIR',
+      name: 'Aylık Gelir',
+      description: 'Toplam aylık satış geliri',
+      category: 'financial',
+      unit: 'TRY',
+      direction: 'higher_better',
+      frequency: 'monthly',
+      ownerId: adminUser.id,
+      isActive: true,
+    },
+  });
+
+  const kpiSales = await prisma.kpiDefinition.upsert({
+    where: { organizationId_code: { organizationId: org.id, code: 'KPI-SATIS' } },
+    update: {},
+    create: {
+      organizationId: org.id,
+      code: 'KPI-SATIS',
+      name: 'Satış Adet',
+      description: 'Aylık satış sipariş adedi',
+      category: 'sales',
+      unit: 'adet',
+      direction: 'higher_better',
+      frequency: 'monthly',
+      ownerId: adminUser.id,
+      isActive: true,
+    },
+  });
+
+  const kpiCust = await prisma.kpiDefinition.upsert({
+    where: { organizationId_code: { organizationId: org.id, code: 'KPI-MEMNUN' } },
+    update: {},
+    create: {
+      organizationId: org.id,
+      code: 'KPI-MEMNUN',
+      name: 'Müşteri Memnuniyeti',
+      description: 'Ortalama müşteri memnuniyet skoru',
+      category: 'quality',
+      unit: '%',
+      direction: 'higher_better',
+      frequency: 'monthly',
+      ownerId: adminUser.id,
+      isActive: true,
+    },
+  });
+
+  // KPI Values for recent months
+  const periods = ['2025-03', '2025-04', '2025-05', '2025-06'];
+  const revenueValues = [850000, 920000, 780000, 1050000];
+  const salesValues = [42, 51, 38, 63];
+  const custValues = [82, 88, 85, 91];
+
+  for (let i = 0; i < periods.length; i++) {
+    await prisma.kpiValue.upsert({
+      where: { kpiId_period: { kpiId: kpiRevenue.id, period: periods[i] } },
+      update: {},
+      create: { kpiId: kpiRevenue.id, period: periods[i], value: revenueValues[i], recordedById: adminUser.id },
+    });
+    await prisma.kpiValue.upsert({
+      where: { kpiId_period: { kpiId: kpiSales.id, period: periods[i] } },
+      update: {},
+      create: { kpiId: kpiSales.id, period: periods[i], value: salesValues[i], recordedById: adminUser.id },
+    });
+    await prisma.kpiValue.upsert({
+      where: { kpiId_period: { kpiId: kpiCust.id, period: periods[i] } },
+      update: {},
+      create: { kpiId: kpiCust.id, period: periods[i], value: custValues[i], recordedById: adminUser.id },
+    });
+  }
+
+  // KPI Targets for current period
+  await prisma.kpiTarget.upsert({
+    where: { kpiId_period: { kpiId: kpiRevenue.id, period: '2025-06' } },
+    update: {},
+    create: { kpiId: kpiRevenue.id, period: '2025-06', target: 1000000, warningThreshold: 800000, criticalThreshold: 600000, setById: adminUser.id },
+  });
+  await prisma.kpiTarget.upsert({
+    where: { kpiId_period: { kpiId: kpiSales.id, period: '2025-06' } },
+    update: {},
+    create: { kpiId: kpiSales.id, period: '2025-06', target: 60, warningThreshold: 45, criticalThreshold: 30, setById: adminUser.id },
+  });
+  await prisma.kpiTarget.upsert({
+    where: { kpiId_period: { kpiId: kpiCust.id, period: '2025-06' } },
+    update: {},
+    create: { kpiId: kpiCust.id, period: '2025-06', target: 90, warningThreshold: 75, criticalThreshold: 60, setById: adminUser.id },
+  });
+
+  // ── Faz 14: Calendar Events ───────────────────────────────────────────────
+  const ev1 = await prisma.calendarEvent.create({
+    data: {
+      organizationId: org.id,
+      title: 'Q2 Satış Değerlendirme Toplantısı',
+      type: 'meeting',
+      startDate: new Date('2025-06-10T10:00:00'),
+      endDate: new Date('2025-06-10T12:00:00'),
+      location: 'Toplantı Odası A',
+      description: 'İkinci çeyrek satış performansı değerlendirmesi',
+      isAllDay: false,
+      createdById: adminUser.id,
+    },
+  });
+  await prisma.eventAttendee.create({
+    data: { eventId: ev1.id, userId: adminUser.id, status: 'accepted' },
+  });
+
+  await prisma.calendarEvent.create({
+    data: {
+      organizationId: org.id,
+      title: 'Üretim Planlama',
+      type: 'task',
+      startDate: new Date('2025-06-12T09:00:00'),
+      endDate: new Date('2025-06-12T10:00:00'),
+      isAllDay: false,
+      description: 'Temmuz ayı üretim planlaması',
+      createdById: adminUser.id,
+    },
+  });
+
+  await prisma.calendarEvent.create({
+    data: {
+      organizationId: org.id,
+      title: 'Acme Teknoloji Ziyareti',
+      type: 'customer_visit',
+      startDate: new Date('2025-06-15T14:00:00'),
+      endDate: new Date('2025-06-15T16:00:00'),
+      location: 'Acme Teknoloji Ofisi',
+      isAllDay: false,
+      entityType: 'customer',
+      entityId: customers[0].id,
+      createdById: adminUser.id,
+    },
+  });
+
   console.log('✅ Seed data başarıyla oluşturuldu!');
   console.log(`   Org: ${org.name} (slug: ${org.slug})`);
   console.log(`   Admin: admin@demo.com / Admin1234!`);
   console.log(`   ${products.length} ürün, ${customers.length} müşteri, ${suppliers.length} tedarikçi, ${employees.length} çalışan`);
+  console.log(`   Faz 14: İş merkezleri, BOM, üretim emirleri, KPI tanımları, takvim etkinlikleri eklendi`);
 }
 
 main()

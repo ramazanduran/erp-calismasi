@@ -74,6 +74,12 @@ model Organization {
   trainingPrograms  TrainingProgram[]
   contracts         Contract[]
   maintenanceRequests MaintenanceRequest[]
+  workCenters       WorkCenter[]
+  billsOfMaterial   BillOfMaterial[]
+  productionOrders  ProductionOrder[]
+  bankStatements    BankStatement[]
+  kpiDefinitions    KpiDefinition[]
+  calendarEvents    CalendarEvent[]
 
   @@map("organizations")
 }
@@ -121,6 +127,11 @@ model User {
   maintenanceRequested MaintenanceRequest[] @relation("MaintenanceRequestedBy")
   maintenanceAssigned  MaintenanceRequest[] @relation("MaintenanceAssignedTo")
   maintenanceComments  MaintenanceComment[]
+  productionOrders     ProductionOrder[]
+  kpiOwned             KpiDefinition[]   @relation("KpiOwner")
+  kpiValues            KpiValue[]
+  calendarEventsCreated CalendarEvent[]  @relation("EventCreatedBy")
+  eventAttendees       EventAttendee[]
 
   @@unique([organizationId, email])
   @@index([organizationId])
@@ -374,6 +385,7 @@ model Customer {
   projects     Project[]
   shipments    Shipment[]
   contracts    Contract[]
+  portalTokens CustomerPortalToken[]
 
   @@unique([organizationId, code])
   @@index([organizationId])
@@ -424,6 +436,9 @@ model Product {
   invoiceItems   InvoiceItem[]
   stockMovements StockMovement[]
   qualityInspections QualityInspection[]
+  billsOfMaterial    BillOfMaterial[]
+  bomComponents      BOMItem[]           @relation("BOMComponent")
+  productionOrders   ProductionOrder[]   @relation("ProductionOrderProduct")
 
   @@unique([organizationId, code])
   @@index([organizationId])
@@ -621,8 +636,9 @@ model FinancialAccount {
   createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
   updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
-  organization Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  transactions Transaction[]
+  organization   Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  transactions   Transaction[]
+  bankStatements BankStatement[]
 
   @@index([organizationId])
   @@map("financial_accounts")
@@ -639,8 +655,9 @@ model Transaction {
   date           DateTime @db.Timestamptz
   createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
 
-  organization Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  account      FinancialAccount @relation(fields: [accountId], references: [id])
+  organization       Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  account            FinancialAccount    @relation(fields: [accountId], references: [id])
+  bankStatementLines BankStatementLine[]
 
   @@index([organizationId])
   @@index([accountId])
@@ -1844,4 +1861,302 @@ model MaintenanceComment {
 
   @@index([requestId])
   @@map("maintenance_comments")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MANUFACTURING (Üretim Yönetimi)
+// ─────────────────────────────────────────────────────────────────────────────
+model WorkCenter {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  name           String   @db.VarChar(255)
+  code           String   @db.VarChar(30)
+  description    String?
+  type           String   @default("production") @db.VarChar(20) // production, assembly, quality, packaging
+  capacity       Decimal  @default(8) @db.Decimal(6, 2) // hours/day
+  costPerHour    Decimal  @default(0) @map("cost_per_hour") @db.Decimal(12, 2)
+  currency       String   @default("TRY") @db.VarChar(3)
+  isActive       Boolean  @default(true) @map("is_active")
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  organization Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  operations   WorkOperation[]
+
+  @@unique([organizationId, code])
+  @@index([organizationId])
+  @@map("work_centers")
+}
+
+model BillOfMaterial {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  code           String   @db.VarChar(50)
+  name           String   @db.VarChar(255)
+  productId      String   @map("product_id") @db.Uuid
+  version        String   @default("1.0") @db.VarChar(10)
+  quantity       Decimal  @default(1) @db.Decimal(12, 4) // output quantity
+  unit           String   @default("adet") @db.VarChar(20)
+  status         String   @default("draft") @db.VarChar(20) // draft, active, obsolete
+  notes          String?
+  leadTimeDays   Int?     @map("lead_time_days")
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  organization    Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  product         Product           @relation(fields: [productId], references: [id])
+  items           BOMItem[]
+  productionOrders ProductionOrder[]
+
+  @@unique([organizationId, code])
+  @@index([organizationId])
+  @@map("bills_of_material")
+}
+
+model BOMItem {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  bomId           String   @map("bom_id") @db.Uuid
+  componentId     String   @map("component_id") @db.Uuid
+  quantity        Decimal  @db.Decimal(12, 4)
+  unit            String   @default("adet") @db.VarChar(20)
+  scrapRate       Decimal  @default(0) @map("scrap_rate") @db.Decimal(5, 4) // 0.05 = 5%
+  sortOrder       Int      @default(0) @map("sort_order")
+  notes           String?
+
+  bom       BillOfMaterial @relation(fields: [bomId], references: [id], onDelete: Cascade)
+  component Product        @relation("BOMComponent", fields: [componentId], references: [id])
+
+  @@unique([bomId, componentId])
+  @@index([bomId])
+  @@map("bom_items")
+}
+
+model ProductionOrder {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  orderNumber    String   @map("order_number") @db.VarChar(50)
+  bomId          String?  @map("bom_id") @db.Uuid
+  productId      String   @map("product_id") @db.Uuid
+  quantity       Decimal  @db.Decimal(12, 4)
+  producedQty    Decimal  @default(0) @map("produced_qty") @db.Decimal(12, 4)
+  scrapQty       Decimal  @default(0) @map("scrap_qty") @db.Decimal(12, 4)
+  unit           String   @default("adet") @db.VarChar(20)
+  status         String   @default("draft") @db.VarChar(20) // draft, confirmed, in_progress, completed, cancelled
+  priority       String   @default("normal") @db.VarChar(20) // low, normal, high, urgent
+  scheduledStart DateTime? @map("scheduled_start") @db.Timestamptz
+  scheduledEnd   DateTime? @map("scheduled_end") @db.Timestamptz
+  actualStart    DateTime? @map("actual_start") @db.Timestamptz
+  actualEnd      DateTime? @map("actual_end") @db.Timestamptz
+  notes          String?
+  createdById    String   @map("created_by_id") @db.Uuid
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  organization Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  bom          BillOfMaterial? @relation(fields: [bomId], references: [id])
+  product      Product         @relation("ProductionOrderProduct", fields: [productId], references: [id])
+  createdBy    User            @relation(fields: [createdById], references: [id])
+  operations   WorkOperation[]
+
+  @@unique([organizationId, orderNumber])
+  @@index([organizationId, status])
+  @@map("production_orders")
+}
+
+model WorkOperation {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  productionOrderId String @map("production_order_id") @db.Uuid
+  workCenterId    String   @map("work_center_id") @db.Uuid
+  name            String   @db.VarChar(255)
+  sequence        Int      @default(1)
+  plannedHours    Decimal  @map("planned_hours") @db.Decimal(8, 2)
+  actualHours     Decimal  @default(0) @map("actual_hours") @db.Decimal(8, 2)
+  status          String   @default("pending") @db.VarChar(20) // pending, in_progress, completed, skipped
+  startedAt       DateTime? @map("started_at") @db.Timestamptz
+  completedAt     DateTime? @map("completed_at") @db.Timestamptz
+  notes           String?
+
+  productionOrder ProductionOrder @relation(fields: [productionOrderId], references: [id], onDelete: Cascade)
+  workCenter      WorkCenter      @relation(fields: [workCenterId], references: [id])
+
+  @@index([productionOrderId])
+  @@map("work_operations")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// BANK RECONCILIATION (Banka Mutabakatı)
+// ─────────────────────────────────────────────────────────────────────────────
+model BankStatement {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  accountId      String   @map("account_id") @db.Uuid
+  referenceNumber String? @map("reference_number") @db.VarChar(50)
+  startDate      DateTime @map("start_date") @db.Date
+  endDate        DateTime @map("end_date") @db.Date
+  openingBalance Decimal  @map("opening_balance") @db.Decimal(18, 2)
+  closingBalance Decimal  @map("closing_balance") @db.Decimal(18, 2)
+  currency       String   @default("TRY") @db.VarChar(3)
+  status         String   @default("pending") @db.VarChar(20) // pending, in_progress, reconciled
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  organization Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  account      FinancialAccount     @relation(fields: [accountId], references: [id])
+  lines        BankStatementLine[]
+
+  @@index([organizationId])
+  @@map("bank_statements")
+}
+
+model BankStatementLine {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  statementId   String   @map("statement_id") @db.Uuid
+  transactionId String?  @map("transaction_id") @db.Uuid
+  date          DateTime @db.Date
+  description   String   @db.VarChar(500)
+  reference     String?  @db.VarChar(100)
+  amount        Decimal  @db.Decimal(18, 2)
+  type          String   @db.VarChar(10) // credit, debit
+  balance       Decimal  @db.Decimal(18, 2)
+  status        String   @default("unmatched") @db.VarChar(20) // unmatched, matched, ignored
+  matchedAt     DateTime? @map("matched_at") @db.Timestamptz
+  notes         String?
+
+  statement   BankStatement @relation(fields: [statementId], references: [id], onDelete: Cascade)
+  transaction Transaction?  @relation(fields: [transactionId], references: [id])
+
+  @@index([statementId, status])
+  @@map("bank_statement_lines")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// KPI TRACKING (KPI & Hedef Takibi)
+// ─────────────────────────────────────────────────────────────────────────────
+model KpiDefinition {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  name           String   @db.VarChar(255)
+  code           String   @db.VarChar(30)
+  description    String?
+  category       String   @default("business") @db.VarChar(30) // financial, sales, operational, hr, quality, business
+  unit           String?  @db.VarChar(20) // %, count, TRY, hours, days
+  direction      String   @default("higher_better") @db.VarChar(20) // higher_better, lower_better, target
+  frequency      String   @default("monthly") @db.VarChar(20) // daily, weekly, monthly, quarterly, yearly
+  formula        String?  @db.VarChar(500) // optional formula description
+  isActive       Boolean  @default(true) @map("is_active")
+  ownerId        String?  @map("owner_id") @db.Uuid
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  owner        User?        @relation("KpiOwner", fields: [ownerId], references: [id])
+  values       KpiValue[]
+  targets      KpiTarget[]
+
+  @@unique([organizationId, code])
+  @@index([organizationId])
+  @@map("kpi_definitions")
+}
+
+model KpiValue {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  kpiId       String   @map("kpi_id") @db.Uuid
+  period      String   @db.VarChar(20) // e.g. "2025-01", "2025-Q1", "2025-W12"
+  value       Decimal  @db.Decimal(18, 4)
+  notes       String?
+  enteredById String   @map("entered_by_id") @db.Uuid
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  kpi       KpiDefinition @relation(fields: [kpiId], references: [id], onDelete: Cascade)
+  enteredBy User          @relation(fields: [enteredById], references: [id])
+
+  @@unique([kpiId, period])
+  @@index([kpiId])
+  @@map("kpi_values")
+}
+
+model KpiTarget {
+  id       String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  kpiId    String   @map("kpi_id") @db.Uuid
+  period   String   @db.VarChar(20)
+  target   Decimal  @db.Decimal(18, 4)
+  warning  Decimal? @db.Decimal(18, 4) // warning threshold
+  critical Decimal? @db.Decimal(18, 4) // critical threshold
+
+  kpi KpiDefinition @relation(fields: [kpiId], references: [id], onDelete: Cascade)
+
+  @@unique([kpiId, period])
+  @@map("kpi_targets")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CUSTOMER PORTAL (Müşteri Portalı)
+// ─────────────────────────────────────────────────────────────────────────────
+model CustomerPortalToken {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  customerId  String   @map("customer_id") @db.Uuid
+  token       String   @unique @db.VarChar(128)
+  email       String   @db.VarChar(255)
+  name        String   @db.VarChar(255)
+  permissions Json     @default("[\"orders.read\",\"invoices.read\",\"shipments.read\"]")
+  isActive    Boolean  @default(true) @map("is_active")
+  lastUsedAt  DateTime? @map("last_used_at") @db.Timestamptz
+  expiresAt   DateTime? @map("expires_at") @db.Timestamptz
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([token])
+  @@index([customerId])
+  @@map("customer_portal_tokens")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CALENDAR EVENTS (Takvim Etkinlikleri)
+// ─────────────────────────────────────────────────────────────────────────────
+model CalendarEvent {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  createdById    String   @map("created_by_id") @db.Uuid
+  title          String   @db.VarChar(255)
+  description    String?
+  type           String   @default("meeting") @db.VarChar(20) // meeting, deadline, reminder, holiday, task, call
+  startDate      DateTime @map("start_date") @db.Timestamptz
+  endDate        DateTime @map("end_date") @db.Timestamptz
+  isAllDay       Boolean  @default(false) @map("is_all_day")
+  location       String?  @db.VarChar(255)
+  onlineUrl      String?  @map("online_url")
+  color          String?  @db.VarChar(20)
+  isRecurring    Boolean  @default(false) @map("is_recurring")
+  recurrenceRule String?  @map("recurrence_rule") @db.VarChar(255) // RRULE format
+  entityType     String?  @map("entity_type") @db.VarChar(20) // deal, project, order
+  entityId       String?  @map("entity_id") @db.Uuid
+  status         String   @default("confirmed") @db.VarChar(20) // confirmed, tentative, cancelled
+  reminder       Int?     // minutes before
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  organization Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdBy    User               @relation("EventCreatedBy", fields: [createdById], references: [id])
+  attendees    EventAttendee[]
+
+  @@index([organizationId, startDate])
+  @@map("calendar_events")
+}
+
+model EventAttendee {
+  id       String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  eventId  String   @map("event_id") @db.Uuid
+  userId   String?  @map("user_id") @db.Uuid
+  email    String   @db.VarChar(255)
+  name     String   @db.VarChar(255)
+  status   String   @default("pending") @db.VarChar(20) // pending, accepted, declined, tentative
+  isOrganizer Boolean @default(false) @map("is_organizer")
+
+  event CalendarEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user  User?         @relation(fields: [userId], references: [id])
+
+  @@unique([eventId, email])
+  @@index([eventId])
+  @@map("event_attendees")
 }
