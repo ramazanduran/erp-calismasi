@@ -1,10 +1,11 @@
 'use client';
 
-import { useState } from 'react';
-import { Search, Plus, Calendar, CheckCircle, XCircle, Clock } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { Search, Plus, Calendar, CheckCircle, XCircle, Clock, Users } from 'lucide-react';
 import { toast } from 'sonner';
 import { useLeaves, useUpdateLeaveStatus } from '@/lib/api/hooks';
 import { LeaveModal } from '@/components/modals/leave-modal';
+import { cn } from '@/lib/utils';
 
 type LeaveStatus = 'pending' | 'approved' | 'rejected';
 type LeaveType = 'annual' | 'sick' | 'unpaid' | 'maternity' | 'paternity';
@@ -67,7 +68,21 @@ export default function LeavesPage() {
     return true;
   });
 
-  const pendingCount = leavesList.filter((l: Record<string, unknown>) => l.status === 'pending').length;
+  const stats = useMemo(() => {
+    const pending = leavesList.filter((l: Record<string, unknown>) => l.status === 'pending');
+    const approved = leavesList.filter((l: Record<string, unknown>) => l.status === 'approved');
+    const totalDays = approved.reduce((s: number, l: Record<string, unknown>) => s + (Number(l.days) || 0), 0);
+    const uniqueEmployees = new Set(leavesList.map((l: Record<string, unknown>) => l.employeeId as string)).size;
+    return {
+      total: leavesList.length,
+      pendingCount: pending.length,
+      approvedCount: approved.length,
+      totalDays,
+      uniqueEmployees,
+    };
+  }, [leavesList]);
+
+  const pendingCount = stats.pendingCount;
 
   const handleStatusChange = async (id: string, status: 'approved' | 'rejected') => {
     try {
@@ -94,6 +109,27 @@ export default function LeavesPage() {
           <Plus className="h-4 w-4" />
           Yeni Talep
         </button>
+      </div>
+
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {[
+          { label: 'Toplam Talep', value: stats.total, icon: Calendar, color: 'text-blue-500', bg: 'bg-blue-50 dark:bg-blue-950' },
+          { label: 'Onay Bekleyen', value: stats.pendingCount, icon: Clock, color: 'text-yellow-500', bg: 'bg-yellow-50 dark:bg-yellow-950' },
+          { label: 'Onaylanan', value: stats.approvedCount, icon: CheckCircle, color: 'text-green-500', bg: 'bg-green-50 dark:bg-green-950' },
+          { label: 'Toplam İzin Günü', value: `${stats.totalDays} gün`, icon: Users, color: 'text-purple-500', bg: 'bg-purple-50 dark:bg-purple-950' },
+        ].map((card) => (
+          <div key={card.label} className="rounded-xl border border-border bg-card p-4 shadow-sm">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-muted-foreground">{card.label}</p>
+                <p className="text-xl font-bold mt-0.5">{card.value}</p>
+              </div>
+              <div className={cn('p-2 rounded-lg', card.bg)}>
+                <card.icon className={cn('h-4 w-4', card.color)} />
+              </div>
+            </div>
+          </div>
+        ))}
       </div>
 
       {pendingCount > 0 && (

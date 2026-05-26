@@ -1,12 +1,13 @@
 'use client';
 
-import { useState } from 'react';
-import { Search, Plus, Package, AlertTriangle, Pencil, Trash2, FileDown } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { Search, Plus, Package, AlertTriangle, Pencil, Trash2, FileDown, TrendingDown } from 'lucide-react';
 import { toast } from 'sonner';
 import { useProducts, useDeleteProduct } from '@/lib/api/hooks';
 import { ProductModal } from '@/components/modals/product-modal';
 import { BulkActionsBar } from '@/components/ui/bulk-actions-bar';
 import { exportToExcel } from '@/lib/utils/excel-export';
+import { cn } from '@/lib/utils';
 
 function SkeletonRows() {
   return (
@@ -40,8 +41,26 @@ export default function ProductsPage() {
     if (!activeFilter) return true;
     if (activeFilter === 'active') return p.isActive;
     if (activeFilter === 'inactive') return !p.isActive;
+    if (activeFilter === 'low_stock') {
+      const stock = Number(p.currentStock ?? 0);
+      const min = Number(p.minStock ?? 0);
+      return stock <= min && stock > 0;
+    }
+    if (activeFilter === 'out_of_stock') return Number(p.currentStock ?? 0) === 0;
     return true;
   });
+
+  const productStats = useMemo(() => {
+    const total = productsList.length;
+    const active = productsList.filter((p: Record<string, unknown>) => p.isActive).length;
+    const lowStock = productsList.filter((p: Record<string, unknown>) => {
+      const stock = Number(p.currentStock ?? 0);
+      const min = Number(p.minStock ?? 0);
+      return stock <= min && stock > 0;
+    }).length;
+    const outOfStock = productsList.filter((p: Record<string, unknown>) => Number(p.currentStock ?? 0) === 0).length;
+    return { total, active, lowStock, outOfStock };
+  }, [productsList]);
 
   const toggleSelect = (id: string) => {
     setSelectedIds(prev => {
@@ -110,6 +129,34 @@ export default function ProductsPage() {
         </div>
       </div>
 
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {[
+          { label: 'Toplam Ürün', value: productStats.total, icon: Package, color: 'text-blue-500', bg: 'bg-blue-50 dark:bg-blue-950', filter: '' },
+          { label: 'Aktif Ürün', value: productStats.active, icon: Package, color: 'text-green-500', bg: 'bg-green-50 dark:bg-green-950', filter: 'active' },
+          { label: 'Düşük Stok', value: productStats.lowStock, icon: AlertTriangle, color: 'text-yellow-500', bg: 'bg-yellow-50 dark:bg-yellow-950', filter: 'low_stock' },
+          { label: 'Stok Tükendi', value: productStats.outOfStock, icon: TrendingDown, color: 'text-red-500', bg: 'bg-red-50 dark:bg-red-950', filter: 'out_of_stock' },
+        ].map((card) => (
+          <button
+            key={card.label}
+            onClick={() => setActiveFilter(activeFilter === card.filter ? '' : card.filter)}
+            className={cn(
+              'rounded-xl border border-border bg-card p-4 shadow-sm text-left transition-all hover:shadow-md',
+              activeFilter === card.filter && 'ring-2 ring-primary',
+            )}
+          >
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-muted-foreground">{card.label}</p>
+                <p className="text-xl font-bold mt-0.5">{card.value}</p>
+              </div>
+              <div className={cn('p-2 rounded-lg', card.bg)}>
+                <card.icon className={cn('h-4 w-4', card.color)} />
+              </div>
+            </div>
+          </button>
+        ))}
+      </div>
+
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -129,6 +176,8 @@ export default function ProductsPage() {
           <option value="">Tüm Ürünler</option>
           <option value="active">Aktif</option>
           <option value="inactive">Pasif</option>
+          <option value="low_stock">Düşük Stok</option>
+          <option value="out_of_stock">Stok Tükendi</option>
         </select>
       </div>
 
