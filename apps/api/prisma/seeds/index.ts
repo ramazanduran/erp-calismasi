@@ -767,11 +767,123 @@ async function main() {
     },
   });
 
+  // ── Faz 15: Sales Quotes ──────────────────────────────────────────────────
+  await prisma.salesQuote.upsert({
+    where: { organizationId_quoteNumber: { organizationId: org.id, quoteNumber: 'TEK-2025-0001' } },
+    update: {},
+    create: {
+      organizationId: org.id,
+      quoteNumber: 'TEK-2025-0001',
+      customerId: customers[0].id,
+      createdById: adminUser.id,
+      status: 'sent',
+      validUntil: new Date('2025-07-31'),
+      currency: 'TRY',
+      notes: 'Acme Teknoloji için yıllık donanım teklifi',
+      subtotal: 44000,
+      taxAmount: 8800,
+      totalAmount: 52800,
+      items: {
+        create: [
+          { productId: products[0].id, description: 'Laptop Pro 15"', quantity: 2, unit: 'adet', unitPrice: 22000, discount: 0, vatRate: 20, totalAmount: 52800, sortOrder: 0 },
+        ],
+      },
+    },
+  });
+
+  await prisma.salesQuote.upsert({
+    where: { organizationId_quoteNumber: { organizationId: org.id, quoteNumber: 'TEK-2025-0002' } },
+    update: {},
+    create: {
+      organizationId: org.id,
+      quoteNumber: 'TEK-2025-0002',
+      customerId: customers[1].id,
+      createdById: adminUser.id,
+      status: 'draft',
+      validUntil: new Date('2025-08-15'),
+      currency: 'TRY',
+      subtotal: 3500,
+      taxAmount: 700,
+      totalAmount: 4200,
+      items: {
+        create: [
+          { productId: products[1].id, description: 'Kablosuz Mouse x10', quantity: 10, unit: 'adet', unitPrice: 350, discount: 0, vatRate: 20, totalAmount: 4200, sortOrder: 0 },
+        ],
+      },
+    },
+  });
+
+  // ── Faz 15: Purchase Requests ─────────────────────────────────────────────
+  await prisma.purchaseRequest.upsert({
+    where: { organizationId_requestNumber: { organizationId: org.id, requestNumber: 'SAT-2025-0001' } },
+    update: {},
+    create: {
+      organizationId: org.id,
+      requestNumber: 'SAT-2025-0001',
+      requestedById: adminUser.id,
+      departmentId: departments[0].id,
+      status: 'pending',
+      priority: 'high',
+      neededBy: new Date('2025-07-01'),
+      notes: 'Satış ekibi için laptop ihtiyacı',
+      items: {
+        create: [
+          { productId: products[0].id, description: 'Laptop Pro 15"', quantity: 3, unit: 'adet', estimatedPrice: 15000 },
+          { productId: products[1].id, description: 'Kablosuz Mouse', quantity: 3, unit: 'adet', estimatedPrice: 200 },
+        ],
+      },
+    },
+  });
+
+  // ── Faz 15: Vehicles ──────────────────────────────────────────────────────
+  await prisma.vehicle.upsert({
+    where: { organizationId_plateNumber: { organizationId: org.id, plateNumber: '34 ABC 123' } },
+    update: {},
+    create: {
+      organizationId: org.id,
+      plateNumber: '34 ABC 123',
+      brand: 'Ford',
+      model: 'Transit',
+      year: 2022,
+      type: 'van',
+      status: 'active',
+      fuelType: 'diesel',
+      currentMileage: 45000,
+      nextServiceAt: 50000,
+      driverName: 'Mehmet Demir',
+      insuranceExpiry: new Date('2026-03-15'),
+      inspectionExpiry: new Date('2025-09-20'),
+      isActive: true,
+    },
+  });
+
+  await prisma.vehicle.upsert({
+    where: { organizationId_plateNumber: { organizationId: org.id, plateNumber: '06 XY 789' } },
+    update: {},
+    create: {
+      organizationId: org.id,
+      plateNumber: '06 XY 789',
+      brand: 'Mercedes',
+      model: 'Actros',
+      year: 2020,
+      type: 'truck',
+      status: 'maintenance',
+      fuelType: 'diesel',
+      currentMileage: 120000,
+      nextServiceAt: 125000,
+      driverName: 'Ali Kaya',
+      insuranceExpiry: new Date('2025-12-01'),
+      inspectionExpiry: new Date('2026-01-10'),
+      isActive: true,
+    },
+  });
+
   console.log('✅ Seed data başarıyla oluşturuldu!');
   console.log(`   Org: ${org.name} (slug: ${org.slug})`);
   console.log(`   Admin: admin@demo.com / Admin1234!`);
   console.log(`   ${products.length} ürün, ${customers.length} müşteri, ${suppliers.length} tedarikçi, ${employees.length} çalışan`);
-  console.log(`   Faz 14: İş merkezleri, BOM, üretim emirleri, KPI tanımları, takvim etkinlikleri eklendi`);
+  console.log(`   Faz 14: İş merkezleri, BOM, üretim emirleri, KPI tanımları, takvim etkinlikleri`);
+  console.log(`   Faz 15: Teklifler, satın alma talepleri, araç filosu eklendi`);
 }
 
 main()

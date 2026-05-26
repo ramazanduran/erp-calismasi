@@ -7,11 +7,13 @@ import { OrdersService } from './orders.service';
 import { InvoicesController } from './invoices.controller';
 import { InvoicesService } from './invoices.service';
 import { PdfService } from './pdf.service';
+import { QuotesController } from './quotes.controller';
+import { QuotesService } from './quotes.service';
 
 @Module({
   imports: [DatabaseModule],
-  controllers: [CustomersController, OrdersController, InvoicesController],
-  providers: [CustomersService, OrdersService, InvoicesService, PdfService],
-  exports: [CustomersService, OrdersService, InvoicesService, PdfService],
+  controllers: [CustomersController, OrdersController, InvoicesController, QuotesController],
+  providers: [CustomersService, OrdersService, InvoicesService, PdfService, QuotesService],
+  exports: [CustomersService, OrdersService, InvoicesService, PdfService, QuotesService],
 })
 export class SalesModule {}
