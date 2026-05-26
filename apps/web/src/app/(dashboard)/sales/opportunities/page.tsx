@@ -30,14 +30,6 @@ type LeadStatus =
   | 'converted'
   | 'lost';
 
-type LeadSource =
-  | 'web'
-  | 'referral'
-  | 'social'
-  | 'cold_call'
-  | 'event'
-  | 'other';
-
 interface Deal {
   id: string;
   title: string;
@@ -55,7 +47,7 @@ interface Lead {
   lastName: string;
   company: string | null;
   status: LeadStatus;
-  source: LeadSource | null;
+  source: string | null;
   estimatedValue: number | null;
 }
 
@@ -174,7 +166,7 @@ function DealCardSkeleton() {
 function LeadRowSkeleton() {
   return (
     <tr className="border-b border-border">
-      {Array.from({ length: 5 }).map((_, j) => (
+      {Array.from({ length: 6 }).map((_, j) => (
         <td key={j} className="px-4 py-3">
           <div className="animate-pulse bg-muted rounded h-4 w-full" />
         </td>

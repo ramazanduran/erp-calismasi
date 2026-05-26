@@ -878,6 +878,57 @@ async function main() {
     },
   });
 
+  // ── Faz 16: Warehouses ────────────────────────────────────────────────────
+  const wh1 = await prisma.warehouse.upsert({
+    where: { organizationId_code: { organizationId: org.id, code: 'DEP-ANA' } },
+    update: {},
+    create: {
+      organizationId: org.id,
+      code: 'DEP-ANA',
+      name: 'Ana Depo',
+      type: 'main',
+      address: 'Organize Sanayi Bölgesi, 1. Cadde No:5',
+      city: 'İstanbul',
+      managerId: adminUser.id,
+      isActive: true,
+    },
+  });
+
+  await prisma.warehouse.upsert({
+    where: { organizationId_code: { organizationId: org.id, code: 'DEP-YEDEK' } },
+    update: {},
+    create: {
+      organizationId: org.id,
+      code: 'DEP-YEDEK',
+      name: 'Yedek Parça Deposu',
+      type: 'satellite',
+      address: 'Sanayi Mahallesi, 2. Sokak No:12',
+      city: 'İstanbul',
+      isActive: true,
+    },
+  });
+
+  // Add locations to main warehouse
+  await prisma.warehouseLocation.upsert({
+    where: { warehouseId_code: { warehouseId: wh1.id, code: 'A01' } },
+    update: {},
+    create: { warehouseId: wh1.id, code: 'A01', name: 'Raf A - Bölüm 1', type: 'shelf', isActive: true },
+  });
+  await prisma.warehouseLocation.upsert({
+    where: { warehouseId_code: { warehouseId: wh1.id, code: 'A02' } },
+    update: {},
+    create: { warehouseId: wh1.id, code: 'A02', name: 'Raf A - Bölüm 2', type: 'shelf', isActive: true },
+  });
+
+  // Add warehouse stock entries
+  for (const product of products) {
+    await prisma.warehouseStock.upsert({
+      where: { warehouseId_productId: { warehouseId: wh1.id, productId: product.id } },
+      update: {},
+      create: { warehouseId: wh1.id, productId: product.id, quantity: product.currentStock },
+    });
+  }
+
   console.log('✅ Seed data başarıyla oluşturuldu!');
   console.log(`   Org: ${org.name} (slug: ${org.slug})`);
   console.log(`   Admin: admin@demo.com / Admin1234!`);

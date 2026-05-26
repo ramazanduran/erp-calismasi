@@ -83,6 +83,7 @@ model Organization {
   salesQuotes       SalesQuote[]
   purchaseRequests  PurchaseRequest[]
   vehicles          Vehicle[]
+  warehouses        Warehouse[]
 
   @@map("organizations")
 }
@@ -138,6 +139,7 @@ model User {
   salesQuotesCreated   SalesQuote[]
   purchaseRequestsMade PurchaseRequest[] @relation("PRRequestedBy")
   purchaseRequestsApproved PurchaseRequest[] @relation("PRApprovedBy")
+  managedWarehouses  Warehouse[]  @relation("WarehouseManager")
 
   @@unique([organizationId, email])
   @@index([organizationId])
@@ -449,6 +451,7 @@ model Product {
   productionOrders   ProductionOrder[]   @relation("ProductionOrderProduct")
   quoteItems         SalesQuoteItem[]
   purchaseRequestItems PurchaseRequestItem[]
+  warehouseStock     WarehouseStock[]
 
   @@unique([organizationId, code])
   @@index([organizationId])
@@ -2298,4 +2301,63 @@ model Vehicle {
   @@unique([organizationId, plateNumber])
   @@index([organizationId])
   @@map("vehicles")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// WAREHOUSE MANAGEMENT (Depo Yönetimi)
+// ─────────────────────────────────────────────────────────────────────────────
+model Warehouse {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  code           String   @db.VarChar(50)
+  name           String   @db.VarChar(255)
+  type           String   @default("main") @db.VarChar(20) // main, satellite, virtual, transit
+  address        String?
+  city           String?  @db.VarChar(100)
+  managerId      String?  @map("manager_id") @db.Uuid
+  phone          String?  @db.VarChar(30)
+  isActive       Boolean  @default(true) @map("is_active")
+  notes          String?
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  organization Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  manager      User?              @relation("WarehouseManager", fields: [managerId], references: [id])
+  locations    WarehouseLocation[]
+  stockEntries WarehouseStock[]
+
+  @@unique([organizationId, code])
+  @@index([organizationId])
+  @@map("warehouses")
+}
+
+model WarehouseLocation {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  warehouseId String   @map("warehouse_id") @db.Uuid
+  code        String   @db.VarChar(50)
+  name        String   @db.VarChar(100)
+  type        String   @default("shelf") @db.VarChar(20)
+  isActive    Boolean  @default(true) @map("is_active")
+
+  warehouse Warehouse @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
+
+  @@unique([warehouseId, code])
+  @@index([warehouseId])
+  @@map("warehouse_locations")
+}
+
+model WarehouseStock {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  warehouseId String   @map("warehouse_id") @db.Uuid
+  productId   String   @map("product_id") @db.Uuid
+  quantity    Decimal  @default(0) @db.Decimal(15, 3)
+  reservedQty Decimal  @default(0) @map("reserved_qty") @db.Decimal(15, 3)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  warehouse Warehouse @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
+  product   Product   @relation(fields: [productId], references: [id])
+
+  @@unique([warehouseId, productId])
+  @@index([warehouseId])
+  @@map("warehouse_stock")
 }
