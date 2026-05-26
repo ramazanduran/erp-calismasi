@@ -140,6 +140,109 @@ async function main() {
     skipDuplicates: true,
   });
 
+  // ─── FAZ 11: Budget, Deals, ExchangeRates ───────────────────────────────────
+
+  // Exchange Rates
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  await prisma.exchangeRate.upsert({
+    where: { organizationId_baseCurrency_targetCurrency_date: { organizationId: org.id, baseCurrency: 'USD', targetCurrency: 'TRY', date: today } },
+    update: { rate: 32.50 },
+    create: { organizationId: org.id, baseCurrency: 'USD', targetCurrency: 'TRY', rate: 32.50, date: today, source: 'seed' },
+  });
+  await prisma.exchangeRate.upsert({
+    where: { organizationId_baseCurrency_targetCurrency_date: { organizationId: org.id, baseCurrency: 'EUR', targetCurrency: 'TRY', date: today } },
+    update: { rate: 35.20 },
+    create: { organizationId: org.id, baseCurrency: 'EUR', targetCurrency: 'TRY', rate: 35.20, date: today, source: 'seed' },
+  });
+  await prisma.exchangeRate.upsert({
+    where: { organizationId_baseCurrency_targetCurrency_date: { organizationId: org.id, baseCurrency: 'GBP', targetCurrency: 'TRY', date: today } },
+    update: { rate: 41.80 },
+    create: { organizationId: org.id, baseCurrency: 'GBP', targetCurrency: 'TRY', rate: 41.80, date: today, source: 'seed' },
+  });
+
+  // Budget
+  const budget = await prisma.budget.create({
+    data: {
+      organizationId: org.id,
+      name: '2025 Yıllık Bütçe',
+      type: 'annual',
+      status: 'active',
+      startDate: new Date('2025-01-01'),
+      endDate: new Date('2025-12-31'),
+      currency: 'TRY',
+      totalAmount: 5000000,
+      lines: {
+        create: [
+          { category: 'personnel', description: 'Personel Giderleri', plannedAmount: 2500000, actualAmount: 1800000 },
+          { category: 'marketing', description: 'Pazarlama & Reklam', plannedAmount: 500000, actualAmount: 320000 },
+          { category: 'operations', description: 'Operasyonel Giderler', plannedAmount: 800000, actualAmount: 650000 },
+          { category: 'capex', description: 'Yatırım Harcamaları', plannedAmount: 700000, actualAmount: 200000 },
+          { category: 'other', description: 'Diğer Giderler', plannedAmount: 500000, actualAmount: 180000 },
+        ],
+      },
+    },
+  });
+
+  // CRM Deals
+  const firstCustomer = customers[0];
+  if (firstCustomer && budget) {
+    await prisma.deal.create({
+      data: {
+        organizationId: org.id,
+        title: 'ERP Genişletme Projesi',
+        customerId: firstCustomer.id,
+        stage: 'proposal',
+        value: 250000,
+        probability: 60,
+        expectedClose: new Date(Date.now() + 30 * 86400000),
+        description: 'Mevcut ERP sisteminin yeni modüllerle genişletilmesi',
+        activities: {
+          create: [
+            { type: 'meeting', title: 'İlk Keşif Toplantısı', description: 'Müşteri ihtiyaçlarının belirlenmesi', completedAt: new Date() },
+            { type: 'email', title: 'Teklif Gönderimi', description: 'Teknik ve ticari teklif gönderildi', completedAt: new Date() },
+            { type: 'call', title: 'Takip Görüşmesi', description: 'Teklif değerlendirmesi', dueAt: new Date(Date.now() + 7 * 86400000) },
+          ],
+        },
+      },
+    });
+
+    await prisma.deal.create({
+      data: {
+        organizationId: org.id,
+        title: 'Yıllık Bakım Sözleşmesi',
+        customerId: customers[1]?.id,
+        stage: 'negotiation',
+        value: 120000,
+        probability: 80,
+        expectedClose: new Date(Date.now() + 14 * 86400000),
+      },
+    });
+
+    await prisma.deal.create({
+      data: {
+        organizationId: org.id,
+        title: 'Bulut Altyapısı Kurulumu',
+        stage: 'qualification',
+        value: 85000,
+        probability: 30,
+        expectedClose: new Date(Date.now() + 60 * 86400000),
+      },
+    });
+
+    await prisma.deal.create({
+      data: {
+        organizationId: org.id,
+        title: 'Mobil Uygulama Geliştirme',
+        customerId: customers[2]?.id,
+        stage: 'won',
+        value: 180000,
+        probability: 100,
+        closedAt: new Date(Date.now() - 7 * 86400000),
+      },
+    });
+  }
+
   console.log('✅ Seed data başarıyla oluşturuldu!');
   console.log(`   Org: ${org.name} (slug: ${org.slug})`);
   console.log(`   Admin: admin@demo.com / Admin1234!`);

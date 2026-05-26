@@ -105,8 +105,10 @@ const navigation = [
     icon: Target,
     children: [
       { label: 'Leads', href: '/crm/leads' },
+      { label: 'Satış Pipeline', href: '/crm/deals' },
     ],
   },
+  { id: 'budget', label: 'Bütçe', icon: DollarSign, href: '/budget' },
   { id: 'tasks', label: 'Görevler', icon: CheckSquare, href: '/tasks' },
   { id: 'workflows', label: 'İş Akışları', icon: GitBranch, href: '/workflows' },
   { id: 'projects', label: 'Projeler', icon: FolderKanban, href: '/projects' },
@@ -277,6 +279,8 @@ export function Sidebar({ collapsed, mobileOpen, onMobileClose, user: _user }: S
                 { label: 'Audit Loglar', href: '/settings/admin/audit-logs' },
                 { label: 'Veri İçe Aktarma', href: '/settings/admin/import' },
                 { label: 'API Token\'ları', href: '/settings/api-tokens' },
+                { label: 'Webhooks', href: '/settings/webhooks' },
+                { label: 'Döviz Kurları', href: '/settings/exchange-rates' },
               ].map((child) => (
                 <Link
                   key={child.href}

@@ -31,6 +31,10 @@ import { CrmModule } from './modules/crm/crm.module';
 import { QueueModule } from './modules/queue/queue.module';
 import { PricingModule } from './modules/pricing/pricing.module';
 import { ApiTokensModule } from './modules/api-tokens/api-tokens.module';
+import { BudgetModule } from './modules/budget/budget.module';
+import { DealsModule } from './modules/deals/deals.module';
+import { WebhooksModule } from './modules/webhooks/webhooks.module';
+import { ExchangeRatesModule } from './modules/exchange-rates/exchange-rates.module';
 
 @Module({
   imports: [
@@ -106,6 +110,12 @@ import { ApiTokensModule } from './modules/api-tokens/api-tokens.module';
 
     // Faz 10
     ApiTokensModule,
+
+    // Faz 11
+    BudgetModule,
+    DealsModule,
+    WebhooksModule,
+    ExchangeRatesModule,
   ],
 })
 export class AppModule {}

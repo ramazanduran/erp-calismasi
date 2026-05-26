@@ -57,6 +57,10 @@ model Organization {
   stockCounts       StockCount[]
   priceLists        PriceList[]
   apiTokens         ApiToken[]
+  budgets           Budget[]
+  deals             Deal[]
+  webhooks          Webhook[]
+  exchangeRates     ExchangeRate[]
 
   @@map("organizations")
 }
@@ -166,6 +170,7 @@ model Department {
   parent       Department?  @relation("DeptHierarchy", fields: [parentId], references: [id])
   children     Department[] @relation("DeptHierarchy")
   users        User[]
+  budgets      Budget[]
 
   @@unique([organizationId, code])
   @@index([organizationId])
@@ -342,6 +347,7 @@ model Customer {
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   orders       Order[]
   invoices     Invoice[]
+  deals        Deal[]
 
   @@unique([organizationId, code])
   @@index([organizationId])
@@ -860,6 +866,7 @@ model Lead {
   updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  deals        Deal[]
 
   @@index([organizationId])
   @@map("leads")
@@ -983,4 +990,156 @@ model ApiToken {
 
   @@index([organizationId, userId])
   @@map("api_tokens")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// BUDGET (Bütçe Yönetimi)
+// ─────────────────────────────────────────────────────────────────────────────
+model Budget {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  name           String   @db.VarChar(255)
+  description    String?
+  type           String   @default("annual") @db.VarChar(20) // annual, quarterly, monthly, project
+  status         String   @default("draft") @db.VarChar(20)  // draft, active, closed
+  startDate      DateTime @map("start_date") @db.Date
+  endDate        DateTime @map("end_date") @db.Date
+  departmentId   String?  @map("department_id") @db.Uuid
+  currency       String   @default("TRY") @db.VarChar(3)
+  totalAmount    Decimal  @default(0) @map("total_amount") @db.Decimal(18, 2)
+  notes          String?
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  organization Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  department   Department?   @relation(fields: [departmentId], references: [id])
+  lines        BudgetLine[]
+
+  @@index([organizationId])
+  @@map("budgets")
+}
+
+model BudgetLine {
+  id               String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  budgetId         String  @map("budget_id") @db.Uuid
+  category         String  @db.VarChar(100) // personnel, marketing, operations, capex, etc.
+  description      String  @db.VarChar(255)
+  plannedAmount    Decimal @map("planned_amount") @db.Decimal(18, 2)
+  actualAmount     Decimal @default(0) @map("actual_amount") @db.Decimal(18, 2)
+  period           String? @db.VarChar(7)  // YYYY-MM for monthly tracking
+  notes            String?
+
+  budget Budget @relation(fields: [budgetId], references: [id], onDelete: Cascade)
+
+  @@index([budgetId])
+  @@map("budget_lines")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CRM DEALS / OPPORTUNITIES (Satış Fırsatları)
+// ─────────────────────────────────────────────────────────────────────────────
+model Deal {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String    @map("organization_id") @db.Uuid
+  title          String    @db.VarChar(255)
+  customerId     String?   @map("customer_id") @db.Uuid
+  leadId         String?   @map("lead_id") @db.Uuid
+  assignedUserId String?   @map("assigned_user_id") @db.Uuid
+  stage          String    @default("qualification") @db.VarChar(50)
+  // qualification, proposal, negotiation, won, lost
+  value          Decimal   @default(0) @db.Decimal(18, 2)
+  currency       String    @default("TRY") @db.VarChar(3)
+  probability    Int       @default(0) // 0-100
+  expectedClose  DateTime? @map("expected_close") @db.Date
+  closedAt       DateTime? @map("closed_at") @db.Timestamptz
+  lostReason     String?   @map("lost_reason")
+  description    String?
+  tags           String[]
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+
+  organization Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  customer     Customer?       @relation(fields: [customerId], references: [id])
+  lead         Lead?           @relation(fields: [leadId], references: [id])
+  activities   DealActivity[]
+
+  @@index([organizationId, stage])
+  @@map("deals")
+}
+
+model DealActivity {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  dealId      String   @map("deal_id") @db.Uuid
+  type        String   @db.VarChar(30)  // call, email, meeting, note, task
+  title       String   @db.VarChar(255)
+  description String?
+  dueAt       DateTime? @map("due_at") @db.Timestamptz
+  completedAt DateTime? @map("completed_at") @db.Timestamptz
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  deal Deal @relation(fields: [dealId], references: [id], onDelete: Cascade)
+
+  @@index([dealId])
+  @@map("deal_activities")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// WEBHOOKS (Dış Entegrasyon)
+// ─────────────────────────────────────────────────────────────────────────────
+model Webhook {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  name           String   @db.VarChar(100)
+  url            String
+  secret         String?
+  events         String[] // order.created, invoice.paid, customer.created etc.
+  isActive       Boolean  @default(true) @map("is_active")
+  headers        Json     @default("{}")
+  retryCount     Int      @default(3) @map("retry_count")
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  organization Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  logs         WebhookLog[]
+
+  @@index([organizationId])
+  @@map("webhooks")
+}
+
+model WebhookLog {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  webhookId   String   @map("webhook_id") @db.Uuid
+  event       String   @db.VarChar(100)
+  payload     Json
+  statusCode  Int?     @map("status_code")
+  response    String?
+  error       String?
+  attempts    Int      @default(1)
+  deliveredAt DateTime? @map("delivered_at") @db.Timestamptz
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  webhook Webhook @relation(fields: [webhookId], references: [id], onDelete: Cascade)
+
+  @@index([webhookId])
+  @@map("webhook_logs")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// EXCHANGE RATES (Döviz Kurları)
+// ─────────────────────────────────────────────────────────────────────────────
+model ExchangeRate {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  baseCurrency   String   @map("base_currency") @db.VarChar(3)
+  targetCurrency String   @map("target_currency") @db.VarChar(3)
+  rate           Decimal  @db.Decimal(18, 6)
+  source         String   @default("manual") @db.VarChar(20) // manual, tcmb, ecb
+  date           DateTime @db.Date
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, baseCurrency, targetCurrency, date])
+  @@index([organizationId, date])
+  @@map("exchange_rates")
 }

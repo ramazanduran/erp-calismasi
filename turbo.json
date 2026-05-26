@@ -26,6 +26,10 @@
     "db:seed": {
       "cache": false,
       "dependsOn": ["db:migrate"]
+    },
+    "e2e": {
+      "cache": false,
+      "dependsOn": ["build"]
     }
   }
 }
