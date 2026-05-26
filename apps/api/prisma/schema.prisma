@@ -61,6 +61,13 @@ model Organization {
   deals             Deal[]
   webhooks          Webhook[]
   exchangeRates     ExchangeRate[]
+  projects          Project[]
+  assetCategories   AssetCategory[]
+  assets            Asset[]
+  shipments         Shipment[]
+  documentTemplates DocumentTemplate[]
+  generatedDocuments GeneratedDocument[]
+  savedReports      SavedReport[]
 
   @@map("organizations")
 }
@@ -348,6 +355,8 @@ model Customer {
   orders       Order[]
   invoices     Invoice[]
   deals        Deal[]
+  projects     Project[]
+  shipments    Shipment[]
 
   @@unique([organizationId, code])
   @@index([organizationId])
@@ -428,6 +437,7 @@ model Order {
   customer     Customer     @relation(fields: [customerId], references: [id])
   items        OrderItem[]
   invoices     Invoice[]
+  shipments    Shipment[]
 
   @@unique([organizationId, orderNumber])
   @@index([organizationId])
@@ -1142,4 +1152,330 @@ model ExchangeRate {
   @@unique([organizationId, baseCurrency, targetCurrency, date])
   @@index([organizationId, date])
   @@map("exchange_rates")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PROJECT MANAGEMENT (Proje Yönetimi)
+// ─────────────────────────────────────────────────────────────────────────────
+model Project {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String    @map("organization_id") @db.Uuid
+  code           String    @db.VarChar(20)
+  name           String    @db.VarChar(255)
+  description    String?
+  status         String    @default("planning") @db.VarChar(20)
+  // planning, active, on_hold, completed, cancelled
+  priority       String    @default("medium") @db.VarChar(20)
+  ownerId        String?   @map("owner_id") @db.Uuid
+  customerId     String?   @map("customer_id") @db.Uuid
+  startDate      DateTime? @map("start_date") @db.Date
+  endDate        DateTime? @map("end_date") @db.Date
+  budget         Decimal?  @db.Decimal(18, 2)
+  currency       String    @default("TRY") @db.VarChar(3)
+  progress       Int       @default(0) // 0-100
+  tags           String[]
+  color          String?   @db.VarChar(7)
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+
+  organization Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  customer     Customer?        @relation(fields: [customerId], references: [id])
+  members      ProjectMember[]
+  tasks        ProjectTask[]
+  milestones   ProjectMilestone[]
+  timeEntries  TimeEntry[]
+
+  @@unique([organizationId, code])
+  @@index([organizationId])
+  @@map("projects")
+}
+
+model ProjectMember {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  projectId String   @map("project_id") @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  role      String   @default("member") @db.VarChar(30) // manager, member, viewer
+  joinedAt  DateTime @default(now()) @map("joined_at") @db.Timestamptz
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, userId])
+  @@map("project_members")
+}
+
+model ProjectTask {
+  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  projectId    String    @map("project_id") @db.Uuid
+  milestoneId  String?   @map("milestone_id") @db.Uuid
+  parentId     String?   @map("parent_id") @db.Uuid
+  title        String    @db.VarChar(255)
+  description  String?
+  status       String    @default("todo") @db.VarChar(20)
+  // todo, in_progress, review, done, blocked
+  priority     String    @default("medium") @db.VarChar(20)
+  assigneeId   String?   @map("assignee_id") @db.Uuid
+  estimatedHours Decimal? @map("estimated_hours") @db.Decimal(8, 2)
+  loggedHours  Decimal   @default(0) @map("logged_hours") @db.Decimal(8, 2)
+  dueDate      DateTime? @map("due_date") @db.Date
+  completedAt  DateTime? @map("completed_at") @db.Timestamptz
+  sortOrder    Int       @default(0) @map("sort_order")
+  tags         String[]
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt    DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+
+  project    Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  milestone  ProjectMilestone? @relation(fields: [milestoneId], references: [id])
+  parent     ProjectTask?      @relation("TaskHierarchy", fields: [parentId], references: [id])
+  subtasks   ProjectTask[]     @relation("TaskHierarchy")
+  timeEntries TimeEntry[]
+
+  @@index([projectId])
+  @@map("project_tasks")
+}
+
+model ProjectMilestone {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  projectId   String    @map("project_id") @db.Uuid
+  name        String    @db.VarChar(255)
+  description String?
+  dueDate     DateTime  @map("due_date") @db.Date
+  status      String    @default("pending") @db.VarChar(20) // pending, completed, missed
+  completedAt DateTime? @map("completed_at") @db.Timestamptz
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz
+
+  project Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  tasks   ProjectTask[]
+
+  @@index([projectId])
+  @@map("project_milestones")
+}
+
+model TimeEntry {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  projectId   String   @map("project_id") @db.Uuid
+  taskId      String?  @map("task_id") @db.Uuid
+  userId      String   @map("user_id") @db.Uuid
+  description String?
+  hours       Decimal  @db.Decimal(8, 2)
+  date        DateTime @db.Date
+  billable    Boolean  @default(true)
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  project Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  task    ProjectTask? @relation(fields: [taskId], references: [id])
+
+  @@index([projectId])
+  @@map("time_entries")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// FIXED ASSETS (Demirbaş Yönetimi)
+// ─────────────────────────────────────────────────────────────────────────────
+model AssetCategory {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  name           String   @db.VarChar(100)
+  depreciationMethod String @default("straight_line") @map("depreciation_method") @db.VarChar(30)
+  usefulLifeYears Int      @default(5) @map("useful_life_years")
+  salvageRatePct  Decimal  @default(0) @map("salvage_rate_pct") @db.Decimal(5, 2)
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  assets       Asset[]
+
+  @@index([organizationId])
+  @@map("asset_categories")
+}
+
+model Asset {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String    @map("organization_id") @db.Uuid
+  categoryId     String?   @map("category_id") @db.Uuid
+  code           String    @db.VarChar(30)
+  name           String    @db.VarChar(255)
+  description    String?
+  status         String    @default("active") @db.VarChar(20) // active, disposed, maintenance
+  location       String?   @db.VarChar(255)
+  assignedToId   String?   @map("assigned_to_id") @db.Uuid
+  purchaseDate   DateTime? @map("purchase_date") @db.Date
+  purchasePrice  Decimal   @default(0) @map("purchase_price") @db.Decimal(18, 2)
+  currentValue   Decimal   @default(0) @map("current_value") @db.Decimal(18, 2)
+  salvageValue   Decimal   @default(0) @map("salvage_value") @db.Decimal(18, 2)
+  usefulLifeYears Int      @default(5) @map("useful_life_years")
+  serialNumber   String?   @map("serial_number") @db.VarChar(100)
+  warrantyExpiry DateTime? @map("warranty_expiry") @db.Date
+  disposedAt     DateTime? @map("disposed_at") @db.Timestamptz
+  notes          String?
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+
+  organization Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  category     AssetCategory? @relation(fields: [categoryId], references: [id])
+  maintenances AssetMaintenance[]
+  depreciations AssetDepreciation[]
+
+  @@unique([organizationId, code])
+  @@index([organizationId])
+  @@map("assets")
+}
+
+model AssetMaintenance {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  assetId     String    @map("asset_id") @db.Uuid
+  type        String    @db.VarChar(30) // scheduled, corrective, preventive
+  title       String    @db.VarChar(255)
+  description String?
+  cost        Decimal   @default(0) @db.Decimal(18, 2)
+  scheduledAt DateTime? @map("scheduled_at") @db.Date
+  completedAt DateTime? @map("completed_at") @db.Date
+  technician  String?   @db.VarChar(100)
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz
+
+  asset Asset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@index([assetId])
+  @@map("asset_maintenances")
+}
+
+model AssetDepreciation {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  assetId    String   @map("asset_id") @db.Uuid
+  period     String   @db.VarChar(7)  // YYYY-MM
+  amount     Decimal  @db.Decimal(18, 2)
+  bookValue  Decimal  @map("book_value") @db.Decimal(18, 2)
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  asset Asset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@unique([assetId, period])
+  @@map("asset_depreciations")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// LOGISTICS (Lojistik)
+// ─────────────────────────────────────────────────────────────────────────────
+model Shipment {
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId  String    @map("organization_id") @db.Uuid
+  trackingNumber  String    @unique @map("tracking_number") @db.VarChar(100)
+  orderId         String?   @map("order_id") @db.Uuid
+  customerId      String?   @map("customer_id") @db.Uuid
+  carrier         String?   @db.VarChar(100)
+  status          String    @default("pending") @db.VarChar(30)
+  // pending, picked_up, in_transit, out_for_delivery, delivered, returned, failed
+  origin          Json      // { address, city, country, postalCode }
+  destination     Json      // { address, city, country, postalCode }
+  weight          Decimal?  @db.Decimal(10, 3)
+  dimensions      Json?     // { length, width, height, unit }
+  shippingCost    Decimal   @default(0) @map("shipping_cost") @db.Decimal(18, 2)
+  estimatedDelivery DateTime? @map("estimated_delivery") @db.Date
+  actualDelivery  DateTime? @map("actual_delivery") @db.Timestamptz
+  notes           String?
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+
+  organization Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  order        Order?         @relation(fields: [orderId], references: [id])
+  customer     Customer?      @relation(fields: [customerId], references: [id])
+  events       ShipmentEvent[]
+  items        ShipmentItem[]
+
+  @@index([organizationId])
+  @@map("shipments")
+}
+
+model ShipmentItem {
+  id          String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  shipmentId  String  @map("shipment_id") @db.Uuid
+  productId   String? @map("product_id") @db.Uuid
+  description String  @db.VarChar(255)
+  quantity    Int
+  weight      Decimal? @db.Decimal(10, 3)
+
+  shipment Shipment @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+
+  @@map("shipment_items")
+}
+
+model ShipmentEvent {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  shipmentId  String   @map("shipment_id") @db.Uuid
+  status      String   @db.VarChar(30)
+  location    String?  @db.VarChar(255)
+  description String?
+  occurredAt  DateTime @default(now()) @map("occurred_at") @db.Timestamptz
+
+  shipment Shipment @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+
+  @@index([shipmentId])
+  @@map("shipment_events")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// DOCUMENT TEMPLATES (Doküman Şablonları)
+// ─────────────────────────────────────────────────────────────────────────────
+model DocumentTemplate {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  name           String   @db.VarChar(100)
+  type           String   @db.VarChar(30) // invoice, order, contract, quote, receipt, letter
+  description    String?
+  htmlContent    String   @map("html_content")
+  variables      Json     @default("[]") // [{ key, label, type, defaultValue }]
+  isDefault      Boolean  @default(false) @map("is_default")
+  isActive       Boolean  @default(true) @map("is_active")
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  organization Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  documents    GeneratedDocument[]
+
+  @@index([organizationId, type])
+  @@map("document_templates")
+}
+
+model GeneratedDocument {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  templateId   String   @map("template_id") @db.Uuid
+  organizationId String  @map("organization_id") @db.Uuid
+  name         String   @db.VarChar(255)
+  variables    Json     @default("{}")
+  htmlContent  String   @map("html_content")
+  pdfUrl       String?  @map("pdf_url")
+  entityType   String?  @map("entity_type") @db.VarChar(30) // invoice, order, contract
+  entityId     String?  @map("entity_id") @db.Uuid
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  template     DocumentTemplate @relation(fields: [templateId], references: [id])
+  organization Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@map("generated_documents")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CUSTOM REPORTS (Özel Rapor Oluşturucu)
+// ─────────────────────────────────────────────────────────────────────────────
+model SavedReport {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  createdById    String   @map("created_by_id") @db.Uuid
+  name           String   @db.VarChar(100)
+  description    String?
+  dataSource     String   @map("data_source") @db.VarChar(50)
+  // orders, invoices, products, customers, employees, transactions
+  columns        Json     @default("[]")
+  filters        Json     @default("{}")
+  sortBy         String?  @map("sort_by") @db.VarChar(50)
+  sortDir        String   @default("desc") @map("sort_dir") @db.VarChar(4)
+  chartType      String?  @map("chart_type") @db.VarChar(20) // bar, line, pie, table
+  chartConfig    Json     @default("{}")
+  isPublic       Boolean  @default(false) @map("is_public")
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@map("saved_reports")
 }

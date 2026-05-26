@@ -35,6 +35,11 @@ import { BudgetModule } from './modules/budget/budget.module';
 import { DealsModule } from './modules/deals/deals.module';
 import { WebhooksModule } from './modules/webhooks/webhooks.module';
 import { ExchangeRatesModule } from './modules/exchange-rates/exchange-rates.module';
+import { ProjectsModule } from './modules/projects/projects.module';
+import { AssetsModule } from './modules/assets/assets.module';
+import { LogisticsModule } from './modules/logistics/logistics.module';
+import { DocumentTemplatesModule } from './modules/document-templates/document-templates.module';
+import { CustomReportsModule } from './modules/custom-reports/custom-reports.module';
 
 @Module({
   imports: [
@@ -116,6 +121,13 @@ import { ExchangeRatesModule } from './modules/exchange-rates/exchange-rates.mod
     DealsModule,
     WebhooksModule,
     ExchangeRatesModule,
+
+    // Faz 12
+    ProjectsModule,
+    AssetsModule,
+    LogisticsModule,
+    DocumentTemplatesModule,
+    CustomReportsModule,
   ],
 })
 export class AppModule {}

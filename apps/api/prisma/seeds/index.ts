@@ -243,6 +243,100 @@ async function main() {
     });
   }
 
+  // ─── FAZ 12: Projects, Assets, Logistics, Document Templates ──────────────
+
+  // Asset Category
+  const itCategory = await prisma.assetCategory.create({
+    data: {
+      organizationId: org.id,
+      name: 'Bilişim Ekipmanları',
+      depreciationMethod: 'straight_line',
+      usefulLifeYears: 5,
+      salvageRatePct: 0,
+    },
+  });
+
+  const furnitureCategory = await prisma.assetCategory.create({
+    data: {
+      organizationId: org.id,
+      name: 'Mobilya & Demirbaş',
+      depreciationMethod: 'straight_line',
+      usefulLifeYears: 10,
+      salvageRatePct: 5,
+    },
+  });
+
+  // Assets
+  await prisma.asset.createMany({
+    data: [
+      { organizationId: org.id, categoryId: itCategory.id, code: 'DMB-001', name: 'Dell Laptop XPS 15', purchasePrice: 45000, currentValue: 36000, salvageValue: 0, usefulLifeYears: 5, purchaseDate: new Date('2023-01-15'), status: 'active', location: 'Genel Müdür Ofisi' },
+      { organizationId: org.id, categoryId: itCategory.id, code: 'DMB-002', name: 'HP LaserJet Pro Yazıcı', purchasePrice: 12000, currentValue: 8000, salvageValue: 500, usefulLifeYears: 5, purchaseDate: new Date('2023-03-01'), status: 'active', location: 'Muhasebe' },
+      { organizationId: org.id, categoryId: furnitureCategory.id, code: 'DMB-003', name: 'Toplantı Masası Seti', purchasePrice: 25000, currentValue: 22000, salvageValue: 1000, usefulLifeYears: 10, purchaseDate: new Date('2022-06-01'), status: 'active', location: 'Toplantı Salonu' },
+    ],
+  });
+
+  // Project
+  const project = await prisma.project.create({
+    data: {
+      organizationId: org.id,
+      code: 'PRJ-0001',
+      name: 'ERP Dijital Dönüşüm',
+      description: 'Şirket geneli dijital dönüşüm ve ERP entegrasyon projesi',
+      status: 'active',
+      priority: 'high',
+      customerId: customers[0]?.id,
+      startDate: new Date('2025-01-01'),
+      endDate: new Date('2025-12-31'),
+      budget: 500000,
+      progress: 35,
+      color: '#6366f1',
+    },
+  });
+
+  await prisma.projectMilestone.createMany({
+    data: [
+      { projectId: project.id, name: 'Analiz & Planlama', dueDate: new Date('2025-03-31'), status: 'completed', completedAt: new Date('2025-03-25') },
+      { projectId: project.id, name: 'Geliştirme Faz 1', dueDate: new Date('2025-06-30'), status: 'pending' },
+      { projectId: project.id, name: 'Test & Kabul', dueDate: new Date('2025-09-30'), status: 'pending' },
+      { projectId: project.id, name: 'Canlıya Geçiş', dueDate: new Date('2025-12-15'), status: 'pending' },
+    ],
+  });
+
+  await prisma.projectTask.createMany({
+    data: [
+      { projectId: project.id, title: 'Mevcut süreçlerin dokümantasyonu', status: 'done', priority: 'high', estimatedHours: 40, loggedHours: 38 },
+      { projectId: project.id, title: 'Kullanıcı gereksinim analizi', status: 'done', priority: 'high', estimatedHours: 24, loggedHours: 26 },
+      { projectId: project.id, title: 'Modül geliştirme - Satış', status: 'in_progress', priority: 'high', estimatedHours: 80, loggedHours: 45 },
+      { projectId: project.id, title: 'Modül geliştirme - Muhasebe', status: 'todo', priority: 'medium', estimatedHours: 60, loggedHours: 0 },
+      { projectId: project.id, title: 'Entegrasyon testleri', status: 'todo', priority: 'high', estimatedHours: 40, loggedHours: 0 },
+    ],
+  });
+
+  // Shipment
+  if (customers[0]) {
+    await prisma.shipment.create({
+      data: {
+        organizationId: org.id,
+        trackingNumber: 'ERP-ABC123DEF456',
+        customerId: customers[0].id,
+        carrier: 'Aras Kargo',
+        status: 'in_transit',
+        origin: { address: 'Atatürk Cad. No:1', city: 'İstanbul', country: 'Türkiye', postalCode: '34000' },
+        destination: { address: 'Kızılay Meydanı No:5', city: 'Ankara', country: 'Türkiye', postalCode: '06000' },
+        weight: 2.5,
+        shippingCost: 150,
+        estimatedDelivery: new Date(Date.now() + 2 * 86400000),
+        events: {
+          create: [
+            { status: 'pending', description: 'Sevkiyat oluşturuldu', occurredAt: new Date(Date.now() - 3 * 86400000) },
+            { status: 'picked_up', location: 'İstanbul Şubesi', description: 'Kargoya teslim edildi', occurredAt: new Date(Date.now() - 2 * 86400000) },
+            { status: 'in_transit', location: 'Ankara Dağıtım Merkezi', description: 'Dağıtım merkezine ulaştı', occurredAt: new Date(Date.now() - 86400000) },
+          ],
+        },
+      },
+    });
+  }
+
   console.log('✅ Seed data başarıyla oluşturuldu!');
   console.log(`   Org: ${org.name} (slug: ${org.slug})`);
   console.log(`   Admin: admin@demo.com / Admin1234!`);

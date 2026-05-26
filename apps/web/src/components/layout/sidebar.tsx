@@ -7,6 +7,7 @@ import {
   LayoutDashboard, DollarSign, Package, ShoppingCart, Truck as PurchaseIcon,
   Factory, Users, Truck, BarChart3, FolderKanban, FileText, Bell, Settings,
   ChevronDown, ChevronRight, X, GitBranch, CheckSquare, Calculator, Target,
+  Layers,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { AuthUser } from '@erp/shared-types';
@@ -97,6 +98,7 @@ const navigation = [
     children: [
       { label: 'Genel Bakış', href: '/analytics' },
       { label: 'Raporlar', href: '/analytics/reports' },
+      { label: 'Özel Raporlar', href: '/analytics/custom-reports' },
     ],
   },
   {
@@ -109,10 +111,25 @@ const navigation = [
     ],
   },
   { id: 'budget', label: 'Bütçe', icon: DollarSign, href: '/budget' },
+  {
+    id: 'projects',
+    label: 'Proje Yönetimi',
+    icon: FolderKanban,
+    children: [
+      { label: 'Tüm Projeler', href: '/projects' },
+    ],
+  },
+  { id: 'assets', label: 'Demirbaşlar', icon: Layers, href: '/assets' },
+  {
+    id: 'logistics',
+    label: 'Lojistik',
+    icon: Truck,
+    children: [
+      { label: 'Sevkiyatlar', href: '/logistics/shipments' },
+    ],
+  },
   { id: 'tasks', label: 'Görevler', icon: CheckSquare, href: '/tasks' },
   { id: 'workflows', label: 'İş Akışları', icon: GitBranch, href: '/workflows' },
-  { id: 'projects', label: 'Projeler', icon: FolderKanban, href: '/projects' },
-  { id: 'documents', label: 'Dokümanlar', icon: FileText, href: '/documents' },
   { id: 'notifications', label: 'Bildirimler', icon: Bell, href: '/notifications' },
 ];
 
@@ -281,6 +298,7 @@ export function Sidebar({ collapsed, mobileOpen, onMobileClose, user: _user }: S
                 { label: 'API Token\'ları', href: '/settings/api-tokens' },
                 { label: 'Webhooks', href: '/settings/webhooks' },
                 { label: 'Döviz Kurları', href: '/settings/exchange-rates' },
+                { label: 'Doküman Şablonları', href: '/settings/document-templates' },
               ].map((child) => (
                 <Link
                   key={child.href}
