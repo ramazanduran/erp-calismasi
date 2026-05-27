@@ -10,6 +10,7 @@ import {
   CalendarDays,
   ExternalLink,
   FileDown,
+  Search,
 } from 'lucide-react';
 import { exportToExcel } from '@/lib/utils/excel-export';
 import { api } from '@/lib/api/client';
@@ -459,6 +460,7 @@ type Tab = 'deals' | 'leads';
 
 export default function OpportunitiesPage() {
   const [activeTab, setActiveTab] = useState<Tab>('deals');
+  const [search, setSearch] = useState('');
 
   const { data: dealsRaw, isLoading: dealsLoading } = useQuery({
     queryKey: ['crm-deals-opportunities'],
@@ -473,8 +475,26 @@ export default function OpportunitiesPage() {
     enabled: activeTab === 'leads',
   });
 
-  const deals = useMemo(() => normalizeDealList(dealsRaw), [dealsRaw]);
-  const leads = useMemo(() => normalizeLeadList(leadsRaw), [leadsRaw]);
+  const allDeals = useMemo(() => normalizeDealList(dealsRaw), [dealsRaw]);
+  const allLeads = useMemo(() => normalizeLeadList(leadsRaw), [leadsRaw]);
+
+  const deals = useMemo(() => {
+    if (!search) return allDeals;
+    const q = search.toLowerCase();
+    return allDeals.filter((d) =>
+      d.title?.toLowerCase().includes(q) ||
+      d.customer?.name?.toLowerCase().includes(q)
+    );
+  }, [allDeals, search]);
+
+  const leads = useMemo(() => {
+    if (!search) return allLeads;
+    const q = search.toLowerCase();
+    return allLeads.filter((l) =>
+      `${l.firstName} ${l.lastName}`.toLowerCase().includes(q) ||
+      l.company?.toLowerCase().includes(q)
+    );
+  }, [allLeads, search]);
 
   const tabs: { id: Tab; label: string }[] = [
     { id: 'deals', label: 'Fırsatlar (Deals)' },
@@ -493,7 +513,18 @@ export default function OpportunitiesPage() {
             Satış pipeline ve adayları yönetin
           </p>
         </div>
-        <button
+        <div className="flex items-center gap-2">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <input
+              type="text"
+              placeholder="Fırsat veya müşteri ara..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-9 pr-3 py-1.5 rounded-lg border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 w-52"
+            />
+          </div>
+          <button
           onClick={() => {
             if (activeTab === 'deals') {
               exportToExcel(
@@ -542,12 +573,13 @@ export default function OpportunitiesPage() {
           className="flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm hover:bg-muted"
         >
           <FileDown className="h-4 w-4" /> Excel
-        </button>
+          </button>
+        </div>
       </div>
 
       {/* Stats - only shown for deals tab */}
       {activeTab === 'deals' && (
-        <SummaryStats deals={deals} />
+        <SummaryStats deals={allDeals} />
       )}
 
       {/* Tabs */}

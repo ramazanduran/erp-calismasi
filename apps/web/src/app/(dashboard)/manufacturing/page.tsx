@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { PlusCircle, Factory, Package, Cog, Play, CheckCircle2, BarChart3, FileDown } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { PlusCircle, Factory, Package, Cog, Play, CheckCircle2, BarChart3, FileDown, Search } from 'lucide-react';
 import { exportToExcel } from '@/lib/utils/excel-export';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api/client';
@@ -232,6 +232,7 @@ export default function ManufacturingPage() {
   const qc = useQueryClient();
   const [activeTab, setActiveTab] = useState<'orders' | 'boms' | 'work-centers'>('orders');
   const [statusFilter, setStatusFilter] = useState('');
+  const [search, setSearch] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [detailOrder, setDetailOrder] = useState<ProductionOrder | null>(null);
 
@@ -268,6 +269,16 @@ export default function ManufacturingPage() {
   const boms = bomsData as BOM[];
   const workCenters = workCentersData as any[];
 
+  const filteredOrders = useMemo(() => {
+    if (!search) return orders;
+    const q = search.toLowerCase();
+    return orders.filter((o) =>
+      o.orderNumber?.toLowerCase().includes(q) ||
+      o.product?.name?.toLowerCase().includes(q) ||
+      o.product?.code?.toLowerCase().includes(q)
+    );
+  }, [orders, search]);
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -279,7 +290,7 @@ export default function ManufacturingPage() {
           <div className="flex items-center gap-2">
             <button
               onClick={() => exportToExcel(
-                orders.map((o) => ({
+                filteredOrders.map((o) => ({
                   orderNumber: o.orderNumber,
                   productCode: o.product.code,
                   productName: o.product.name,
@@ -350,7 +361,17 @@ export default function ManufacturingPage() {
       {/* Orders Tab */}
       {activeTab === 'orders' && (
         <div className="space-y-4">
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap items-center">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <input
+                type="text"
+                placeholder="Emir no, ürün adı veya kodu..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="pl-9 pr-3 py-1.5 rounded-lg border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 w-56"
+              />
+            </div>
             {[{ v: '', l: 'Tümü' }, ...Object.entries(ORDER_STATUS).map(([v, c]) => ({ v, l: c.label }))].map((f) => (
               <button key={f.v} onClick={() => setStatusFilter(f.v)}
                 className={cn('px-3 py-1.5 rounded-lg text-sm', statusFilter === f.v ? 'bg-primary text-primary-foreground' : 'border border-border hover:bg-muted')}>
@@ -361,7 +382,7 @@ export default function ManufacturingPage() {
 
           {ordersLoading ? (
             <div className="py-8 text-center text-muted-foreground">Yükleniyor...</div>
-          ) : orders.length === 0 ? (
+          ) : filteredOrders.length === 0 ? (
             <div className="rounded-xl border border-dashed border-border p-12 text-center">
               <Factory className="h-10 w-10 mx-auto mb-3 text-muted-foreground" />
               <p className="font-medium">Üretim emri bulunamadı</p>
@@ -375,7 +396,7 @@ export default function ManufacturingPage() {
                   ))}</tr>
                 </thead>
                 <tbody className="divide-y divide-border">
-                  {orders.map((order) => {
+                  {filteredOrders.map((order) => {
                     const sc = ORDER_STATUS[order.status];
                     const pc = PRIORITY_CONFIG[order.priority];
                     const pct = order.quantity > 0 ? Math.min(100, Math.round((Number(order.producedQty) / Number(order.quantity)) * 100)) : 0;

@@ -1,12 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api/client';
 import { cn } from '@/lib/utils';
 import {
   Warehouse, Plus, MapPin, Package, Users, ChevronRight, X,
-  Building2, BarChart3, Layers, PlusCircle, Edit, FileDown,
+  Building2, BarChart3, Layers, PlusCircle, Edit, FileDown, Search,
 } from 'lucide-react';
 import { exportToExcel } from '@/lib/utils/excel-export';
 
@@ -193,6 +193,7 @@ export default function WarehousesPage() {
   const [showForm, setShowForm] = useState(false);
   const [editWarehouse, setEditWarehouse] = useState<any>(null);
   const [detailWarehouse, setDetailWarehouse] = useState<any>(null);
+  const [search, setSearch] = useState('');
 
   const { data: statsData } = useQuery({
     queryKey: ['warehouses', 'stats'],
@@ -217,6 +218,16 @@ export default function WarehousesPage() {
   const stats = statsData as any;
   const warehouses = warehousesData as any[];
 
+  const filteredWarehouses = useMemo(() => {
+    if (!search) return warehouses;
+    const q = search.toLowerCase();
+    return warehouses.filter((w: any) =>
+      w.code?.toLowerCase().includes(q) ||
+      w.name?.toLowerCase().includes(q) ||
+      w.city?.toLowerCase().includes(q)
+    );
+  }, [warehouses, search]);
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -227,7 +238,7 @@ export default function WarehousesPage() {
         <div className="flex items-center gap-2">
           <button
             onClick={() => exportToExcel(
-              warehouses.map((w) => ({
+              filteredWarehouses.map((w) => ({
                 code: w.code ?? '',
                 name: w.name ?? '',
                 type: TYPE_CONFIG[w.type]?.label ?? w.type ?? '',
@@ -278,18 +289,30 @@ export default function WarehousesPage() {
         ))}
       </div>
 
+      {/* Search */}
+      <div className="relative w-72">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <input
+          type="text"
+          placeholder="Kod, ad veya şehir..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="pl-9 pr-3 py-1.5 rounded-lg border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 w-full"
+        />
+      </div>
+
       {/* Warehouse Grid */}
       {isLoading ? (
         <div className="py-8 text-center text-muted-foreground">Yükleniyor...</div>
-      ) : warehouses.length === 0 ? (
+      ) : filteredWarehouses.length === 0 ? (
         <div className="rounded-xl border border-dashed border-border p-12 text-center">
           <Warehouse className="h-10 w-10 mx-auto mb-3 text-muted-foreground" />
           <p className="font-medium">Depo bulunamadı</p>
-          <p className="text-sm text-muted-foreground mt-1">İlk deponuzu oluşturun</p>
+          <p className="text-sm text-muted-foreground mt-1">{search ? 'Arama kriterlerinizi değiştirin' : 'İlk deponuzu oluşturun'}</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {warehouses.map((wh: any) => {
+          {filteredWarehouses.map((wh: any) => {
             const tc = TYPE_CONFIG[wh.type] ?? TYPE_CONFIG['main'];
             return (
               <div key={wh.id} className="rounded-xl border border-border p-5 shadow-sm hover:shadow-md transition-shadow">

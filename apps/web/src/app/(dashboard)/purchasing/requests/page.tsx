@@ -13,6 +13,7 @@ import {
   Trash2,
   AlertTriangle,
   FileDown,
+  Search,
 } from 'lucide-react';
 import { exportToExcel } from '@/lib/utils/excel-export';
 import { api } from '@/lib/api/client';
@@ -662,6 +663,7 @@ function RowActions({ request }: { request: PurchaseRequest }) {
 
 export default function PurchaseRequestsPage() {
   const [statusFilter, setStatusFilter] = useState<RequestStatus | ''>('');
+  const [search, setSearch] = useState('');
   const [page] = useState(1);
   const [modalOpen, setModalOpen] = useState(false);
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
@@ -694,6 +696,16 @@ export default function PurchaseRequestsPage() {
       return (raw as { total: number }).total ?? 0;
     return requests.length;
   }, [requestsRaw, requests.length]);
+
+  const filteredRequests = useMemo(() => {
+    if (!search) return requests;
+    const q = search.toLowerCase();
+    return requests.filter((r) =>
+      r.requestNumber?.toLowerCase().includes(q) ||
+      r.department?.name?.toLowerCase().includes(q) ||
+      (r.requestedBy ? `${r.requestedBy.firstName} ${r.requestedBy.lastName}`.toLowerCase().includes(q) : false)
+    );
+  }, [requests, search]);
 
   const stats = statsRaw as RequestStats | undefined;
 
@@ -730,7 +742,7 @@ export default function PurchaseRequestsPage() {
         <div className="flex items-center gap-2">
           <button
             onClick={() => exportToExcel(
-              requests.map((r) => ({
+              filteredRequests.map((r) => ({
                 requestNumber: r.requestNumber,
                 requestedBy: r.requestedBy ? `${r.requestedBy.firstName} ${r.requestedBy.lastName}` : '',
                 department: r.department?.name ?? '',
@@ -801,6 +813,18 @@ export default function PurchaseRequestsPage() {
         />
       </div>
 
+      {/* Search */}
+      <div className="relative w-72">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <input
+          type="text"
+          placeholder="Talep no, talep eden veya departman..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="pl-9 pr-3 py-1.5 rounded-lg border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 w-full"
+        />
+      </div>
+
       {/* Status Filter Tabs */}
       <div className="flex gap-1 border-b border-border overflow-x-auto pb-px">
         {FILTER_TABS.map((tab) => (
@@ -855,25 +879,27 @@ export default function PurchaseRequestsPage() {
             <tbody>
               {isLoading ? (
                 <SkeletonRows cols={9} />
-              ) : requests.length === 0 ? (
+              ) : filteredRequests.length === 0 ? (
                 <tr>
                   <td
                     colSpan={9}
                     className="text-center py-12 text-muted-foreground"
                   >
                     <div className="space-y-2">
-                      <p>Henüz satın alma talebi oluşturulmamış</p>
-                      <button
-                        onClick={() => setModalOpen(true)}
-                        className="text-primary hover:underline text-sm"
-                      >
-                        İlk Talebi Oluştur
-                      </button>
+                      <p>{search ? 'Arama sonucu bulunamadı' : 'Henüz satın alma talebi oluşturulmamış'}</p>
+                      {!search && (
+                        <button
+                          onClick={() => setModalOpen(true)}
+                          className="text-primary hover:underline text-sm"
+                        >
+                          İlk Talebi Oluştur
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>
               ) : (
-                requests.flatMap((req) => {
+                filteredRequests.flatMap((req) => {
                   const isExpanded = expandedRows.has(req.id);
                   return [
                     <tr
@@ -954,7 +980,7 @@ export default function PurchaseRequestsPage() {
         </div>
         {!isLoading && (
           <div className="border-t border-border px-4 py-3 text-sm text-muted-foreground">
-            {requests.length} / {total} talep gösteriliyor
+            {filteredRequests.length} / {total} talep gösteriliyor
           </div>
         )}
       </div>
