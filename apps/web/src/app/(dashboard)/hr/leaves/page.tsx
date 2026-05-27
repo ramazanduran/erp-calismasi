@@ -1,11 +1,12 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { Search, Plus, Calendar, CheckCircle, XCircle, Clock, Users } from 'lucide-react';
+import { Search, Plus, Calendar, CheckCircle, XCircle, Clock, Users, FileDown } from 'lucide-react';
 import { toast } from 'sonner';
 import { useLeaves, useUpdateLeaveStatus } from '@/lib/api/hooks';
 import { LeaveModal } from '@/components/modals/leave-modal';
 import { cn } from '@/lib/utils';
+import { exportToExcel } from '@/lib/utils/excel-export';
 
 type LeaveStatus = 'pending' | 'approved' | 'rejected';
 type LeaveType = 'annual' | 'sick' | 'unpaid' | 'maternity' | 'paternity';
@@ -102,13 +103,47 @@ export default function LeavesPage() {
             Çalışan izin taleplerini yönetin ve onaylayın
           </p>
         </div>
-        <button
-          onClick={() => setModalOpen(true)}
-          className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
-        >
-          <Plus className="h-4 w-4" />
-          Yeni Talep
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => exportToExcel(
+              filtered.map((leave) => {
+                const emp = leave.employee as Record<string, unknown> | undefined;
+                return {
+                  employeeName: `${emp?.firstName ?? ''} ${emp?.lastName ?? ''}`.trim(),
+                  employeeNumber: emp?.employeeNumber ?? '',
+                  type: TYPE_LABELS[(leave.type as LeaveType)] ?? leave.type,
+                  status: STATUS_LABELS[(leave.status as LeaveStatus)] ?? leave.status,
+                  startDate: leave.startDate ? new Date(leave.startDate as string).toLocaleDateString('tr-TR') : '',
+                  endDate: leave.endDate ? new Date(leave.endDate as string).toLocaleDateString('tr-TR') : '',
+                  days: leave.days,
+                  reason: leave.reason ?? '',
+                };
+              }),
+              [
+                { key: 'employeeName', header: 'Çalışan', width: 22 },
+                { key: 'employeeNumber', header: 'Sicil No', width: 12 },
+                { key: 'type', header: 'İzin Tipi', width: 15 },
+                { key: 'status', header: 'Durum', width: 12 },
+                { key: 'startDate', header: 'Başlangıç', width: 12 },
+                { key: 'endDate', header: 'Bitiş', width: 12 },
+                { key: 'days', header: 'Gün', width: 8 },
+                { key: 'reason', header: 'Sebep', width: 30 },
+              ],
+              'izin-talepleri',
+              'İzin Talepleri'
+            )}
+            className="flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm hover:bg-muted"
+          >
+            <FileDown className="h-4 w-4" /> Excel
+          </button>
+          <button
+            onClick={() => setModalOpen(true)}
+            className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+          >
+            <Plus className="h-4 w-4" />
+            Yeni Talep
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">

@@ -15,6 +15,7 @@ import {
   CheckCircle2,
   Package,
   ArrowUpDown,
+  FileDown,
 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { usePurchaseOrders, useUpdatePurchaseOrderStatus } from '@/lib/api/hooks';
@@ -22,6 +23,7 @@ import { PurchaseOrderModal } from '@/components/modals/purchase-order-modal';
 import { api } from '@/lib/api/client';
 import { toast } from 'sonner';
 import { cn, formatCurrency, formatDate } from '@/lib/utils';
+import { exportToExcel } from '@/lib/utils/excel-export';
 
 type SortField = 'orderNumber' | 'supplier' | 'createdAt' | 'expectedDate' | 'netAmount' | 'totalAmount';
 type SortDir = 'asc' | 'desc';
@@ -363,13 +365,42 @@ export default function PurchaseOrdersPage() {
           <h1 className="text-2xl font-bold text-foreground">Satın Alma Siparişleri</h1>
           <p className="mt-1 text-sm text-muted-foreground">Tedarikçi sipariş süreçlerini yönetin</p>
         </div>
-        <button
-          onClick={() => setModalOpen(true)}
-          className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-sm transition-colors hover:bg-primary/90"
-        >
-          <Plus className="h-4 w-4" />
-          Sipariş Oluştur
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => exportToExcel(
+              filteredOrders.map((o) => ({
+                orderNumber: o.orderNumber,
+                supplierName: (o.supplier as Record<string, unknown>)?.name ?? '',
+                status: STATUS_LABELS[o.status as string] ?? o.status,
+                netAmount: o.netAmount,
+                totalAmount: o.totalAmount,
+                expectedDate: o.expectedDate ? new Date(o.expectedDate as string).toLocaleDateString('tr-TR') : '',
+                createdAt: o.createdAt ? new Date(o.createdAt as string).toLocaleDateString('tr-TR') : '',
+              })),
+              [
+                { key: 'orderNumber', header: 'Sipariş No', width: 14 },
+                { key: 'supplierName', header: 'Tedarikçi', width: 25 },
+                { key: 'status', header: 'Durum', width: 14 },
+                { key: 'netAmount', header: 'Net Tutar', width: 14 },
+                { key: 'totalAmount', header: 'Toplam', width: 14 },
+                { key: 'expectedDate', header: 'Beklenen Teslim', width: 16 },
+                { key: 'createdAt', header: 'Oluşturma', width: 12 },
+              ],
+              'satin-alma-siparisleri',
+              'Satın Alma Siparişleri'
+            )}
+            className="flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm hover:bg-muted"
+          >
+            <FileDown className="h-4 w-4" /> Excel
+          </button>
+          <button
+            onClick={() => setModalOpen(true)}
+            className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-sm transition-colors hover:bg-primary/90"
+          >
+            <Plus className="h-4 w-4" />
+            Sipariş Oluştur
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">

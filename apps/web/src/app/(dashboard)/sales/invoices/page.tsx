@@ -14,11 +14,13 @@ import {
   AlertTriangle,
   X,
   Loader2,
+  FileDown,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useInvoices, useInvoice, useUpdateInvoice, useDeleteInvoice } from '@/lib/api/hooks';
 import { InvoiceModal } from '@/components/modals/invoice-modal';
 import { cn } from '@/lib/utils';
+import { exportToExcel } from '@/lib/utils/excel-export';
 
 type InvoiceStatus = 'draft' | 'sent' | 'paid' | 'overdue' | 'cancelled';
 type InvoiceType = 'sale' | 'purchase' | 'refund';
@@ -355,13 +357,42 @@ export default function SalesInvoicesPage() {
           <h1 className="text-2xl font-bold text-foreground">Faturalar</h1>
           <p className="text-sm text-muted-foreground mt-1">Satış faturalarını oluşturun ve yönetin</p>
         </div>
-        <button
-          onClick={() => setModalOpen(true)}
-          className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
-        >
-          <Plus className="h-4 w-4" />
-          Yeni Fatura
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => exportToExcel(
+              filtered.map((inv) => ({
+                invoiceNumber: inv.invoiceNumber,
+                customerName: (inv.customer as Record<string, unknown>)?.name ?? '',
+                type: TYPE_LABELS[(inv.type as InvoiceType)] ?? inv.type,
+                status: STATUS_LABELS[(inv.status as InvoiceStatus)] ?? inv.status,
+                issueDate: inv.issueDate ? new Date(inv.issueDate as string).toLocaleDateString('tr-TR') : '',
+                dueDate: inv.dueDate ? new Date(inv.dueDate as string).toLocaleDateString('tr-TR') : '',
+                totalAmount: inv.totalAmount,
+              })),
+              [
+                { key: 'invoiceNumber', header: 'Fatura No', width: 14 },
+                { key: 'customerName', header: 'Müşteri', width: 25 },
+                { key: 'type', header: 'Tip', width: 10 },
+                { key: 'status', header: 'Durum', width: 12 },
+                { key: 'issueDate', header: 'Düzenlenme', width: 14 },
+                { key: 'dueDate', header: 'Vade', width: 14 },
+                { key: 'totalAmount', header: 'Tutar', width: 14 },
+              ],
+              'faturalar',
+              'Faturalar'
+            )}
+            className="flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm hover:bg-muted"
+          >
+            <FileDown className="h-4 w-4" /> Excel
+          </button>
+          <button
+            onClick={() => setModalOpen(true)}
+            className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+          >
+            <Plus className="h-4 w-4" />
+            Yeni Fatura
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">

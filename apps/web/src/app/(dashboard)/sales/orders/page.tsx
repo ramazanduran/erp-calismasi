@@ -18,11 +18,13 @@ import {
   ArrowUpDown,
   ArrowUp,
   ArrowDown,
+  FileDown,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useOrders, useOrder, useUpdateOrder, useDeleteOrder } from '@/lib/api/hooks';
 import { OrderModal } from '@/components/modals/order-modal';
 import { cn } from '@/lib/utils';
+import { exportToExcel } from '@/lib/utils/excel-export';
 
 type OrderStatus = 'draft' | 'confirmed' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
 type SortField = 'orderNumber' | 'customer' | 'itemCount' | 'netAmount' | 'taxAmount' | 'totalAmount' | 'dueDate' | 'createdAt' | 'status';
@@ -389,13 +391,42 @@ export default function OrdersPage() {
           <h1 className="text-2xl font-bold text-foreground">Siparişler</h1>
           <p className="text-sm text-muted-foreground mt-1">Satış siparişlerini yönetin ve takip edin</p>
         </div>
-        <button
-          onClick={() => setModalOpen(true)}
-          className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
-        >
-          <Plus className="h-4 w-4" />
-          Yeni Sipariş
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => exportToExcel(
+              filtered.map((o) => ({
+                orderNumber: o.orderNumber,
+                customerName: (o.customer as Record<string, unknown>)?.name ?? '',
+                status: STATUS_LABELS[(o.status as OrderStatus)] ?? o.status,
+                netAmount: o.netAmount,
+                taxAmount: o.taxAmount,
+                totalAmount: o.totalAmount,
+                createdAt: o.createdAt ? new Date(o.createdAt as string).toLocaleDateString('tr-TR') : '',
+              })),
+              [
+                { key: 'orderNumber', header: 'Sipariş No', width: 14 },
+                { key: 'customerName', header: 'Müşteri', width: 25 },
+                { key: 'status', header: 'Durum', width: 14 },
+                { key: 'netAmount', header: 'Net Tutar', width: 14 },
+                { key: 'taxAmount', header: 'KDV', width: 12 },
+                { key: 'totalAmount', header: 'Toplam', width: 14 },
+                { key: 'createdAt', header: 'Tarih', width: 12 },
+              ],
+              'siparisler',
+              'Siparişler'
+            )}
+            className="flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm hover:bg-muted"
+          >
+            <FileDown className="h-4 w-4" /> Excel
+          </button>
+          <button
+            onClick={() => setModalOpen(true)}
+            className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+          >
+            <Plus className="h-4 w-4" />
+            Yeni Sipariş
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
