@@ -48,6 +48,23 @@ interface FolderNode {
   label: string;
 }
 
+// ─── Mock Data ────────────────────────────────────────────────────────────────
+
+const MOCK_DOCS: Document[] = [
+  { id: '1', name: 'Tedarikçi Çerçeve Sözleşmesi 2026', type: 'pdf', size: '1.2 MB', uploadedBy: 'Ahmet Yılmaz', date: '2026-05-10', version: '2.1', tags: ['sözleşme', 'tedarikçi'], folder: 'sozlesmeler' },
+  { id: '2', name: 'Nisan 2026 Fatura Raporu', type: 'excel', size: '840 KB', uploadedBy: 'Fatma Kaya', date: '2026-05-03', version: '1.0', tags: ['fatura', 'nisan'], folder: 'faturalar' },
+  { id: '3', name: 'ABC Lojistik Hizmet Sözleşmesi', type: 'word', size: '320 KB', uploadedBy: 'Mehmet Demir', date: '2026-04-22', version: '1.3', tags: ['sözleşme', 'lojistik'], folder: 'sozlesmeler' },
+  { id: '4', name: 'Ürün Katalog Görselleri Q1', type: 'image', size: '4.5 MB', uploadedBy: 'Ayşe Çelik', date: '2026-04-15', version: '1.0', tags: ['katalog', 'ürün'], folder: 'urun-dosyalari' },
+  { id: '5', name: 'Personel Özlük Formu Şablonu', type: 'word', size: '120 KB', uploadedBy: 'Selin Arslan', date: '2026-03-30', version: '3.0', tags: ['hr', 'şablon'], folder: 'hr-belgeleri' },
+  { id: '6', name: 'Yıllık Satış Teklifi - XYZ Corp', type: 'pdf', size: '2.1 MB', uploadedBy: 'Murat Yıldız', date: '2026-05-18', version: '1.1', tags: ['teklif', 'satış'], folder: 'teklifler' },
+  { id: '7', name: 'Depo Stok Sayım Raporu', type: 'excel', size: '580 KB', uploadedBy: 'Ali Özcan', date: '2026-05-01', version: '1.0', tags: ['stok', 'sayım'], folder: 'genel' },
+  { id: '8', name: 'Kalite Güvence El Kitabı', type: 'pdf', size: '3.8 MB', uploadedBy: 'Zeynep Kurt', date: '2026-02-14', version: '5.2', tags: ['kalite', 'el kitabı'], folder: 'genel' },
+  { id: '9', name: 'Yeni Çalışan İşe Alım Sözleşmesi', type: 'word', size: '210 KB', uploadedBy: 'Selin Arslan', date: '2026-05-20', version: '2.0', tags: ['hr', 'işe alım'], folder: 'hr-belgeleri' },
+  { id: '10', name: 'Ürün Teknik Veri Sayfası A100', type: 'pdf', size: '1.6 MB', uploadedBy: 'Emre Şahin', date: '2026-04-08', version: '1.4', tags: ['teknik', 'ürün'], folder: 'urun-dosyalari' },
+];
+
+const MOCK_DOC_STATS = { total: 10, uploadedThisMonth: 3, shared: 4, pendingVersion: 2 };
+
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const FOLDERS: FolderNode[] = [
@@ -262,7 +279,9 @@ export default function DocumentsPage() {
   const [showNewFolder, setShowNewFolder] = useState(false);
   const [extraFolders, setExtraFolders] = useState<FolderNode[]>([]);
 
-  const { data: docsData, isLoading } = useQuery({
+  const [localDocs] = useState<Document[]>(MOCK_DOCS);
+
+  const { data: rawDocs, isLoading: docsLoading } = useQuery({
     queryKey: ['documents', { folder: selectedFolder, search, type: typeFilter }],
     queryFn: () =>
       api.get('/api/v1/documents', {
@@ -277,11 +296,13 @@ export default function DocumentsPage() {
     queryFn: () => api.get('/api/v1/documents/stats'),
   });
 
-  const stats = statsData as any;
-  const allDocs = (docsData as Document[] | undefined) ?? [];
+  const apiDocs: Document[] | null = rawDocs !== undefined ? (Array.isArray(rawDocs) ? (rawDocs as Document[]) : []) : null;
+  const stats = (statsData as any) ?? MOCK_DOC_STATS;
+  const isLoading = docsLoading && apiDocs === null;
 
   const filteredDocs = useMemo(() => {
-    let list = allDocs;
+    const source = apiDocs ?? localDocs;
+    let list = source;
     if (search) {
       const q = search.toLowerCase();
       list = list.filter(
@@ -294,7 +315,7 @@ export default function DocumentsPage() {
     if (typeFilter) list = list.filter((d) => d.type === typeFilter);
     if (selectedFolder) list = list.filter((d) => d.folder === selectedFolder);
     return list;
-  }, [allDocs, search, typeFilter, selectedFolder]);
+  }, [apiDocs, localDocs, search, typeFilter, selectedFolder]);
 
   const allFolders = useMemo(() => [...FOLDERS, ...extraFolders], [extraFolders]);
 

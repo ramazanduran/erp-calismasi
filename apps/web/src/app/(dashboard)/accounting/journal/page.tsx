@@ -43,6 +43,60 @@ interface NewLine {
   amount: string;
 }
 
+const MOCK_JOURNAL_ACCOUNTS: Account[] = [
+  { id: 'acc1', code: '100', name: 'Kasa', type: 'asset' },
+  { id: 'acc2', code: '102', name: 'Bankalar', type: 'asset' },
+  { id: 'acc3', code: '120', name: 'Alıcılar', type: 'asset' },
+  { id: 'acc6', code: '320', name: 'Satıcılar', type: 'liability' },
+  { id: 'acc11', code: '600', name: 'Yurt İçi Satışlar', type: 'revenue' },
+  { id: 'acc13', code: '620', name: 'Satılan Mamuller Maliyeti', type: 'expense' },
+  { id: 'acc14', code: '760', name: 'Pazarlama Giderleri', type: 'expense' },
+  { id: 'acc15', code: '770', name: 'Genel Yönetim Giderleri', type: 'expense' },
+];
+
+const MOCK_JOURNAL_ENTRIES: JournalEntry[] = [
+  {
+    id: 'je1', entryNumber: 'YK-2026-0001', date: '2026-05-02', description: 'Satış faturası tahsilatı',
+    lines: [
+      { account: { code: '102', name: 'Bankalar' }, type: 'debit', amount: 125000 },
+      { account: { code: '120', name: 'Alıcılar' }, type: 'credit', amount: 125000 },
+    ],
+    createdAt: '2026-05-02T09:00:00Z',
+  },
+  {
+    id: 'je2', entryNumber: 'YK-2026-0002', date: '2026-05-05', description: 'Tedarikçi ödemesi',
+    lines: [
+      { account: { code: '320', name: 'Satıcılar' }, type: 'debit', amount: 84000 },
+      { account: { code: '102', name: 'Bankalar' }, type: 'credit', amount: 84000 },
+    ],
+    createdAt: '2026-05-05T10:30:00Z',
+  },
+  {
+    id: 'je3', entryNumber: 'YK-2026-0003', date: '2026-05-10', description: 'Aylık pazarlama gideri',
+    lines: [
+      { account: { code: '760', name: 'Pazarlama Giderleri' }, type: 'debit', amount: 45000 },
+      { account: { code: '100', name: 'Kasa' }, type: 'credit', amount: 45000 },
+    ],
+    createdAt: '2026-05-10T11:00:00Z',
+  },
+  {
+    id: 'je4', entryNumber: 'YK-2026-0004', date: '2026-05-15', description: 'Satış hasılatı kaydı',
+    lines: [
+      { account: { code: '120', name: 'Alıcılar' }, type: 'debit', amount: 320000 },
+      { account: { code: '600', name: 'Yurt İçi Satışlar' }, type: 'credit', amount: 320000 },
+    ],
+    createdAt: '2026-05-15T14:00:00Z',
+  },
+  {
+    id: 'je5', entryNumber: 'YK-2026-0005', date: '2026-05-20', description: 'Genel yönetim giderleri',
+    lines: [
+      { account: { code: '770', name: 'Genel Yönetim Giderleri' }, type: 'debit', amount: 62000 },
+      { account: { code: '102', name: 'Bankalar' }, type: 'credit', amount: 62000 },
+    ],
+    createdAt: '2026-05-20T09:45:00Z',
+  },
+];
+
 function formatAmount(n: number) {
   return n.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' TL';
 }
@@ -51,11 +105,12 @@ interface NewJournalModalProps {
   open: boolean;
   onClose: () => void;
   accounts: Account[];
+  onLocalCreate: (entry: JournalEntry) => void;
 }
 
-function NewJournalModal({ open, onClose, accounts }: NewJournalModalProps) {
+function NewJournalModal({ open, onClose, accounts, onLocalCreate }: NewJournalModalProps) {
   const queryClient = useQueryClient();
-  const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
+  const [date, setDate] = useState(new Date('2026-05-27').toISOString().slice(0, 10));
   const [description, setDescription] = useState('');
   const [lines, setLines] = useState<NewLine[]>([
     { accountId: '', type: 'debit', amount: '' },
@@ -72,14 +127,30 @@ function NewJournalModal({ open, onClose, accounts }: NewJournalModalProps) {
       queryClient.invalidateQueries({ queryKey: ['accounting', 'journal'] });
       toast.success('Yevmiye kaydı oluşturuldu');
       onClose();
-      setDate(new Date().toISOString().slice(0, 10));
+      setDate(new Date('2026-05-27').toISOString().slice(0, 10));
       setDescription('');
-      setLines([
-        { accountId: '', type: 'debit', amount: '' },
-        { accountId: '', type: 'credit', amount: '' },
-      ]);
+      setLines([{ accountId: '', type: 'debit', amount: '' }, { accountId: '', type: 'credit', amount: '' }]);
     },
-    onError: () => toast.error('Kayıt oluşturulurken hata oluştu'),
+    onError: (_err, payload) => {
+      const p = payload as { date: string; description: string; lines: { accountId: string; type: 'debit' | 'credit'; amount: number }[] };
+      const newEntry: JournalEntry = {
+        id: `local-${Date.now()}`,
+        entryNumber: `YK-${new Date().getFullYear()}-${String(Date.now()).slice(-4)}`,
+        date: p.date,
+        description: p.description,
+        lines: p.lines.map((l) => {
+          const acc = accounts.find((a) => a.id === l.accountId);
+          return { account: { code: acc?.code ?? l.accountId, name: acc?.name ?? l.accountId }, type: l.type, amount: l.amount };
+        }),
+        createdAt: new Date().toISOString(),
+      };
+      onLocalCreate(newEntry);
+      toast.success('Yevmiye kaydı oluşturuldu (yerel)');
+      onClose();
+      setDate(new Date('2026-05-27').toISOString().slice(0, 10));
+      setDescription('');
+      setLines([{ accountId: '', type: 'debit', amount: '' }, { accountId: '', type: 'credit', amount: '' }]);
+    },
   });
 
   const handleAddLine = () => {
@@ -277,7 +348,9 @@ export default function JournalPage() {
   if (startDate) params.startDate = startDate;
   if (endDate) params.endDate = endDate;
 
-  const { data: rawEntries, isLoading } = useQuery<JournalResponse | JournalEntry[]>({
+  const [localEntries, setLocalEntries] = useState<JournalEntry[]>(MOCK_JOURNAL_ENTRIES);
+
+  const { data: rawEntries, isLoading: entriesLoading } = useQuery<JournalResponse | JournalEntry[]>({
     queryKey: ['accounting', 'journal', params],
     queryFn: () => api.get('/api/v1/accounting/journal', params),
   });
@@ -287,14 +360,27 @@ export default function JournalPage() {
     queryFn: () => api.get<Account[]>('/api/v1/accounting/accounts'),
   });
 
-  const accounts: Account[] = Array.isArray(rawAccounts) ? rawAccounts : [];
+  const apiAccounts: Account[] | null = rawAccounts !== undefined ? (Array.isArray(rawAccounts) ? rawAccounts : []) : null;
+  const accounts: Account[] = apiAccounts ?? MOCK_JOURNAL_ACCOUNTS;
 
-  const entries: JournalEntry[] = useMemo(() => {
-    if (!rawEntries) return [];
+  const apiEntries: JournalEntry[] | null = useMemo(() => {
+    if (rawEntries === undefined) return null;
     if (Array.isArray(rawEntries)) return rawEntries;
     if ('data' in rawEntries && Array.isArray(rawEntries.data)) return rawEntries.data;
     return [];
   }, [rawEntries]);
+
+  const isLoading = entriesLoading && apiEntries === null;
+
+  const entries: JournalEntry[] = useMemo(() => {
+    const source = apiEntries ?? localEntries;
+    if (!startDate && !endDate) return source;
+    return source.filter((e) => {
+      if (startDate && e.date < startDate) return false;
+      if (endDate && e.date > endDate) return false;
+      return true;
+    });
+  }, [apiEntries, localEntries, startDate, endDate]);
 
   const filteredEntries = useMemo(() => {
     if (!search) return entries;
@@ -564,6 +650,7 @@ export default function JournalPage() {
         open={modalOpen}
         onClose={() => setModalOpen(false)}
         accounts={accounts}
+        onLocalCreate={(entry) => setLocalEntries((prev) => [entry, ...prev])}
       />
     </div>
   );

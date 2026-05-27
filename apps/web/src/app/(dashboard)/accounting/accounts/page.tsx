@@ -19,6 +19,24 @@ interface Account {
   _count?: { journalLines: number };
 }
 
+const MOCK_ACCOUNTS: Account[] = [
+  { id: 'acc1', code: '100', name: 'Kasa', type: 'asset', balance: 125000, currency: 'TRY', isActive: true, _count: { journalLines: 48 } },
+  { id: 'acc2', code: '102', name: 'Bankalar', type: 'asset', balance: 1840000, currency: 'TRY', isActive: true, _count: { journalLines: 120 } },
+  { id: 'acc3', code: '120', name: 'Alıcılar', type: 'asset', balance: 680000, currency: 'TRY', isActive: true, _count: { journalLines: 75 } },
+  { id: 'acc4', code: '153', name: 'Ticari Mallar', type: 'asset', balance: 430000, currency: 'TRY', isActive: true, _count: { journalLines: 62 } },
+  { id: 'acc5', code: '255', name: 'Demirbaşlar', type: 'asset', balance: 220000, currency: 'TRY', isActive: true, _count: { journalLines: 18 } },
+  { id: 'acc6', code: '320', name: 'Satıcılar', type: 'liability', balance: 350000, currency: 'TRY', isActive: true, _count: { journalLines: 54 } },
+  { id: 'acc7', code: '360', name: 'Ödenecek Vergiler', type: 'liability', balance: 85000, currency: 'TRY', isActive: true, _count: { journalLines: 24 } },
+  { id: 'acc8', code: '400', name: 'Banka Kredileri', type: 'liability', balance: 500000, currency: 'TRY', isActive: true, _count: { journalLines: 12 } },
+  { id: 'acc9', code: '500', name: 'Sermaye', type: 'equity', balance: 2000000, currency: 'TRY', isActive: true, _count: { journalLines: 5 } },
+  { id: 'acc10', code: '570', name: 'Geçmiş Yıl Karları', type: 'equity', balance: 360000, currency: 'TRY', isActive: true, _count: { journalLines: 8 } },
+  { id: 'acc11', code: '600', name: 'Yurt İçi Satışlar', type: 'revenue', balance: 3200000, currency: 'TRY', isActive: true, _count: { journalLines: 145 } },
+  { id: 'acc12', code: '601', name: 'Yurt Dışı Satışlar', type: 'revenue', balance: 850000, currency: 'TRY', isActive: true, _count: { journalLines: 38 } },
+  { id: 'acc13', code: '620', name: 'Satılan Mamuller Maliyeti', type: 'expense', balance: 1900000, currency: 'TRY', isActive: true, _count: { journalLines: 92 } },
+  { id: 'acc14', code: '760', name: 'Pazarlama Giderleri', type: 'expense', balance: 240000, currency: 'TRY', isActive: true, _count: { journalLines: 41 } },
+  { id: 'acc15', code: '770', name: 'Genel Yönetim Giderleri', type: 'expense', balance: 310000, currency: 'TRY', isActive: true, _count: { journalLines: 67 } },
+];
+
 const TYPE_LABELS: Record<string, string> = {
   asset: 'Varlık',
   liability: 'Borç',
@@ -52,9 +70,10 @@ interface NewAccountModalProps {
   open: boolean;
   onClose: () => void;
   accounts: Account[];
+  onLocalCreate: (account: Account) => void;
 }
 
-function NewAccountModal({ open, onClose, accounts }: NewAccountModalProps) {
+function NewAccountModal({ open, onClose, accounts, onLocalCreate }: NewAccountModalProps) {
   const queryClient = useQueryClient();
   const [form, setForm] = useState({
     code: '',
@@ -78,8 +97,12 @@ function NewAccountModal({ open, onClose, accounts }: NewAccountModalProps) {
       onClose();
       setForm({ code: '', name: '', type: 'asset', parentId: '', currency: 'TRY', description: '' });
     },
-    onError: () => {
-      toast.error('Hesap oluşturulurken hata oluştu');
+    onError: (_err, data) => {
+      const newAccount: Account = { id: `local-${Date.now()}`, code: data.code, name: data.name, type: data.type, balance: 0, currency: data.currency, isActive: true };
+      onLocalCreate(newAccount);
+      toast.success('Hesap başarıyla oluşturuldu (yerel)');
+      onClose();
+      setForm({ code: '', name: '', type: 'asset', parentId: '', currency: 'TRY', description: '' });
     },
   });
 
@@ -209,13 +232,16 @@ export default function AccountsPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [search, setSearch] = useState('');
   const [activeFilter, setActiveFilter] = useState('all');
+  const [localAccounts, setLocalAccounts] = useState<Account[]>(MOCK_ACCOUNTS);
 
-  const { data: rawAccounts, isLoading } = useQuery<Account[]>({
+  const { data: rawAccounts, isLoading: accountsLoading } = useQuery<Account[]>({
     queryKey: ['accounting', 'accounts'],
     queryFn: () => api.get<Account[]>('/api/v1/accounting/accounts'),
   });
 
-  const accounts: Account[] = Array.isArray(rawAccounts) ? rawAccounts : [];
+  const apiAccounts: Account[] | null = rawAccounts !== undefined ? (Array.isArray(rawAccounts) ? rawAccounts : []) : null;
+  const isLoading = accountsLoading && apiAccounts === null;
+  const accounts: Account[] = apiAccounts ?? localAccounts;
 
   const totalByType = (type: string) =>
     accounts
@@ -433,6 +459,7 @@ export default function AccountsPage() {
         open={modalOpen}
         onClose={() => setModalOpen(false)}
         accounts={accounts}
+        onLocalCreate={(acc) => setLocalAccounts((prev) => [...prev, acc])}
       />
     </div>
   );

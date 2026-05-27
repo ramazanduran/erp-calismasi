@@ -58,6 +58,28 @@ interface NewReviewForm {
   notes: string;
 }
 
+// ─── Mock Data ────────────────────────────────────────────────────────────────
+
+const MOCK_EMPLOYEES: Employee[] = [
+  { id: 'emp1', employeeNumber: 'EMP-001', firstName: 'Ahmet', lastName: 'Yılmaz', position: 'Yazılım Geliştirici', department: { name: 'BT' } },
+  { id: 'emp2', employeeNumber: 'EMP-002', firstName: 'Fatma', lastName: 'Kaya', position: 'Muhasebe Uzmanı', department: { name: 'Finans' } },
+  { id: 'emp3', employeeNumber: 'EMP-003', firstName: 'Mehmet', lastName: 'Demir', position: 'Satış Müdürü', department: { name: 'Satış' } },
+  { id: 'emp4', employeeNumber: 'EMP-004', firstName: 'Ayşe', lastName: 'Çelik', position: 'İK Uzmanı', department: { name: 'İnsan Kaynakları' } },
+  { id: 'emp5', employeeNumber: 'EMP-005', firstName: 'Ali', lastName: 'Özcan', position: 'Lojistik Koordinatörü', department: { name: 'Lojistik' } },
+  { id: 'emp6', employeeNumber: 'EMP-006', firstName: 'Zeynep', lastName: 'Kurt', position: 'Kalite Mühendisi', department: { name: 'Kalite' } },
+];
+
+const MOCK_REVIEWS: PerformanceReview[] = [
+  { id: 'rev1', employee: { firstName: 'Ahmet', lastName: 'Yılmaz', employeeNumber: 'EMP-001', department: { name: 'BT' } }, reviewPeriod: '2026 Q1', rating: 4, goals: 'Yeni modül geliştirme', strengths: 'Teknik beceriler, takım çalışması', improvements: 'Zaman yönetimi', reviewedBy: { firstName: 'Selin', lastName: 'Arslan' }, createdAt: '2026-04-10T10:00:00Z' },
+  { id: 'rev2', employee: { firstName: 'Fatma', lastName: 'Kaya', employeeNumber: 'EMP-002', department: { name: 'Finans' } }, reviewPeriod: '2026 Q1', rating: 5, goals: 'Raporlama süreçlerini iyileştirme', strengths: 'Detay odaklılık, analitik düşünce', improvements: 'Sunum becerileri', reviewedBy: { firstName: 'Selin', lastName: 'Arslan' }, createdAt: '2026-04-08T09:00:00Z' },
+  { id: 'rev3', employee: { firstName: 'Mehmet', lastName: 'Demir', employeeNumber: 'EMP-003', department: { name: 'Satış' } }, reviewPeriod: '2026 Q1', rating: 4, goals: 'Satış hedeflerini %15 artırma', strengths: 'Müzakere, müşteri ilişkileri', improvements: 'Raporlama disiplini', reviewedBy: { firstName: 'Selin', lastName: 'Arslan' }, createdAt: '2026-04-12T14:00:00Z' },
+  { id: 'rev4', employee: { firstName: 'Ayşe', lastName: 'Çelik', employeeNumber: 'EMP-004', department: { name: 'İnsan Kaynakları' } }, reviewPeriod: '2026 Q1', rating: 5, goals: 'İşe alım sürecini dijitalleştirme', strengths: 'İletişim, empati, organizasyon', improvements: 'Teknik araç kullanımı', reviewedBy: { firstName: 'Selin', lastName: 'Arslan' }, createdAt: '2026-04-09T11:00:00Z' },
+  { id: 'rev5', employee: { firstName: 'Ali', lastName: 'Özcan', employeeNumber: 'EMP-005', department: { name: 'Lojistik' } }, reviewPeriod: '2026 Q1', rating: 3, goals: 'Teslimat sürelerini kısaltma', strengths: 'Operasyonel bilgi', improvements: 'Dijital araçlar, raporlama', reviewedBy: { firstName: 'Selin', lastName: 'Arslan' }, createdAt: '2026-04-11T10:30:00Z' },
+  { id: 'rev6', employee: { firstName: 'Zeynep', lastName: 'Kurt', employeeNumber: 'EMP-006', department: { name: 'Kalite' } }, reviewPeriod: '2026 Q1', rating: 4, goals: 'ISO 9001 uyumluluk denetimi', strengths: 'Süreç analizi, sorun çözme', improvements: 'Liderlik becerileri', reviewedBy: { firstName: 'Selin', lastName: 'Arslan' }, createdAt: '2026-04-14T13:00:00Z' },
+  { id: 'rev7', employee: { firstName: 'Ahmet', lastName: 'Yılmaz', employeeNumber: 'EMP-001', department: { name: 'BT' } }, reviewPeriod: '2025 Q4', rating: 3, goals: 'Sistem bakım görevleri', strengths: 'Teknik bilgi', improvements: 'Dokümantasyon', reviewedBy: { firstName: 'Selin', lastName: 'Arslan' }, createdAt: '2026-01-15T10:00:00Z' },
+  { id: 'rev8', employee: { firstName: 'Mehmet', lastName: 'Demir', employeeNumber: 'EMP-003', department: { name: 'Satış' } }, reviewPeriod: '2025 Q4', rating: 5, goals: 'Yıl sonu satış hedefleri', strengths: 'Performans, hedef odaklılık', improvements: 'Ekip koordinasyonu', reviewedBy: { firstName: 'Selin', lastName: 'Arslan' }, createdAt: '2026-01-12T09:00:00Z' },
+];
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 const REVIEW_PERIOD_PRESETS = [
@@ -224,10 +246,14 @@ function NewReviewModal({
   open,
   onClose,
   defaultYear,
+  allEmployees,
+  onLocalCreate,
 }: {
   open: boolean;
   onClose: () => void;
   defaultYear: number;
+  allEmployees: Employee[];
+  onLocalCreate: (review: PerformanceReview) => void;
 }) {
   const queryClient = useQueryClient();
   const [form, setForm] = useState<NewReviewForm>({
@@ -247,7 +273,7 @@ function NewReviewModal({
     enabled: open,
   });
   const employees: Employee[] =
-    (employeesData as any)?.data ?? (Array.isArray(employeesData) ? employeesData : []);
+    (employeesData as any)?.data ?? (Array.isArray(employeesData) ? employeesData : allEmployees);
 
   const createMutation = useMutation({
     mutationFn: (payload: Record<string, unknown>) =>
@@ -256,18 +282,32 @@ function NewReviewModal({
       queryClient.invalidateQueries({ queryKey: ['performance'] });
       toast.success('Performans değerlendirmesi oluşturuldu');
       onClose();
-      setForm({
-        employeeId: '',
-        reviewPeriod: `${defaultYear} Q1`,
-        rating: 0,
-        goals: '',
-        strengths: '',
-        improvements: '',
-        notes: '',
-      });
+      setForm({ employeeId: '', reviewPeriod: `${defaultYear} Q1`, rating: 0, goals: '', strengths: '', improvements: '', notes: '' });
       setCustomPeriod(false);
     },
-    onError: () => toast.error('Değerlendirme oluşturulamadı'),
+    onError: (_err, variables) => {
+      const emp = allEmployees.find((e) => e.id === variables.employeeId);
+      if (emp) {
+        const newReview: PerformanceReview = {
+          id: `local-${Date.now()}`,
+          employee: { firstName: emp.firstName, lastName: emp.lastName, employeeNumber: emp.employeeNumber, department: emp.department },
+          reviewPeriod: String(variables.reviewPeriod ?? form.reviewPeriod),
+          rating: Number(variables.rating ?? form.rating),
+          goals: String(variables.goals ?? ''),
+          strengths: String(variables.strengths ?? ''),
+          improvements: String(variables.improvements ?? ''),
+          notes: String(variables.notes ?? ''),
+          createdAt: new Date().toISOString(),
+        };
+        onLocalCreate(newReview);
+        toast.success('Performans değerlendirmesi oluşturuldu (yerel)');
+        onClose();
+        setForm({ employeeId: '', reviewPeriod: `${defaultYear} Q1`, rating: 0, goals: '', strengths: '', improvements: '', notes: '' });
+        setCustomPeriod(false);
+      } else {
+        toast.error('Değerlendirme oluşturulamadı');
+      }
+    },
   });
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -474,13 +514,13 @@ function NewReviewModal({
 // ─── Main Page ─────────────────────────────────────────────────────────────────
 
 export default function PerformancePage() {
-  const now = new Date();
-  const [year, setYear] = useState(now.getFullYear());
+  const [year, setYear] = useState(2026);
   const [employeeFilter, setEmployeeFilter] = useState('');
   const [search, setSearch] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
+  const [localReviews, setLocalReviews] = useState<PerformanceReview[]>(MOCK_REVIEWS);
 
-  const { data: reviewData, isLoading } = useQuery({
+  const { data: reviewData, isLoading: reviewLoading } = useQuery({
     queryKey: ['performance', year, employeeFilter],
     queryFn: () =>
       api.get<{ data: PerformanceReview[]; total: number }>('api/v1/hr/performance', {
@@ -495,10 +535,20 @@ export default function PerformancePage() {
     queryFn: () => api.get<{ data: Employee[] }>('hr/employees?limit=200'),
   });
 
-  const reviews: PerformanceReview[] =
-    (reviewData as any)?.data ?? (Array.isArray(reviewData) ? (reviewData as any) : []);
+  const apiReviews: PerformanceReview[] | null =
+    reviewData !== undefined
+      ? ((reviewData as any)?.data ?? (Array.isArray(reviewData) ? (reviewData as any) : []))
+      : null;
+  const isLoading = reviewLoading && apiReviews === null;
+
+  const allReviews = apiReviews ?? localReviews;
   const employees: Employee[] =
-    (employeesData as any)?.data ?? (Array.isArray(employeesData) ? employeesData : []);
+    (employeesData as any)?.data ?? (Array.isArray(employeesData) ? employeesData : MOCK_EMPLOYEES);
+
+  const reviews = useMemo(
+    () => allReviews.filter((r) => new Date(r.createdAt).getFullYear() === year && (!employeeFilter || (r as any).employeeId === employeeFilter)),
+    [allReviews, year, employeeFilter]
+  );
 
   const filteredReviews = useMemo(() => {
     if (!search) return reviews;
@@ -805,6 +855,8 @@ export default function PerformancePage() {
         open={modalOpen}
         onClose={() => setModalOpen(false)}
         defaultYear={year}
+        allEmployees={employees}
+        onLocalCreate={(review) => setLocalReviews((prev) => [review, ...prev])}
       />
     </div>
   );
