@@ -11,10 +11,12 @@ import {
   ChevronDown,
   Trash2,
   X,
+  FileDown,
 } from 'lucide-react';
 import { api } from '@/lib/api/client';
 import { cn, formatCurrency, formatDate } from '@/lib/utils';
 import { Modal } from '@/components/modals/modal';
+import { exportToExcel } from '@/lib/utils/excel-export';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -538,13 +540,40 @@ export default function QuotesPage() {
             Müşteri tekliflerini yönetin ve takip edin
           </p>
         </div>
-        <button
-          onClick={() => setModalOpen(true)}
-          className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
-        >
-          <Plus className="h-4 w-4" />
-          Yeni Teklif
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => exportToExcel(
+              quotes.map((q) => ({
+                quoteNumber: q.quoteNumber ?? q.id?.slice(0, 8),
+                customerName: (q.customer as Record<string, unknown>)?.name ?? '',
+                status: STATUS_LABELS[q.status] ?? q.status,
+                totalAmount: q.totalAmount ?? 0,
+                validUntil: q.validUntil ? new Date(q.validUntil).toLocaleDateString('tr-TR') : '',
+                createdAt: q.createdAt ? new Date(q.createdAt).toLocaleDateString('tr-TR') : '',
+              })),
+              [
+                { key: 'quoteNumber', header: 'Teklif No', width: 14 },
+                { key: 'customerName', header: 'Müşteri', width: 25 },
+                { key: 'status', header: 'Durum', width: 12 },
+                { key: 'totalAmount', header: 'Toplam Tutar', width: 16 },
+                { key: 'validUntil', header: 'Geçerlilik', width: 14 },
+                { key: 'createdAt', header: 'Tarih', width: 12 },
+              ],
+              'teklifler',
+              'Teklifler'
+            )}
+            className="flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm hover:bg-muted"
+          >
+            <FileDown className="h-4 w-4" /> Excel
+          </button>
+          <button
+            onClick={() => setModalOpen(true)}
+            className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+          >
+            <Plus className="h-4 w-4" />
+            Yeni Teklif
+          </button>
+        </div>
       </div>
 
       {/* Stats */}

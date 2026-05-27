@@ -19,6 +19,7 @@ import {
   Clock,
   ShoppingCart,
   ChevronRight,
+  FileDown,
 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { useSuppliers, useDeleteSupplier } from '@/lib/api/hooks';
@@ -26,6 +27,7 @@ import { SupplierModal } from '@/components/modals/supplier-modal';
 import { api } from '@/lib/api/client';
 import { toast } from 'sonner';
 import { cn, formatCurrency, formatDate } from '@/lib/utils';
+import { exportToExcel } from '@/lib/utils/excel-export';
 
 type StatusFilter = 'all' | 'active' | 'inactive';
 
@@ -389,13 +391,46 @@ export default function SuppliersPage() {
             <h1 className="text-2xl font-bold text-foreground">Tedarikçiler</h1>
             <p className="mt-1 text-sm text-muted-foreground">Tedarikçi firmalarını yönetin</p>
           </div>
-          <button
-            onClick={() => { setEditId(null); setModalOpen(true); }}
-            className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-sm transition-colors hover:bg-primary/90"
-          >
-            <Plus className="h-4 w-4" />
-            Yeni Tedarikçi
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => exportToExcel(
+                suppliers.map((s) => ({
+                  code: s.code,
+                  name: s.name,
+                  email: s.email ?? '',
+                  phone: s.phone ?? '',
+                  contactPerson: s.contactPerson ?? '',
+                  taxNumber: s.taxNumber ?? '',
+                  status: s.status === 'active' ? 'Aktif' : 'Pasif',
+                  balance: s.balance,
+                  paymentTerms: s.paymentTerms,
+                })),
+                [
+                  { key: 'code', header: 'Kod', width: 10 },
+                  { key: 'name', header: 'Tedarikçi Adı', width: 28 },
+                  { key: 'email', header: 'E-posta', width: 25 },
+                  { key: 'phone', header: 'Telefon', width: 15 },
+                  { key: 'contactPerson', header: 'İletişim Kişisi', width: 20 },
+                  { key: 'taxNumber', header: 'VKN', width: 12 },
+                  { key: 'status', header: 'Durum', width: 10 },
+                  { key: 'balance', header: 'Bakiye', width: 14 },
+                  { key: 'paymentTerms', header: 'Ödeme Vadesi (gün)', width: 20 },
+                ],
+                'tedarikciler',
+                'Tedarikçiler'
+              )}
+              className="flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm hover:bg-muted"
+            >
+              <FileDown className="h-4 w-4" /> Excel
+            </button>
+            <button
+              onClick={() => { setEditId(null); setModalOpen(true); }}
+              className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-sm transition-colors hover:bg-primary/90"
+            >
+              <Plus className="h-4 w-4" />
+              Yeni Tedarikçi
+            </button>
+          </div>
         </div>
 
         <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
