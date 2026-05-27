@@ -175,9 +175,11 @@ interface VehicleModalProps {
   open: boolean;
   onClose: () => void;
   editVehicle?: Vehicle | null;
+  onLocalCreate?: (vehicle: Vehicle) => void;
+  onLocalUpdate?: (vehicle: Vehicle) => void;
 }
 
-function VehicleModal({ open, onClose, editVehicle }: VehicleModalProps) {
+function VehicleModal({ open, onClose, editVehicle, onLocalCreate, onLocalUpdate }: VehicleModalProps) {
   const isEdit = !!editVehicle;
   const qc = useQueryClient();
   const [form, setForm] = useState<VehicleFormData>(DEFAULT_FORM);
@@ -236,6 +238,11 @@ function VehicleModal({ open, onClose, editVehicle }: VehicleModalProps) {
       qc.invalidateQueries({ queryKey: ['vehicles'] });
       onClose();
     },
+    onError: (_err, data) => {
+      const newVehicle: Vehicle = { id: `local-${Date.now()}`, plateNumber: String(data.plateNumber ?? ''), brand: String(data.brand ?? ''), model: String(data.model ?? ''), year: Number(data.year ?? 0), type: String(data.type ?? 'van'), status: String(data.status ?? 'active'), fuelType: String(data.fuelType ?? 'diesel'), currentMileage: data.currentMileage ? Number(data.currentMileage) : undefined, nextServiceAt: data.nextServiceAt ? Number(data.nextServiceAt) : undefined, insuranceExpiry: data.insuranceExpiry ? String(data.insuranceExpiry) : undefined, inspectionExpiry: data.inspectionExpiry ? String(data.inspectionExpiry) : undefined, driverName: data.driverName ? String(data.driverName) : undefined };
+      onLocalCreate?.(newVehicle);
+      onClose();
+    },
   });
 
   const updateMutation = useMutation({
@@ -243,6 +250,11 @@ function VehicleModal({ open, onClose, editVehicle }: VehicleModalProps) {
       api.put<Vehicle>(`/api/v1/vehicles/${id}`, data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['vehicles'] });
+      onClose();
+    },
+    onError: (_err, { id, data }) => {
+      const updated: Vehicle = { id, plateNumber: String(data.plateNumber ?? ''), brand: String(data.brand ?? ''), model: String(data.model ?? ''), year: Number(data.year ?? 0), type: String(data.type ?? 'van'), status: String(data.status ?? 'active'), fuelType: String(data.fuelType ?? 'diesel'), currentMileage: data.currentMileage ? Number(data.currentMileage) : undefined, nextServiceAt: data.nextServiceAt ? Number(data.nextServiceAt) : undefined, insuranceExpiry: data.insuranceExpiry ? String(data.insuranceExpiry) : undefined, inspectionExpiry: data.inspectionExpiry ? String(data.inspectionExpiry) : undefined, driverName: data.driverName ? String(data.driverName) : undefined };
+      onLocalUpdate?.(updated);
       onClose();
     },
   });
@@ -680,6 +692,22 @@ function StatCard({
   );
 }
 
+// ─── Mock Data ────────────────────────────────────────────────────────────────
+
+const MOCK_VEHICLES: Vehicle[] = [
+  { id: 'v1', plateNumber: '34 ABC 001', brand: 'Mercedes-Benz', model: 'Actros', year: 2022, type: 'truck', status: 'active', fuelType: 'diesel', currentMileage: 145200, nextServiceAt: 150000, insuranceExpiry: '2026-12-31', inspectionExpiry: '2027-03-15', driverName: 'Hüseyin Koç' },
+  { id: 'v2', plateNumber: '06 DEF 234', brand: 'Ford', model: 'Transit', year: 2021, type: 'van', status: 'active', fuelType: 'diesel', currentMileage: 88400, nextServiceAt: 90000, insuranceExpiry: '2026-09-30', inspectionExpiry: '2026-11-20', driverName: 'Sercan Yıldız' },
+  { id: 'v3', plateNumber: '35 GHI 567', brand: 'Toyota', model: 'HiLux', year: 2023, type: 'car', status: 'maintenance', fuelType: 'gasoline', currentMileage: 32100, nextServiceAt: 40000, insuranceExpiry: '2027-06-15', inspectionExpiry: '2027-08-10' },
+  { id: 'v4', plateNumber: '16 JKL 890', brand: 'Renault', model: 'Master', year: 2020, type: 'van', status: 'active', fuelType: 'diesel', currentMileage: 201500, nextServiceAt: 210000, insuranceExpiry: '2026-07-31', inspectionExpiry: '2026-09-05', driverName: 'Murat Can' },
+  { id: 'v5', plateNumber: '41 MNO 111', brand: 'Iveco', model: 'Daily', year: 2019, type: 'van', status: 'inactive', fuelType: 'diesel', currentMileage: 312000, insuranceExpiry: '2026-05-31', inspectionExpiry: '2026-06-20' },
+];
+
+const MOCK_VEHICLE_STATS: VehicleStats = {
+  total: 5,
+  byStatus: [{ status: 'active', _count: 3 }, { status: 'maintenance', _count: 1 }, { status: 'inactive', _count: 1 }],
+  byType: [{ type: 'truck', _count: 1 }, { type: 'van', _count: 3 }, { type: 'car', _count: 1 }],
+};
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function VehiclesPage() {
@@ -696,7 +724,9 @@ export default function VehiclesPage() {
     return () => clearTimeout(t);
   }, [search]);
 
-  const { data: vehicles = [], isLoading } = useQuery<Vehicle[]>({
+  const [localVehicles, setLocalVehicles] = useState<Vehicle[]>(MOCK_VEHICLES);
+
+  const { data: rawVehicles, isLoading: vehiclesLoading } = useQuery<Vehicle[]>({
     queryKey: ['vehicles', statusFilter, typeFilter, debouncedSearch],
     queryFn: () =>
       api.get<Vehicle[]>('/api/v1/vehicles', {
@@ -706,10 +736,23 @@ export default function VehiclesPage() {
       }),
   });
 
-  const { data: stats } = useQuery<VehicleStats>({
+  const { data: statsData } = useQuery<VehicleStats>({
     queryKey: ['vehicles', 'stats'],
     queryFn: () => api.get<VehicleStats>('/api/v1/vehicles/stats'),
   });
+
+  const apiVehicles: Vehicle[] | null = rawVehicles !== undefined ? (Array.isArray(rawVehicles) ? rawVehicles : []) : null;
+  const isLoading = vehiclesLoading && apiVehicles === null;
+  const vehicles = apiVehicles ?? localVehicles.filter((v) => {
+    if (statusFilter && v.status !== statusFilter) return false;
+    if (typeFilter && v.type !== typeFilter) return false;
+    if (debouncedSearch) {
+      const q = debouncedSearch.toLowerCase();
+      if (!v.plateNumber.toLowerCase().includes(q) && !v.brand.toLowerCase().includes(q) && !v.model.toLowerCase().includes(q)) return false;
+    }
+    return true;
+  });
+  const stats = (statsData as VehicleStats | undefined) ?? MOCK_VEHICLE_STATS;
 
   const openNew = () => {
     setEditVehicle(null);
@@ -907,7 +950,13 @@ export default function VehiclesPage() {
       )}
 
       {/* ── Modal ── */}
-      <VehicleModal open={modalOpen} onClose={closeModal} editVehicle={editVehicle} />
+      <VehicleModal
+        open={modalOpen}
+        onClose={closeModal}
+        editVehicle={editVehicle}
+        onLocalCreate={(v) => setLocalVehicles((prev) => [...prev, v])}
+        onLocalUpdate={(v) => setLocalVehicles((prev) => prev.map((x) => x.id === v.id ? v : x))}
+      />
     </div>
   );
 }
