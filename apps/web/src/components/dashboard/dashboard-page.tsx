@@ -275,12 +275,12 @@ export function DashboardPage() {
           <h2 className="font-semibold mb-4">Hızlı İşlemler</h2>
           <div className="grid grid-cols-2 gap-2">
             {[
-              { label: 'Sipariş Oluştur', href: '/sales/orders/new' },
-              { label: 'Fatura Kes', href: '/finance/invoices/new' },
-              { label: 'Stok Girişi', href: '/inventory/movements/new' },
-              { label: 'Müşteri Ekle', href: '/sales/customers/new' },
+              { label: 'Sipariş Oluştur', href: '/sales/orders' },
+              { label: 'Fatura Kes', href: '/sales/invoices' },
+              { label: 'Stok Hareketi', href: '/inventory/movements' },
+              { label: 'Müşteri Ekle', href: '/sales/customers' },
               { label: 'Rapor Al', href: '/analytics/reports' },
-              { label: 'İzin Talebi', href: '/hr/leaves/new' },
+              { label: 'İzin Talebi', href: '/hr/leaves' },
             ].map((action) => (
               <a
                 key={action.label}

@@ -8,6 +8,7 @@ import {
   Factory, Users, Truck, BarChart3, FolderKanban, FileText, Bell, Settings,
   ChevronDown, ChevronRight, X, GitBranch, CheckSquare, Calculator, Target,
   Layers, ClipboardList, FileSignature, Wrench, TrendingUp, CalendarDays, Cog,
+  FolderOpen, ShieldCheck,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { AuthUser } from '@erp/shared-types';
@@ -37,6 +38,7 @@ const navigation = [
       { label: 'Stok Hareketleri', href: '/inventory/movements' },
       { label: 'Stok Sayım', href: '/inventory/stock-counts' },
       { label: 'Fiyat Listesi', href: '/inventory/price-lists' },
+      { label: 'Stok Raporları', href: '/inventory/reports' },
     ],
   },
   {
@@ -49,6 +51,7 @@ const navigation = [
       { label: 'Faturalar', href: '/sales/invoices' },
       { label: 'Teklifler', href: '/sales/quotes' },
       { label: 'Fırsatlar', href: '/sales/opportunities' },
+      { label: 'Servis Talepleri', href: '/sales/service-requests' },
     ],
   },
   {
@@ -59,6 +62,7 @@ const navigation = [
       { label: 'Tedarikçiler', href: '/purchasing/suppliers' },
       { label: 'Siparişler', href: '/purchasing/orders' },
       { label: 'Talepler', href: '/purchasing/requests' },
+      { label: 'Teklif İsteme (RFQ)', href: '/purchasing/rfq' },
     ],
   },
   {
@@ -83,6 +87,7 @@ const navigation = [
       { label: 'Performans', href: '/hr/performance' },
       { label: 'İşe Alım', href: '/hr/recruitment' },
       { label: 'Eğitim', href: '/hr/training' },
+      { label: 'İSG', href: '/hr/health-safety' },
     ],
   },
   {
@@ -142,6 +147,7 @@ const navigation = [
   { id: 'tasks', label: 'Görevler', icon: CheckSquare, href: '/tasks' },
   { id: 'workflows', label: 'İş Akışları', icon: GitBranch, href: '/workflows' },
   { id: 'notifications', label: 'Bildirimler', icon: Bell, href: '/notifications' },
+  { id: 'documents', label: 'Dokümanlar', icon: FolderOpen, href: '/documents' },
 ];
 
 interface SidebarProps {
