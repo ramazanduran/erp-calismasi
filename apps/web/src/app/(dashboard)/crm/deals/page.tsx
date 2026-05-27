@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { PlusCircle, Trophy, Target, TrendingUp, Users, FileDown } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { PlusCircle, Trophy, Target, TrendingUp, Users, FileDown, Search } from 'lucide-react';
 import { exportToExcel } from '@/lib/utils/excel-export';
 import { useDealPipeline, useDealStats, useCreateDeal, useUpdateDeal, useDeleteDeal } from '@/lib/api/hooks';
 import { formatCurrency, cn } from '@/lib/utils';
@@ -183,6 +183,7 @@ export default function DealsPage() {
   const updateDeal = useUpdateDeal();
   const [showForm, setShowForm] = useState(false);
   const [view, setView] = useState<'kanban' | 'list'>('kanban');
+  const [search, setSearch] = useState('');
 
   const handleSave = async (data: Record<string, unknown>) => {
     await createDeal.mutateAsync(data);
@@ -196,6 +197,18 @@ export default function DealsPage() {
   const dealStats = stats as DealStats | undefined;
   const pipelineColumns = pipeline as PipelineColumn[];
 
+  const filteredColumns = useMemo(() => {
+    if (!search) return pipelineColumns;
+    const q = search.toLowerCase();
+    return pipelineColumns.map((col) => ({
+      ...col,
+      deals: col.deals.filter((d) =>
+        d.title?.toLowerCase().includes(q) ||
+        d.customer?.name?.toLowerCase().includes(q)
+      ),
+    }));
+  }, [pipelineColumns, search]);
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -203,7 +216,17 @@ export default function DealsPage() {
           <h1 className="text-2xl font-bold">Satış Pipeline</h1>
           <p className="text-muted-foreground mt-1">Satış fırsatlarını yönetin ve takip edin</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 items-center">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <input
+              type="text"
+              placeholder="Fırsat veya müşteri ara..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-9 pr-3 py-1.5 rounded-lg border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 w-48"
+            />
+          </div>
           <div className="flex border border-border rounded-lg overflow-hidden">
             <button
               onClick={() => setView('kanban')}
@@ -220,7 +243,7 @@ export default function DealsPage() {
           </div>
           <button
             onClick={() => exportToExcel(
-              pipelineColumns.flatMap((col) => col.deals).map((deal) => ({
+              filteredColumns.flatMap((col) => col.deals).map((deal) => ({
                 title: deal.title,
                 customer: deal.customer?.name ?? '',
                 value: Number(deal.value),
@@ -282,7 +305,7 @@ export default function DealsPage() {
             <div className="text-center py-12 text-muted-foreground">Yükleniyor...</div>
           ) : (
             <div className="flex gap-4 min-w-max pb-4">
-              {pipelineColumns.map((col) => {
+              {filteredColumns.map((col) => {
                 const config = STAGE_CONFIG[col.stage];
                 return (
                   <div key={col.stage} className={cn('w-72 rounded-xl border p-3', config?.bg ?? 'bg-muted/30')}>
@@ -321,7 +344,7 @@ export default function DealsPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {pipelineColumns.flatMap((col) => col.deals).map((deal) => (
+              {filteredColumns.flatMap((col) => col.deals).map((deal) => (
                 <tr key={deal.id} className="hover:bg-muted/30">
                   <td className="px-4 py-3 font-medium">{deal.title}</td>
                   <td className="px-4 py-3 text-muted-foreground">{deal.customer?.name ?? '-'}</td>

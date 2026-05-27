@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api/client';
 import { toast } from 'sonner';
@@ -8,7 +8,7 @@ import { cn } from '@/lib/utils';
 import {
   Plus, ClipboardList, X, CheckCircle2, Clock, FileSearch,
   Hash, Calendar, Package, TrendingUp, TrendingDown, Minus,
-  ChevronDown, ChevronUp, AlertCircle, User, Layers, FileDown,
+  ChevronDown, ChevronUp, AlertCircle, User, Layers, FileDown, Search,
 } from 'lucide-react';
 import { exportToExcel } from '@/lib/utils/excel-export';
 
@@ -380,6 +380,7 @@ function SummaryCard({
 
 export default function StockCountsPage() {
   const [activeTab, setActiveTab] = useState('all');
+  const [search, setSearch] = useState('');
   const [showNewModal, setShowNewModal] = useState(false);
   const [detailCount, setDetailCount] = useState<StockCount | null>(null);
   const [completeCount, setCompleteCount] = useState<StockCount | null>(null);
@@ -392,9 +393,17 @@ export default function StockCountsPage() {
 
   const allCounts = (data as StockCount[]) ?? [];
 
-  const filteredCounts = activeTab === 'all'
-    ? allCounts
-    : allCounts.filter(c => c.status === activeTab);
+  const filteredCounts = useMemo(() => {
+    let result = activeTab === 'all' ? allCounts : allCounts.filter(c => c.status === activeTab);
+    if (search) {
+      const q = search.toLowerCase();
+      result = result.filter(c =>
+        c.countNumber?.toLowerCase().includes(q) ||
+        (c.createdBy ? `${c.createdBy.firstName} ${c.createdBy.lastName}`.toLowerCase().includes(q) : false)
+      );
+    }
+    return result;
+  }, [allCounts, activeTab, search]);
 
   const totalCount = allCounts.length;
   const inProgressCount = allCounts.filter(c => c.status === 'in_progress').length;
@@ -479,8 +488,19 @@ export default function StockCountsPage() {
         />
       </div>
 
-      {/* Filter Tabs */}
-      <div className="flex gap-1 rounded-lg border border-border bg-muted/30 p-1 w-fit">
+      {/* Search & Filter */}
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <input
+            type="text"
+            placeholder="Sayım no veya oluşturan..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-9 pr-3 py-1.5 rounded-lg border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 w-52"
+          />
+        </div>
+        <div className="flex gap-1 rounded-lg border border-border bg-muted/30 p-1 w-fit">
         {FILTER_TABS.map((tab) => {
           const count = tab.key === 'all'
             ? allCounts.length
@@ -506,6 +526,7 @@ export default function StockCountsPage() {
             </button>
           );
         })}
+        </div>
       </div>
 
       {/* Table */}
