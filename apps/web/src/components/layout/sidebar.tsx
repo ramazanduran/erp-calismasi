@@ -26,6 +26,7 @@ const navigation = [
       { label: 'Banka Hesapları', href: '/finance/bank-accounts' },
       { label: 'Banka Mutabakatı', href: '/finance/bank-reconciliation' },
       { label: 'Raporlar', href: '/finance/reports' },
+      { label: 'Vergi Yönetimi', href: '/finance/tax' },
     ],
   },
   {
@@ -63,6 +64,7 @@ const navigation = [
       { label: 'Siparişler', href: '/purchasing/orders' },
       { label: 'Talepler', href: '/purchasing/requests' },
       { label: 'Teklif İsteme (RFQ)', href: '/purchasing/rfq' },
+      { label: 'İthalat & İhracat', href: '/purchasing/import-export' },
     ],
   },
   {
@@ -97,6 +99,7 @@ const navigation = [
     children: [
       { label: 'Sevkiyatlar', href: '/logistics/shipments' },
       { label: 'Araçlar', href: '/logistics/vehicles' },
+      { label: 'Rota Planlama', href: '/logistics/routes' },
     ],
   },
   {
@@ -116,6 +119,7 @@ const navigation = [
     children: [
       { label: 'Leads', href: '/crm/leads' },
       { label: 'Satış Pipeline', href: '/crm/deals' },
+      { label: 'Aktiviteler', href: '/crm/activities' },
     ],
   },
   { id: 'budget', label: 'Bütçe', icon: DollarSign, href: '/budget' },
@@ -334,6 +338,7 @@ export function Sidebar({ collapsed, mobileOpen, onMobileClose, user: _user }: S
                 { label: 'Roller', href: '/settings/admin/roles' },
                 { label: 'Departmanlar', href: '/settings/admin/departments' },
                 { label: 'Audit Loglar', href: '/settings/admin/audit-logs' },
+                { label: 'Özel Varlıklar', href: '/settings/admin/entities' },
                 { label: 'Veri İçe Aktarma', href: '/settings/admin/import' },
                 { label: 'API Token\'ları', href: '/settings/api-tokens' },
                 { label: 'Webhooks', href: '/settings/webhooks' },
