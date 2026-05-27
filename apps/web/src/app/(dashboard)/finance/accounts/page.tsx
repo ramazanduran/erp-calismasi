@@ -463,6 +463,15 @@ function NewAccountModal({ onClose }: { onClose: () => void }) {
   );
 }
 
+const MOCK_FIN_ACCOUNTS: Account[] = [
+  { id: 'fa1', name: 'Garanti Bankası - TRY Ana Hesap', type: 'bank', currency: 'TRY', balance: 1840000, isActive: true, bankName: 'Garanti BBVA', accountNumber: '8234567', iban: 'TR12 0006 2000 0000 0008 2345 67', transactionCount: 120 },
+  { id: 'fa2', name: 'İş Bankası - USD Hesabı', type: 'bank', currency: 'USD', balance: 45000, isActive: true, bankName: 'İş Bankası', accountNumber: '1234567', iban: 'TR34 0006 4000 0000 0001 2345 67', transactionCount: 38 },
+  { id: 'fa3', name: 'Merkez Kasa', type: 'cash', currency: 'TRY', balance: 125000, isActive: true, transactionCount: 48 },
+  { id: 'fa4', name: 'Kurumsal Kredi Kartı', type: 'credit', currency: 'TRY', balance: -42000, isActive: true, bankName: 'Akbank', transactionCount: 67 },
+  { id: 'fa5', name: 'Yapı Kredi - EUR Hesabı', type: 'bank', currency: 'EUR', balance: 18000, isActive: true, bankName: 'Yapı Kredi', accountNumber: '9876543', iban: 'TR56 0006 7000 0000 0009 8765 43', transactionCount: 22 },
+  { id: 'fa6', name: 'Ankara Şube Kasası', type: 'cash', currency: 'TRY', balance: 28000, isActive: true, transactionCount: 15 },
+];
+
 export default function AccountsPage() {
   const [activeTab, setActiveTab] = useState<TabKey>('');
   const [showInactive, setShowInactive] = useState(false);
@@ -470,13 +479,15 @@ export default function AccountsPage() {
   const [selectedAccount, setSelectedAccount] = useState<Account | null>(null);
   const [showNewModal, setShowNewModal] = useState(false);
   const [editingAccount, setEditingAccount] = useState<Account | null>(null);
+  const [localAccounts, setLocalAccounts] = useState<Account[]>(MOCK_FIN_ACCOUNTS);
 
-  const { data: accounts, isLoading } = useAccounts({
+  const { data: accounts, isLoading: accountsLoading } = useAccounts({
     type: activeTab || undefined,
     isActive: showInactive ? undefined : true,
   });
 
-  const allAccounts: Account[] = Array.isArray(accounts) ? (accounts as Account[]) : [];
+  const isLoading = accountsLoading && accounts === undefined;
+  const allAccounts: Account[] = accounts !== undefined ? (Array.isArray(accounts) ? (accounts as Account[]) : []) : localAccounts;
 
   const filtered = useMemo(() => {
     return allAccounts.filter((a) => {

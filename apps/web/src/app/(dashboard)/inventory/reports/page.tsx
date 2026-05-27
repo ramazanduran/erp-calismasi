@@ -31,6 +31,50 @@ interface MinMaxRow { id: string; productName: string; minStock: number; maxStoc
 interface MovementRow { id: string; date: string; productCode: string; productName: string; warehouse: string; type: string; quantity: number; unit: string; reference?: string; }
 interface TurnoverRow { id: string; productName: string; periodSales: number; avgStock: number; turnoverRate: number; turnoverDays: number; }
 
+const MOCK_CURRENT_STOCK: CurrentStockRow[] = [
+  { id: 'p1', code: 'URN-001', name: 'Çelik Vida M8x30', warehouse: 'Merkez Ana Depo', currentStock: 1200, reserved: 150, available: 1050, unit: 'Adet', minStock: 200, status: 'normal' },
+  { id: 'p2', code: 'URN-002', name: 'Plastik Conta 50mm', warehouse: 'Merkez Ana Depo', currentStock: 85, reserved: 40, available: 45, unit: 'Adet', minStock: 100, status: 'low' },
+  { id: 'p3', code: 'URN-003', name: 'Alüminyum Profil 2m', warehouse: 'Ankara Depo', currentStock: 320, reserved: 0, available: 320, unit: 'Adet', minStock: 50, status: 'overstock' },
+  { id: 'p4', code: 'URN-004', name: 'Kauçuk Conta 30mm', warehouse: 'Merkez Ana Depo', currentStock: 12, reserved: 10, available: 2, unit: 'Adet', minStock: 50, status: 'critical' },
+  { id: 'p5', code: 'URN-005', name: 'Paslanmaz Somun M10', warehouse: 'İzmir Depo', currentStock: 560, reserved: 80, available: 480, unit: 'Adet', minStock: 100, status: 'normal' },
+];
+
+const MOCK_ABC: ABCRow[] = [
+  { rank: 1, productName: 'Alüminyum Profil 2m', annualValue: 2400000, cumulativePercent: 32.5, abcClass: 'A' },
+  { rank: 2, productName: 'Çelik Vida M8x30', annualValue: 1800000, cumulativePercent: 57.0, abcClass: 'A' },
+  { rank: 3, productName: 'Paslanmaz Somun M10', annualValue: 900000, cumulativePercent: 69.2, abcClass: 'B' },
+  { rank: 4, productName: 'Plastik Conta 50mm', annualValue: 450000, cumulativePercent: 75.3, abcClass: 'B' },
+  { rank: 5, productName: 'Kauçuk Conta 30mm', annualValue: 180000, cumulativePercent: 97.7, abcClass: 'C' },
+];
+
+const MOCK_AGING: AgingRow[] = [
+  { id: 'p1', productName: 'Çelik Vida M8x30', d0_30: 500, d31_60: 400, d61_90: 200, d90plus: 100, total: 1200, risk: 'low' },
+  { id: 'p3', productName: 'Alüminyum Profil 2m', d0_30: 50, d31_60: 70, d61_90: 100, d90plus: 100, total: 320, risk: 'medium' },
+  { id: 'p4', productName: 'Kauçuk Conta 30mm', d0_30: 0, d31_60: 2, d61_90: 5, d90plus: 5, total: 12, risk: 'high' },
+];
+
+const MOCK_MINMAX: MinMaxRow[] = [
+  { id: 'p1', productName: 'Çelik Vida M8x30', minStock: 200, maxStock: 2000, currentStock: 1200, needsOrder: false },
+  { id: 'p2', productName: 'Plastik Conta 50mm', minStock: 100, maxStock: 500, currentStock: 85, needsOrder: true },
+  { id: 'p3', productName: 'Alüminyum Profil 2m', minStock: 50, maxStock: 200, currentStock: 320, needsOrder: false },
+  { id: 'p4', productName: 'Kauçuk Conta 30mm', minStock: 50, maxStock: 300, currentStock: 12, needsOrder: true },
+  { id: 'p5', productName: 'Paslanmaz Somun M10', minStock: 100, maxStock: 800, currentStock: 560, needsOrder: false },
+];
+
+const MOCK_MOVEMENTS: MovementRow[] = [
+  { id: 'm1', date: '2026-05-25', productCode: 'URN-001', productName: 'Çelik Vida M8x30', warehouse: 'Merkez Ana Depo', type: 'in', quantity: 300, unit: 'Adet', reference: 'SİP-2026-0042' },
+  { id: 'm2', date: '2026-05-24', productCode: 'URN-002', productName: 'Plastik Conta 50mm', warehouse: 'Merkez Ana Depo', type: 'out', quantity: 25, unit: 'Adet', reference: 'SEV-2026-0018' },
+  { id: 'm3', date: '2026-05-23', productCode: 'URN-003', productName: 'Alüminyum Profil 2m', warehouse: 'Ankara Depo', type: 'transfer', quantity: 50, unit: 'Adet', reference: 'TRF-2026-0005' },
+  { id: 'm4', date: '2026-05-22', productCode: 'URN-005', productName: 'Paslanmaz Somun M10', warehouse: 'İzmir Depo', type: 'in', quantity: 200, unit: 'Adet', reference: 'SİP-2026-0041' },
+];
+
+const MOCK_TURNOVER: TurnoverRow[] = [
+  { id: 'p1', productName: 'Çelik Vida M8x30', periodSales: 4800, avgStock: 1100, turnoverRate: 4.36, turnoverDays: 84 },
+  { id: 'p2', productName: 'Plastik Conta 50mm', periodSales: 180, avgStock: 95, turnoverRate: 1.89, turnoverDays: 193 },
+  { id: 'p3', productName: 'Alüminyum Profil 2m', periodSales: 620, avgStock: 290, turnoverRate: 2.14, turnoverDays: 171 },
+  { id: 'p5', productName: 'Paslanmaz Somun M10', periodSales: 1200, avgStock: 480, turnoverRate: 2.50, turnoverDays: 146 },
+];
+
 export default function InventoryReportsPage() {
   const [activeTab, setActiveTab] = useState<ReportTab>('current');
   const [search, setSearch] = useState('');
@@ -38,12 +82,12 @@ export default function InventoryReportsPage() {
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
 
-  const { data: currentStock = [], isLoading: loadingCurrent } = useQuery<CurrentStockRow[]>({ queryKey: ['inventory-report-current', warehouseFilter], queryFn: () => api.get('/api/v1/inventory/reports/current-stock', { warehouse: warehouseFilter || undefined }) });
-  const { data: abcData = [], isLoading: loadingABC } = useQuery<ABCRow[]>({ queryKey: ['inventory-report-abc', dateFrom, dateTo], queryFn: () => api.get('/api/v1/inventory/reports/abc', { from: dateFrom || undefined, to: dateTo || undefined }) });
-  const { data: agingData = [], isLoading: loadingAging } = useQuery<AgingRow[]>({ queryKey: ['inventory-report-aging'], queryFn: () => api.get('/api/v1/inventory/reports/aging') });
-  const { data: minMaxData = [], isLoading: loadingMinMax } = useQuery<MinMaxRow[]>({ queryKey: ['inventory-report-minmax'], queryFn: () => api.get('/api/v1/inventory/reports/minmax') });
-  const { data: movementsData = [], isLoading: loadingMovements } = useQuery<MovementRow[]>({ queryKey: ['inventory-report-movements', dateFrom, dateTo, warehouseFilter], queryFn: () => api.get('/api/v1/inventory/reports/movements', { from: dateFrom || undefined, to: dateTo || undefined, warehouse: warehouseFilter || undefined }) });
-  const { data: turnoverData = [], isLoading: loadingTurnover } = useQuery<TurnoverRow[]>({ queryKey: ['inventory-report-turnover', dateFrom, dateTo], queryFn: () => api.get('/api/v1/inventory/reports/turnover', { from: dateFrom || undefined, to: dateTo || undefined }) });
+  const { data: currentStock = [], isLoading: loadingCurrent } = useQuery<CurrentStockRow[]>({ queryKey: ['inventory-report-current', warehouseFilter], queryFn: () => api.get('/api/v1/inventory/reports/current-stock', { warehouse: warehouseFilter || undefined }), initialData: MOCK_CURRENT_STOCK });
+  const { data: abcData = [], isLoading: loadingABC } = useQuery<ABCRow[]>({ queryKey: ['inventory-report-abc', dateFrom, dateTo], queryFn: () => api.get('/api/v1/inventory/reports/abc', { from: dateFrom || undefined, to: dateTo || undefined }), initialData: MOCK_ABC });
+  const { data: agingData = [], isLoading: loadingAging } = useQuery<AgingRow[]>({ queryKey: ['inventory-report-aging'], queryFn: () => api.get('/api/v1/inventory/reports/aging'), initialData: MOCK_AGING });
+  const { data: minMaxData = [], isLoading: loadingMinMax } = useQuery<MinMaxRow[]>({ queryKey: ['inventory-report-minmax'], queryFn: () => api.get('/api/v1/inventory/reports/minmax'), initialData: MOCK_MINMAX });
+  const { data: movementsData = [], isLoading: loadingMovements } = useQuery<MovementRow[]>({ queryKey: ['inventory-report-movements', dateFrom, dateTo, warehouseFilter], queryFn: () => api.get('/api/v1/inventory/reports/movements', { from: dateFrom || undefined, to: dateTo || undefined, warehouse: warehouseFilter || undefined }), initialData: MOCK_MOVEMENTS });
+  const { data: turnoverData = [], isLoading: loadingTurnover } = useQuery<TurnoverRow[]>({ queryKey: ['inventory-report-turnover', dateFrom, dateTo], queryFn: () => api.get('/api/v1/inventory/reports/turnover', { from: dateFrom || undefined, to: dateTo || undefined }), initialData: MOCK_TURNOVER });
 
   const isLoading = { current: loadingCurrent, abc: loadingABC, aging: loadingAging, minmax: loadingMinMax, movements: loadingMovements, turnover: loadingTurnover }[activeTab];
 

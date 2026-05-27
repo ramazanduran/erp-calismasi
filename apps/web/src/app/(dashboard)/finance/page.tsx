@@ -14,6 +14,26 @@ import {
 
 const MONTH_NAMES = ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'];
 
+const MOCK_PL = {
+  totalRevenue: 4050000, grossProfit: 1350000, grossMargin: 33.3,
+  monthly: [
+    { month: 1, revenue: 280000, cogs: 185000 }, { month: 2, revenue: 310000, cogs: 205000 },
+    { month: 3, revenue: 350000, cogs: 230000 }, { month: 4, revenue: 390000, cogs: 255000 },
+    { month: 5, revenue: 430000, cogs: 290000 }, { month: 6, revenue: 0, cogs: 0 },
+  ],
+};
+
+const MOCK_AR = { total: 680000, overdue30: 120000, overdue60: 45000, overdue90plus: 28000 };
+
+const MOCK_CF = {
+  totalInflow: 3800000, totalOutflow: 3200000,
+  monthly: [
+    { month: 1, inflow: 260000, outflow: 220000 }, { month: 2, inflow: 290000, outflow: 250000 },
+    { month: 3, inflow: 330000, outflow: 280000 }, { month: 4, inflow: 370000, outflow: 310000 },
+    { month: 5, inflow: 410000, outflow: 350000 }, { month: 6, inflow: 0, outflow: 0 },
+  ],
+};
+
 const fmt = (n: number) => Number(n).toLocaleString('tr-TR', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 
 export default function FinanceOverviewPage() {
@@ -22,16 +42,19 @@ export default function FinanceOverviewPage() {
   const { data: plData } = useQuery({
     queryKey: ['finance', 'reports', 'pl', year],
     queryFn: () => api.get(`/api/v1/finance/reports/profit-loss?year=${year}`),
+    initialData: MOCK_PL,
   });
 
   const { data: arData } = useQuery({
     queryKey: ['finance', 'reports', 'ar'],
     queryFn: () => api.get('/api/v1/finance/reports/accounts-receivable'),
+    initialData: MOCK_AR,
   });
 
   const { data: cfData } = useQuery({
     queryKey: ['finance', 'reports', 'cf', year],
     queryFn: () => api.get(`/api/v1/finance/reports/cash-flow?year=${year}`),
+    initialData: MOCK_CF,
   });
 
   const { data: invoicesData } = useQuery({

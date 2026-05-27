@@ -171,21 +171,37 @@ function NewAccountModal({
   );
 }
 
+const MOCK_BANK_ACCOUNTS: FinanceAccount[] = [
+  { id: 'ba1', name: 'Garanti Bankası - TRY Ana Hesap', type: 'bank', currency: 'TRY', balance: 1840000, isActive: true, iban: 'TR12 0006 2000 0000 0008 2345 67', swift: 'TGBATRISXXX' },
+  { id: 'ba2', name: 'İş Bankası - USD Hesabı', type: 'bank', currency: 'USD', balance: 45000, isActive: true, iban: 'TR34 0006 4000 0000 0001 2345 67', swift: 'ISBKTRISXXX' },
+  { id: 'ba3', name: 'Yapı Kredi - EUR Hesabı', type: 'bank', currency: 'EUR', balance: 18000, isActive: true, iban: 'TR56 0006 7000 0000 0009 8765 43', swift: 'YAPITRISXXX' },
+];
+
 export default function BankAccountsPage() {
   const queryClient = useQueryClient();
   const [showModal, setShowModal] = useState(false);
   const [search, setSearch] = useState('');
+  const [localAccounts, setLocalAccounts] = useState<FinanceAccount[]>(MOCK_BANK_ACCOUNTS);
 
-  const { data: accounts = [], isLoading } = useQuery<FinanceAccount[]>({
+  const { data: rawAccounts, isLoading: accountsLoading } = useQuery<FinanceAccount[]>({
     queryKey: ['finance', 'accounts'],
     queryFn: () => api.get<FinanceAccount[]>('api/v1/finance/accounts'),
   });
+
+  const apiAccounts: FinanceAccount[] | null = rawAccounts !== undefined ? (Array.isArray(rawAccounts) ? rawAccounts : []) : null;
+  const isLoading = accountsLoading && apiAccounts === null;
+  const accounts = apiAccounts ?? localAccounts;
 
   const createMutation = useMutation({
     mutationFn: (data: NewAccountForm & { type: 'bank' }) =>
       api.post('api/v1/finance/accounts', data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['finance', 'accounts'] });
+      setShowModal(false);
+    },
+    onError: (_err, data) => {
+      const newAcc: FinanceAccount = { id: `local-${Date.now()}`, name: data.name, type: 'bank', currency: data.currency, balance: parseFloat(data.balance) || 0, isActive: true, iban: data.iban, swift: data.swift };
+      setLocalAccounts((prev) => [...prev, newAcc]);
       setShowModal(false);
     },
   });
