@@ -58,6 +58,14 @@ interface RFQ {
   quotes?: SupplierQuote[];
 }
 
+const MOCK_RFQS: RFQ[] = [
+  { id: 'rfq1', rfqNumber: 'RFQ-2026-001', itemDescription: 'Çelik Sac 3mm (S235) — 500 adet', quantity: 500, unit: 'adet', sentDate: '2026-05-01', deadline: '2026-05-15', status: 'received', supplierCount: 3, lowestQuote: 18500, quotes: [{ supplierId: 's1', supplierName: 'Demir Çelik San.', unitPrice: 37, totalPrice: 18500, deliveryDays: 7, selected: true }, { supplierId: 's2', supplierName: 'Mavi Metal Ltd.', unitPrice: 41, totalPrice: 20500, deliveryDays: 5, selected: false }] },
+  { id: 'rfq2', rfqNumber: 'RFQ-2026-002', itemDescription: 'Ambalaj Karton Kutu 40x30x25 — 2000 adet', quantity: 2000, unit: 'adet', sentDate: '2026-05-10', deadline: '2026-05-25', status: 'sent', supplierCount: 2 },
+  { id: 'rfq3', rfqNumber: 'RFQ-2026-003', itemDescription: 'Sanayi Boya Ürünleri — 100 litre', quantity: 100, unit: 'litre', sentDate: '2026-04-20', deadline: '2026-05-05', status: 'closed', supplierCount: 4, lowestQuote: 15200 },
+  { id: 'rfq4', rfqNumber: 'RFQ-2026-004', itemDescription: 'Yedek Parça Set — Makine M-205', quantity: 1, unit: 'set', deadline: '2026-06-15', status: 'draft', supplierCount: 0 },
+  { id: 'rfq5', rfqNumber: 'RFQ-2026-005', itemDescription: 'Kauçuk O-Ring Seti (200 adet)', quantity: 200, unit: 'adet', sentDate: '2026-05-15', deadline: '2026-05-30', status: 'compared', supplierCount: 3, lowestQuote: 4800 },
+];
+
 const MOCK_SUPPLIERS = [
   { id: 's1', name: 'Tedarikçi A' },
   { id: 's2', name: 'Tedarikçi B' },
@@ -180,7 +188,9 @@ export default function RFQPage() {
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
   const [comparisonRFQ, setComparisonRFQ] = useState<RFQ | null>(null);
 
-  const { data: rfqsData = [], isLoading } = useQuery<RFQ[]>({ queryKey: ['rfqs'], queryFn: () => api.get('/api/v1/purchasing/rfq') });
+  const { data: rawRfqs, isLoading: rfqsLoading } = useQuery<RFQ[]>({ queryKey: ['rfqs'], queryFn: () => api.get('/api/v1/purchasing/rfq') });
+  const rfqsData: RFQ[] = rawRfqs !== undefined ? (Array.isArray(rawRfqs) ? rawRfqs : []) : MOCK_RFQS;
+  const isLoading = rfqsLoading && rawRfqs === undefined;
 
   const createRFQ = useMutation({ mutationFn: (d: any) => api.post('/api/v1/purchasing/rfq', d), onSuccess: () => { qc.invalidateQueries({ queryKey: ['rfqs'] }); setShowForm(false); } });
 

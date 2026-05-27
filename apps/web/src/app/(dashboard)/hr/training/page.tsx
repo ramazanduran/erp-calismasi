@@ -53,6 +53,24 @@ interface Stats {
   byCategory: Record<string, number>;
 }
 
+const MOCK_PROGRAMS: Program[] = [
+  { id: 'tr1', title: 'ERP Sistem Kullanımı Temel Eğitim', code: 'ERP-101', category: 'technical', format: 'classroom', durationHours: 16, isMandatory: true, isActive: true, cost: 0, provider: 'İç Eğitim', _count: { sessions: 3, enrollments: 28 } },
+  { id: 'tr2', title: 'İş Güvenliği ve Sağlık Eğitimi', code: 'ISG-001', category: 'safety', format: 'blended', durationHours: 8, isMandatory: true, isActive: true, cost: 500, provider: 'OSGB Partner', _count: { sessions: 6, enrollments: 52 } },
+  { id: 'tr3', title: 'Etkili İletişim ve Sunum', code: 'SS-201', category: 'soft_skills', format: 'classroom', durationHours: 12, isMandatory: false, isActive: true, cost: 2500, provider: 'Yönetim Akademisi', _count: { sessions: 2, enrollments: 18 } },
+  { id: 'tr4', title: 'Liderlik ve Takım Yönetimi', code: 'LDR-301', category: 'leadership', format: 'online', durationHours: 24, isMandatory: false, isActive: true, cost: 3800, provider: 'Harvard Online', _count: { sessions: 1, enrollments: 12 } },
+  { id: 'tr5', title: 'KVKK ve Veri Güvenliği', code: 'CMR-101', category: 'compliance', format: 'online', durationHours: 4, isMandatory: true, isActive: true, cost: 0, provider: 'İç Eğitim', _count: { sessions: 4, enrollments: 62 } },
+  { id: 'tr6', title: 'CNC Makine Operatörlüğü', code: 'TEC-501', category: 'technical', format: 'on_the_job', durationHours: 40, isMandatory: false, isActive: true, cost: 1200, provider: 'Üretim Birimi', _count: { sessions: 2, enrollments: 8 } },
+];
+
+const MOCK_STATS: Stats = {
+  totalPrograms: MOCK_PROGRAMS.length,
+  activePrograms: MOCK_PROGRAMS.filter((p) => p.isActive).length,
+  totalEnrollments: MOCK_PROGRAMS.reduce((s, p) => s + (p._count?.enrollments ?? 0), 0),
+  completedEnrollments: 142,
+  completionRate: 79.3,
+  byCategory: { technical: 2, safety: 1, soft_skills: 1, leadership: 1, compliance: 1 },
+};
+
 function NewProgramModal({ onClose, onSave }: { onClose: () => void; onSave: (d: any) => void }) {
   const [form, setForm] = useState({
     title: '', category: 'technical', format: 'classroom',
@@ -189,18 +207,30 @@ export default function TrainingPage() {
     queryFn: () => api.get('/api/v1/training/stats'),
   });
 
-  const { data: programs = [], isLoading } = useQuery({
+  const { data: rawPrograms, isLoading: programsLoading } = useQuery({
     queryKey: ['training', 'programs', categoryFilter],
     queryFn: () => api.get('/api/v1/training/programs', categoryFilter ? { category: categoryFilter } : undefined),
   });
+  const isLoading = programsLoading && rawPrograms === undefined;
+
+  const [localPrograms, setLocalPrograms] = useState<Program[]>(MOCK_PROGRAMS);
 
   const create = useMutation({
-    mutationFn: (data: any) => api.post('/api/v1/training/programs', data),
+    mutationFn: (data: any) => {
+      if (!rawPrograms) {
+        const np: Program = { id: `tr${Date.now()}`, title: data.title, code: data.code, category: data.category, format: data.format, durationHours: data.durationHours, isMandatory: data.isMandatory, isActive: true, cost: data.cost, provider: data.provider, _count: { sessions: 0, enrollments: 0 } };
+        setLocalPrograms((prev) => [np, ...prev]);
+        setShowForm(false);
+        return Promise.resolve();
+      }
+      return api.post('/api/v1/training/programs', data);
+    },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['training'] }); setShowForm(false); },
   });
 
-  const stats = statsData as Stats | undefined;
-  const allPrograms = programs as Program[];
+  const stats: Stats = (statsData as Stats | undefined) ?? MOCK_STATS;
+  const apiPrograms: Program[] | null = rawPrograms !== undefined ? (Array.isArray(rawPrograms) ? rawPrograms as Program[] : []) : null;
+  const allPrograms = apiPrograms ?? localPrograms;
   const programList = useMemo(() => {
     if (!search) return allPrograms;
     const q = search.toLowerCase();
