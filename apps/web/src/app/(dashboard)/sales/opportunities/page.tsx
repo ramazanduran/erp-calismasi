@@ -9,7 +9,9 @@ import {
   DollarSign,
   CalendarDays,
   ExternalLink,
+  FileDown,
 } from 'lucide-react';
+import { exportToExcel } from '@/lib/utils/excel-export';
 import { api } from '@/lib/api/client';
 import { cn, formatCurrency, formatDate } from '@/lib/utils';
 
@@ -491,6 +493,56 @@ export default function OpportunitiesPage() {
             Satış pipeline ve adayları yönetin
           </p>
         </div>
+        <button
+          onClick={() => {
+            if (activeTab === 'deals') {
+              exportToExcel(
+                deals.map((d) => ({
+                  title: d.title,
+                  customer: d.customer?.name ?? '',
+                  stage: DEAL_STAGES.find((s) => s.id === d.stage)?.label ?? d.stage,
+                  value: d.value,
+                  probability: `%${d.probability}`,
+                  assignedTo: d.assignedTo ? `${d.assignedTo.firstName} ${d.assignedTo.lastName}` : '',
+                  expectedCloseDate: d.expectedCloseDate ? new Date(d.expectedCloseDate).toLocaleDateString('tr-TR') : '',
+                })),
+                [
+                  { key: 'title', header: 'Fırsat', width: 28 },
+                  { key: 'customer', header: 'Müşteri', width: 22 },
+                  { key: 'stage', header: 'Aşama', width: 14 },
+                  { key: 'value', header: 'Değer', width: 14 },
+                  { key: 'probability', header: 'Olasılık', width: 10 },
+                  { key: 'assignedTo', header: 'Sorumlu', width: 20 },
+                  { key: 'expectedCloseDate', header: 'Kapanış Tarihi', width: 14 },
+                ],
+                'firsatlar',
+                'Satış Fırsatları'
+              );
+            } else {
+              exportToExcel(
+                leads.map((l) => ({
+                  name: `${l.firstName} ${l.lastName}`,
+                  company: l.company ?? '',
+                  status: LEAD_STATUS_LABELS[l.status] ?? l.status,
+                  source: SOURCE_LABELS[l.source ?? ''] ?? l.source ?? '',
+                  estimatedValue: l.estimatedValue ?? '',
+                })),
+                [
+                  { key: 'name', header: 'İsim', width: 22 },
+                  { key: 'company', header: 'Şirket', width: 22 },
+                  { key: 'status', header: 'Durum', width: 14 },
+                  { key: 'source', header: 'Kaynak', width: 14 },
+                  { key: 'estimatedValue', header: 'Tahmini Değer', width: 16 },
+                ],
+                'adaylar',
+                'Satış Adayları'
+              );
+            }
+          }}
+          className="flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm hover:bg-muted"
+        >
+          <FileDown className="h-4 w-4" /> Excel
+        </button>
       </div>
 
       {/* Stats - only shown for deals tab */}
