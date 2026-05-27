@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { PlusCircle, Package, DollarSign, TrendingDown, Wrench, FileDown } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { PlusCircle, Package, DollarSign, TrendingDown, Wrench, FileDown, Search } from 'lucide-react';
 import { exportToExcel } from '@/lib/utils/excel-export';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api/client';
@@ -90,11 +90,16 @@ function AddAssetModal({ onClose, onSave, categories }: { onClose: () => void; o
 export default function AssetsPage() {
   const qc = useQueryClient();
   const [statusFilter, setStatusFilter] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('');
+  const [search, setSearch] = useState('');
   const [showForm, setShowForm] = useState(false);
 
   const { data: assets = [], isLoading } = useQuery({
-    queryKey: ['assets', statusFilter],
-    queryFn: () => api.get('/api/v1/assets', statusFilter ? { status: statusFilter } : undefined),
+    queryKey: ['assets', statusFilter, categoryFilter],
+    queryFn: () => api.get('/api/v1/assets', {
+      ...(statusFilter && { status: statusFilter }),
+      ...(categoryFilter && { categoryId: categoryFilter }),
+    }),
   });
 
   const { data: summary } = useQuery({
@@ -119,6 +124,16 @@ export default function AssetsPage() {
 
   const s = summary as AssetSummary | undefined;
 
+  const filteredAssets = useMemo(() => {
+    if (!search) return assets as Asset[];
+    const q = search.toLowerCase();
+    return (assets as Asset[]).filter((a) =>
+      a.code?.toLowerCase().includes(q) ||
+      a.name?.toLowerCase().includes(q) ||
+      a.category?.name?.toLowerCase().includes(q)
+    );
+  }, [assets, search]);
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -129,7 +144,7 @@ export default function AssetsPage() {
         <div className="flex items-center gap-2">
           <button
             onClick={() => exportToExcel(
-              (assets as Asset[]).map((a) => ({
+              filteredAssets.map((a) => ({
                 code: a.code,
                 name: a.name,
                 category: a.category?.name ?? '',
@@ -180,20 +195,42 @@ export default function AssetsPage() {
       </div>
 
       {/* Filters */}
-      <div className="flex gap-2">
-        {[{ value: '', label: 'Tümü' }, ...Object.entries(STATUS_LABELS).map(([v, l]) => ({ value: v, label: l }))].map((f) => (
-          <button key={f.value} onClick={() => setStatusFilter(f.value)}
-            className={cn('px-3 py-1.5 rounded-lg text-sm font-medium', statusFilter === f.value ? 'bg-primary text-primary-foreground' : 'border border-border hover:bg-muted')}>
-            {f.label}
-          </button>
-        ))}
+      <div className="flex flex-wrap gap-2 items-center">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <input
+            type="text"
+            placeholder="Kod veya ad ile ara..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-9 pr-3 py-1.5 rounded-lg border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 w-52"
+          />
+        </div>
+        <select
+          value={categoryFilter}
+          onChange={(e) => setCategoryFilter(e.target.value)}
+          className="px-3 py-1.5 rounded-lg border border-border bg-background text-sm"
+        >
+          <option value="">Tüm Kategoriler</option>
+          {(categories as Array<{ id: string; name: string }>).map((c) => (
+            <option key={c.id} value={c.id}>{c.name}</option>
+          ))}
+        </select>
+        <div className="flex gap-1">
+          {[{ value: '', label: 'Tüm Durumlar' }, ...Object.entries(STATUS_LABELS).map(([v, l]) => ({ value: v, label: l }))].map((f) => (
+            <button key={f.value} onClick={() => setStatusFilter(f.value)}
+              className={cn('px-3 py-1.5 rounded-lg text-sm font-medium', statusFilter === f.value ? 'bg-primary text-primary-foreground' : 'border border-border hover:bg-muted')}>
+              {f.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Asset Table */}
       <div className="rounded-xl border border-border bg-card shadow-sm overflow-hidden">
         {isLoading ? (
           <div className="p-8 text-center text-muted-foreground">Yükleniyor...</div>
-        ) : (assets as Asset[]).length === 0 ? (
+        ) : filteredAssets.length === 0 ? (
           <div className="p-8 text-center text-muted-foreground">Demirbaş bulunamadı</div>
         ) : (
           <table className="w-full text-sm">
@@ -203,7 +240,7 @@ export default function AssetsPage() {
               ))}</tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {(assets as Asset[]).map((asset) => {
+              {filteredAssets.map((asset) => {
                 const depRate = Number(asset.purchasePrice) > 0
                   ? ((Number(asset.purchasePrice) - Number(asset.currentValue)) / Number(asset.purchasePrice)) * 100
                   : 0;

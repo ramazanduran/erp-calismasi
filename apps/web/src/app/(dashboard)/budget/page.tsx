@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { PlusCircle, TrendingUp, DollarSign, BarChart3, Trash2, Edit2, FileDown } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { PlusCircle, TrendingUp, DollarSign, BarChart3, Trash2, Edit2, FileDown, Search } from 'lucide-react';
 import { exportToExcel } from '@/lib/utils/excel-export';
 import { useBudgets, useBudgetSummary, useCreateBudget, useUpdateBudget, useDeleteBudget } from '@/lib/api/hooks';
 import { formatCurrency, cn } from '@/lib/utils';
@@ -202,6 +202,21 @@ export default function BudgetPage() {
   const deleteBudget = useDeleteBudget();
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<Budget | null>(null);
+  const [search, setSearch] = useState('');
+  const [typeFilter, setTypeFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
+
+  const filteredBudgets = useMemo(() => {
+    return (budgets as Budget[]).filter((b) => {
+      if (typeFilter && b.type !== typeFilter) return false;
+      if (statusFilter && b.status !== statusFilter) return false;
+      if (search) {
+        const q = search.toLowerCase();
+        if (!b.name.toLowerCase().includes(q) && !(b.department?.name?.toLowerCase().includes(q))) return false;
+      }
+      return true;
+    });
+  }, [budgets, typeFilter, statusFilter, search]);
 
   const handleSave = async (data: Record<string, unknown>) => {
     if (editing) {
@@ -231,7 +246,7 @@ export default function BudgetPage() {
         <div className="flex items-center gap-2">
           <button
             onClick={() => exportToExcel(
-              (budgets as Budget[]).map((b) => ({
+              filteredBudgets.map((b) => ({
                 name: b.name,
                 type: BUDGET_TYPE_LABELS[b.type] ?? b.type,
                 status: b.status,
@@ -294,13 +309,33 @@ export default function BudgetPage() {
 
       {/* Budget List */}
       <div className="rounded-xl border border-border bg-card shadow-sm overflow-hidden">
-        <div className="p-4 border-b border-border">
+        <div className="p-4 border-b border-border flex flex-wrap items-center gap-3">
           <h2 className="font-semibold">Bütçe Listesi</h2>
+          <div className="flex-1 flex flex-wrap gap-2 justify-end">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <input
+                type="text"
+                placeholder="Bütçe adı ara..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="pl-9 pr-3 py-1.5 rounded-lg border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 w-44"
+              />
+            </div>
+            <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)} className="px-3 py-1.5 rounded-lg border border-border bg-background text-sm">
+              <option value="">Tüm Tipler</option>
+              {Object.entries(BUDGET_TYPE_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+            </select>
+            <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="px-3 py-1.5 rounded-lg border border-border bg-background text-sm">
+              <option value="">Tüm Durumlar</option>
+              {Object.entries(STATUS_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+            </select>
+          </div>
         </div>
         {isLoading ? (
           <div className="p-8 text-center text-muted-foreground">Yükleniyor...</div>
-        ) : (budgets as Budget[]).length === 0 ? (
-          <div className="p-8 text-center text-muted-foreground">Henüz bütçe oluşturulmamış</div>
+        ) : filteredBudgets.length === 0 ? (
+          <div className="p-8 text-center text-muted-foreground">Bütçe bulunamadı</div>
         ) : (
           <table className="w-full text-sm">
             <thead className="bg-muted/50">
@@ -311,7 +346,7 @@ export default function BudgetPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {(budgets as Budget[]).map((b) => {
+              {filteredBudgets.map((b) => {
                 const actual = b.lines.reduce((s, l) => s + Number(l.actualAmount ?? 0), 0);
                 const planned = Number(b.totalAmount);
                 const pct = planned > 0 ? (actual / planned) * 100 : 0;

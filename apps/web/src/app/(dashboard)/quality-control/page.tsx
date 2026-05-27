@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { PlusCircle, CheckSquare, XCircle, AlertTriangle, ClipboardList, Eye, FileDown } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { PlusCircle, CheckSquare, XCircle, AlertTriangle, ClipboardList, Eye, FileDown, Search } from 'lucide-react';
 import { exportToExcel } from '@/lib/utils/excel-export';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api/client';
@@ -225,6 +225,7 @@ export default function QualityControlPage() {
   const qc = useQueryClient();
   const [statusFilter, setStatusFilter] = useState('');
   const [typeFilter, setTypeFilter] = useState('');
+  const [search, setSearch] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [detailId, setDetailId] = useState<string | null>(null);
 
@@ -261,6 +262,17 @@ export default function QualityControlPage() {
   const inspections = ((inspectionsData as any)?.items ?? []) as Inspection[];
   const total = (inspectionsData as any)?.total ?? 0;
 
+  const filteredInspections = useMemo(() => {
+    if (!search) return inspections;
+    const q = search.toLowerCase();
+    return inspections.filter((i) =>
+      i.inspectionNumber?.toLowerCase().includes(q) ||
+      i.product?.name?.toLowerCase().includes(q) ||
+      i.product?.code?.toLowerCase().includes(q) ||
+      i.inspector?.toLowerCase().includes(q)
+    );
+  }, [inspections, search]);
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -271,7 +283,7 @@ export default function QualityControlPage() {
         <div className="flex items-center gap-2">
           <button
             onClick={() => exportToExcel(
-              inspections.map((i) => ({
+              filteredInspections.map((i) => ({
                 inspectionNumber: i.inspectionNumber,
                 type: TYPE_LABELS[i.type] ?? i.type,
                 status: STATUS_CONFIG[i.status]?.label ?? i.status,
@@ -333,7 +345,17 @@ export default function QualityControlPage() {
       )}
 
       {/* Filters */}
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap gap-2 items-center">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <input
+            type="text"
+            placeholder="Muayene no, ürün veya denetçi..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-9 pr-3 py-1.5 rounded-lg border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 w-60"
+          />
+        </div>
         <div className="flex gap-1">
           {[{ v: '', l: 'Tüm Durumlar' }, ...Object.entries(STATUS_CONFIG).map(([v, c]) => ({ v, l: c.label }))].map((f) => (
             <button key={f.v} onClick={() => setStatusFilter(f.v)}
@@ -355,7 +377,7 @@ export default function QualityControlPage() {
       {/* Table */}
       {isLoading ? (
         <div className="py-8 text-center text-muted-foreground">Yükleniyor...</div>
-      ) : inspections.length === 0 ? (
+      ) : filteredInspections.length === 0 ? (
         <div className="rounded-xl border border-dashed border-border p-12 text-center">
           <ClipboardList className="h-10 w-10 mx-auto mb-3 text-muted-foreground" />
           <p className="font-medium">Muayene bulunamadı</p>
@@ -363,7 +385,7 @@ export default function QualityControlPage() {
       ) : (
         <div className="rounded-xl border border-border bg-card shadow-sm overflow-hidden">
           <div className="flex items-center justify-between px-4 py-3 border-b border-border">
-            <p className="text-sm font-medium">Muayeneler ({total})</p>
+            <p className="text-sm font-medium">Muayeneler ({filteredInspections.length})</p>
           </div>
           <table className="w-full text-sm">
             <thead className="bg-muted/50">
@@ -374,7 +396,7 @@ export default function QualityControlPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {inspections.map((ins) => {
+              {filteredInspections.map((ins) => {
                 const sc = STATUS_CONFIG[ins.status];
                 return (
                   <tr key={ins.id} className="hover:bg-muted/30">

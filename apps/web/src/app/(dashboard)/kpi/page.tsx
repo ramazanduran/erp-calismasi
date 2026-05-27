@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { PlusCircle, TrendingUp, TrendingDown, Minus, Target, BarChart3, FileDown } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { PlusCircle, TrendingUp, TrendingDown, Minus, Target, BarChart3, FileDown, Search } from 'lucide-react';
 import { exportToExcel } from '@/lib/utils/excel-export';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api/client';
@@ -191,6 +191,7 @@ function KpiDetailPanel({ kpi, currentPeriod, onClose }: { kpi: KpiDefinition; c
 export default function KpiPage() {
   const qc = useQueryClient();
   const [categoryFilter, setCategoryFilter] = useState('');
+  const [search, setSearch] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [detailKpi, setDetailKpi] = useState<KpiDefinition | null>(null);
 
@@ -207,7 +208,16 @@ export default function KpiPage() {
   });
 
   const kpis = dashboardData as KpiCard[];
-  const filtered = categoryFilter ? kpis.filter((k) => k.category === categoryFilter) : kpis;
+  const filtered = useMemo(() => {
+    return kpis.filter((k) => {
+      if (categoryFilter && k.category !== categoryFilter) return false;
+      if (search) {
+        const q = search.toLowerCase();
+        if (!k.name.toLowerCase().includes(q) && !k.code.toLowerCase().includes(q)) return false;
+      }
+      return true;
+    });
+  }, [kpis, categoryFilter, search]);
 
   const summaryByStatus = filtered.reduce((acc, k) => {
     acc[k.status] = (acc[k.status] ?? 0) + 1;
@@ -275,8 +285,18 @@ export default function KpiPage() {
         })}
       </div>
 
-      {/* Category Filter */}
-      <div className="flex gap-2 flex-wrap">
+      {/* Filters */}
+      <div className="flex gap-2 flex-wrap items-center">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <input
+            type="text"
+            placeholder="KPI adı veya kodu ara..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-9 pr-3 py-1.5 rounded-lg border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 w-52"
+          />
+        </div>
         {[{ v: '', l: 'Tümü' }, ...Object.entries(CATEGORY_LABELS).map(([v, l]) => ({ v, l }))].map((f) => (
           <button key={f.v} onClick={() => setCategoryFilter(f.v)}
             className={cn('px-3 py-1.5 rounded-lg text-sm font-medium', categoryFilter === f.v ? 'bg-primary text-primary-foreground' : 'border border-border hover:bg-muted')}>
