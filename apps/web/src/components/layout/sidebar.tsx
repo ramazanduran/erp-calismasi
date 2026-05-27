@@ -43,6 +43,7 @@ const navigation = [
       { label: 'Stok Sayım', href: '/inventory/stock-counts' },
       { label: 'Fiyat Listesi', href: '/inventory/price-lists' },
       { label: 'Stok Raporları', href: '/inventory/reports' },
+      { label: 'Lot / Seri Takibi', href: '/inventory/lot-tracking' },
     ],
   },
   {
