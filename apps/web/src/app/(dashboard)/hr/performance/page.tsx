@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Plus,
@@ -13,6 +13,7 @@ import {
   Loader2,
   ChevronDown,
   FileDown,
+  Search,
 } from 'lucide-react';
 import { exportToExcel } from '@/lib/utils/excel-export';
 import { toast } from 'sonner';
@@ -476,6 +477,7 @@ export default function PerformancePage() {
   const now = new Date();
   const [year, setYear] = useState(now.getFullYear());
   const [employeeFilter, setEmployeeFilter] = useState('');
+  const [search, setSearch] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
 
   const { data: reviewData, isLoading } = useQuery({
@@ -497,6 +499,15 @@ export default function PerformancePage() {
     (reviewData as any)?.data ?? (Array.isArray(reviewData) ? (reviewData as any) : []);
   const employees: Employee[] =
     (employeesData as any)?.data ?? (Array.isArray(employeesData) ? employeesData : []);
+
+  const filteredReviews = useMemo(() => {
+    if (!search) return reviews;
+    const q = search.toLowerCase();
+    return reviews.filter((r) => {
+      const name = `${r.employee.firstName} ${r.employee.lastName}`.toLowerCase();
+      return name.includes(q) || r.employee.employeeNumber?.toLowerCase().includes(q) || r.reviewPeriod?.toLowerCase().includes(q);
+    });
+  }, [reviews, search]);
 
   // ── Computed stats ──
   const totalReviews = reviews.length;
@@ -528,7 +539,7 @@ export default function PerformancePage() {
         <div className="flex items-center gap-2">
           <button
             onClick={() => exportToExcel(
-              reviews.map((r) => ({
+              filteredReviews.map((r) => ({
                 employeeName: `${r.employee.firstName} ${r.employee.lastName}`,
                 employeeNumber: r.employee.employeeNumber,
                 department: r.employee.department?.name ?? '',
@@ -571,6 +582,16 @@ export default function PerformancePage() {
 
       {/* ── Filters ── */}
       <div className="flex items-center gap-3 flex-wrap">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <input
+            type="text"
+            placeholder="Personel adı veya sicil no..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-9 pr-3 py-2 rounded-lg border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 w-56"
+          />
+        </div>
         <div className="flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-2">
           <ChevronDown className="h-4 w-4 text-muted-foreground" />
           <select
@@ -680,23 +701,25 @@ export default function PerformancePage() {
             <tbody className="divide-y divide-border">
               {isLoading ? (
                 <SkeletonRows cols={8} />
-              ) : reviews.length === 0 ? (
+              ) : filteredReviews.length === 0 ? (
                 <tr>
                   <td colSpan={8} className="py-12 text-center">
                     <AlertCircle className="h-8 w-8 mx-auto mb-2 text-muted-foreground opacity-40" />
                     <p className="text-muted-foreground mb-2">
-                      {year} yılı için henüz değerlendirme bulunmuyor
+                      {search ? 'Aranan kriterlere uygun değerlendirme bulunamadı' : `${year} yılı için henüz değerlendirme bulunmuyor`}
                     </p>
-                    <button
-                      onClick={() => setModalOpen(true)}
-                      className="text-primary hover:underline text-sm"
-                    >
-                      İlk değerlendirmeyi oluştur
-                    </button>
+                    {!search && (
+                      <button
+                        onClick={() => setModalOpen(true)}
+                        className="text-primary hover:underline text-sm"
+                      >
+                        İlk değerlendirmeyi oluştur
+                      </button>
+                    )}
                   </td>
                 </tr>
               ) : (
-                reviews.map((review) => (
+                filteredReviews.map((review) => (
                   <tr key={review.id} className="hover:bg-muted/30 transition-colors">
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
@@ -764,9 +787,9 @@ export default function PerformancePage() {
             </tbody>
           </table>
         </div>
-        {!isLoading && reviews.length > 0 && (
+        {!isLoading && filteredReviews.length > 0 && (
           <div className="border-t border-border px-4 py-3 flex items-center justify-between text-sm text-muted-foreground">
-            <span>{reviews.length} değerlendirme gösteriliyor</span>
+            <span>{filteredReviews.length} değerlendirme gösteriliyor</span>
             <span>
               Ortalama:{' '}
               <span className="font-medium text-foreground">

@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { PlusCircle, Users, Briefcase, TrendingUp, UserCheck, ChevronRight, FileDown } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { PlusCircle, Users, Briefcase, TrendingUp, UserCheck, ChevronRight, FileDown, Search } from 'lucide-react';
 import { exportToExcel } from '@/lib/utils/excel-export';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api/client';
@@ -178,6 +178,7 @@ function PipelineView({ postingId, onClose }: { postingId: string; onClose: () =
 export default function RecruitmentPage() {
   const qc = useQueryClient();
   const [statusFilter, setStatusFilter] = useState('');
+  const [search, setSearch] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [pipelineId, setPipelineId] = useState<string | null>(null);
 
@@ -202,7 +203,16 @@ export default function RecruitmentPage() {
   });
 
   const stats = statsData as Stats | undefined;
-  const postings = postingsData as JobPosting[];
+  const allPostings = postingsData as JobPosting[];
+  const postings = useMemo(() => {
+    if (!search) return allPostings;
+    const q = search.toLowerCase();
+    return allPostings.filter((p) =>
+      p.title?.toLowerCase().includes(q) ||
+      p.department?.toLowerCase().includes(q) ||
+      p.location?.toLowerCase().includes(q)
+    );
+  }, [allPostings, search]);
 
   return (
     <div className="space-y-6">
@@ -289,7 +299,17 @@ export default function RecruitmentPage() {
       )}
 
       {/* Filters */}
-      <div className="flex gap-2 flex-wrap">
+      <div className="flex gap-2 flex-wrap items-center">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <input
+            type="text"
+            placeholder="İlan başlığı, departman veya konum..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-9 pr-3 py-1.5 rounded-lg border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 w-64"
+          />
+        </div>
         {[{ v: '', l: 'Tümü' }, ...Object.entries(STATUS_CONFIG).map(([v, c]) => ({ v, l: c.label }))].map((f) => (
           <button key={f.v} onClick={() => setStatusFilter(f.v)}
             className={cn('px-3 py-1.5 rounded-lg text-sm font-medium', statusFilter === f.v ? 'bg-primary text-primary-foreground' : 'border border-border hover:bg-muted')}>

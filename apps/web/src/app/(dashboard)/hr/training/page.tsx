@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { PlusCircle, BookOpen, Users, CheckCircle2, Clock, FileDown } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { PlusCircle, BookOpen, Users, CheckCircle2, Clock, FileDown, Search } from 'lucide-react';
 import { exportToExcel } from '@/lib/utils/excel-export';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api/client';
@@ -180,6 +180,7 @@ function ProgramDetail({ program, onClose }: { program: Program; onClose: () => 
 export default function TrainingPage() {
   const qc = useQueryClient();
   const [categoryFilter, setCategoryFilter] = useState('');
+  const [search, setSearch] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [detailProgram, setDetailProgram] = useState<Program | null>(null);
 
@@ -199,7 +200,16 @@ export default function TrainingPage() {
   });
 
   const stats = statsData as Stats | undefined;
-  const programList = programs as Program[];
+  const allPrograms = programs as Program[];
+  const programList = useMemo(() => {
+    if (!search) return allPrograms;
+    const q = search.toLowerCase();
+    return allPrograms.filter((p) =>
+      p.title?.toLowerCase().includes(q) ||
+      p.code?.toLowerCase().includes(q) ||
+      p.provider?.toLowerCase().includes(q)
+    );
+  }, [allPrograms, search]);
 
   return (
     <div className="space-y-6">
@@ -264,8 +274,18 @@ export default function TrainingPage() {
         </div>
       )}
 
-      {/* Category Filter */}
-      <div className="flex gap-2 flex-wrap">
+      {/* Filters */}
+      <div className="flex gap-2 flex-wrap items-center">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <input
+            type="text"
+            placeholder="Eğitim adı, kod veya eğitmen..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-9 pr-3 py-1.5 rounded-lg border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 w-56"
+          />
+        </div>
         {[{ v: '', l: 'Tümü' }, ...Object.entries(CATEGORY_LABELS).map(([v, l]) => ({ v, l }))].map((f) => (
           <button key={f.v} onClick={() => setCategoryFilter(f.v)}
             className={cn('px-3 py-1.5 rounded-lg text-sm font-medium', categoryFilter === f.v ? 'bg-primary text-primary-foreground' : 'border border-border hover:bg-muted')}>

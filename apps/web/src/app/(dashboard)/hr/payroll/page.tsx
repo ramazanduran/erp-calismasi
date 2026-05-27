@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, Fragment } from 'react';
+import { useState, Fragment, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Plus,
@@ -15,6 +15,7 @@ import {
   Banknote,
   AlertCircle,
   FileDown,
+  Search,
 } from 'lucide-react';
 import { exportToExcel } from '@/lib/utils/excel-export';
 import { toast } from 'sonner';
@@ -420,6 +421,7 @@ export default function PayrollPage() {
   const [month, setMonth] = useState(now.getMonth() + 1);
   const [year, setYear] = useState(now.getFullYear());
   const [statusFilter, setStatusFilter] = useState<PayrollStatus | ''>('');
+  const [search, setSearch] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
 
   const queryClient = useQueryClient();
@@ -468,10 +470,19 @@ export default function PayrollPage() {
     onError: () => toast.error('İşlem başarısız oldu'),
   });
 
-  // ── Filter locally by status ──
-  const filtered = statusFilter
-    ? payrolls.filter((p) => p.status === statusFilter)
-    : payrolls;
+  // ── Filter locally by status + search ──
+  const filtered = useMemo(() => {
+    return payrolls.filter((p) => {
+      if (statusFilter && p.status !== statusFilter) return false;
+      if (search) {
+        const q = search.toLowerCase();
+        const name = `${p.employee?.firstName ?? ''} ${p.employee?.lastName ?? ''}`.toLowerCase();
+        const num = p.employee?.employeeNumber?.toLowerCase() ?? '';
+        if (!name.includes(q) && !num.includes(q)) return false;
+      }
+      return true;
+    });
+  }, [payrolls, statusFilter, search]);
 
   const years = [2023, 2024, 2025, 2026];
 
@@ -604,7 +615,18 @@ export default function PayrollPage() {
         />
       </div>
 
-      {/* ── Status filter tabs ── */}
+      {/* ── Status filter tabs + search ── */}
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <input
+            type="text"
+            placeholder="Personel adı veya sicil no..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-9 pr-3 py-1.5 rounded-lg border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 w-56"
+          />
+        </div>
       <div className="flex items-center gap-1 rounded-lg border border-border bg-muted/50 p-1 w-fit">
         {STATUS_FILTER_TABS.map((tab) => (
           <button
@@ -624,6 +646,7 @@ export default function PayrollPage() {
             )}
           </button>
         ))}
+      </div>
       </div>
 
       {/* ── Table ── */}
