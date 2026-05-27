@@ -7,6 +7,12 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api/client';
 import { formatCurrency, cn } from '@/lib/utils';
 
+const MOCK_STATEMENTS: Statement[] = [
+  { id: 's1', referenceNumber: 'STMT-2026-001', startDate: '2026-05-01', endDate: '2026-05-31', openingBalance: 250000, closingBalance: 312500, currency: 'TRY', status: 'in_progress', account: { name: 'Ziraat Bankası — Vadesiz TL' }, _count: { lines: 24 } },
+  { id: 's2', referenceNumber: 'STMT-2026-002', startDate: '2026-04-01', endDate: '2026-04-30', openingBalance: 185000, closingBalance: 250000, currency: 'TRY', status: 'reconciled', account: { name: 'İş Bankası — Maaş Ödemeleri' }, _count: { lines: 18 } },
+  { id: 's3', referenceNumber: 'STMT-2026-003', startDate: '2026-05-01', endDate: '2026-05-31', openingBalance: 15000, closingBalance: 18500, currency: 'USD', status: 'pending', account: { name: 'Garanti BBVA — Döviz (USD)' }, _count: { lines: 6 } },
+];
+
 const LINE_STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
   unmatched: { label: 'Eşleşmedi',    color: 'text-orange-600', bg: 'bg-orange-100' },
   matched:   { label: 'Eşleşti',      color: 'text-green-600',  bg: 'bg-green-100' },
@@ -270,6 +276,7 @@ export default function BankReconciliationPage() {
   const { data: stmtsData = [], isLoading } = useQuery({
     queryKey: ['bank-recon', 'list'],
     queryFn: () => api.get('/api/v1/bank-reconciliation'),
+    initialData: MOCK_STATEMENTS,
   });
 
   const create = useMutation({

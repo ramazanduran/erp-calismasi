@@ -22,6 +22,45 @@ import {
 import { toast } from 'sonner';
 import { api } from '@/lib/api/client';
 
+const MOCK_ENTITY_DETAILS: Record<string, EntityDetail> = {
+  'ent-1': {
+    id: 'ent-1', name: 'Müşteri Başvurusu', slug: 'musteri-basvurusu',
+    description: 'Yeni müşteri başvuru formu verileri',
+    _count: { fields: 4, records: 12 },
+    fields: [
+      { id: 'f1', name: 'Başvuru Tarihi', slug: 'basvuru-tarihi', type: 'date', required: true, isSystem: false },
+      { id: 'f2', name: 'Başvuru Kaynağı', slug: 'basvuru-kaynagi', type: 'select', required: false, options: ['Web', 'Telefon', 'Yüz Yüze', 'E-posta'], isSystem: false },
+      { id: 'f3', name: 'Notlar', slug: 'notlar', type: 'text', required: false, isSystem: false },
+      { id: 'f4', name: 'Onaylandı mı', slug: 'onaylandi-mi', type: 'boolean', required: false, isSystem: false },
+    ],
+  },
+  'ent-2': {
+    id: 'ent-2', name: 'Tedarikçi Değerlendirme', slug: 'tedarikci-degerlendirme',
+    description: 'Tedarikçi performans değerlendirme formu',
+    _count: { fields: 3, records: 5 },
+    fields: [
+      { id: 'f5', name: 'Değerlendirme Puanı', slug: 'degerlendirme-puani', type: 'number', required: true, isSystem: false },
+      { id: 'f6', name: 'Değerlendirme Tarihi', slug: 'degerlendirme-tarihi', type: 'date', required: true, isSystem: false },
+      { id: 'f7', name: 'Yorumlar', slug: 'yorumlar', type: 'text', required: false, isSystem: false },
+    ],
+  },
+  'ent-3': {
+    id: 'ent-3', name: 'İş Geliştirme Talebi', slug: 'is-gelistirme-talebi',
+    description: 'Dahili iş geliştirme ve iyileştirme talepleri',
+    _count: { fields: 2, records: 0 },
+    fields: [
+      { id: 'f8', name: 'Talep Önceliği', slug: 'talep-onceligi', type: 'select', required: true, options: ['Düşük', 'Orta', 'Yüksek', 'Kritik'], isSystem: false },
+      { id: 'f9', name: 'Beklenen Tamamlanma', slug: 'beklenen-tamamlanma', type: 'date', required: false, isSystem: false },
+    ],
+  },
+};
+
+const MOCK_ENTITIES: EntitySummary[] = [
+  { id: 'ent-1', name: 'Müşteri Başvurusu', slug: 'musteri-basvurusu', description: 'Yeni müşteri başvuru formu verileri', _count: { fields: 4, records: 12 } },
+  { id: 'ent-2', name: 'Tedarikçi Değerlendirme', slug: 'tedarikci-degerlendirme', description: 'Tedarikçi performans değerlendirme formu', _count: { fields: 3, records: 5 } },
+  { id: 'ent-3', name: 'İş Geliştirme Talebi', slug: 'is-gelistirme-talebi', description: 'Dahili iyileştirme talepleri', _count: { fields: 2, records: 0 } },
+];
+
 type FieldType = 'text' | 'number' | 'date' | 'boolean' | 'select';
 
 type EntityField = {
@@ -344,6 +383,7 @@ function EntityDetailPanel({ entityId }: { entityId: string }) {
     queryKey: ['entities', entityId],
     queryFn: () => api.get(`/api/v1/entities/${entityId}`),
     enabled: !!entityId,
+    initialData: MOCK_ENTITY_DETAILS[entityId],
   });
 
   const addField = useMutation({
@@ -585,6 +625,7 @@ export default function EntitiesAdminPage() {
   const { data: entitiesData, isLoading } = useQuery<EntitySummary[]>({
     queryKey: ['entities'],
     queryFn: () => api.get('/api/v1/entities'),
+    initialData: MOCK_ENTITIES,
   });
 
   const entities: EntitySummary[] = Array.isArray(entitiesData) ? entitiesData : [];

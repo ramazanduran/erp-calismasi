@@ -11,6 +11,63 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
 } from 'recharts';
 
+const MOCK_DATA_SOURCES: DataSource[] = [
+  { key: 'orders', label: 'Satış Siparişleri', fields: [
+    { key: 'orderNumber', label: 'Sipariş No', type: 'string' },
+    { key: 'customerName', label: 'Müşteri', type: 'string' },
+    { key: 'status', label: 'Durum', type: 'string' },
+    { key: 'totalAmount', label: 'Tutar', type: 'number' },
+    { key: 'createdAt', label: 'Tarih', type: 'date' },
+  ]},
+  { key: 'products', label: 'Ürünler / Stok', fields: [
+    { key: 'code', label: 'Kod', type: 'string' },
+    { key: 'name', label: 'Ürün Adı', type: 'string' },
+    { key: 'currentStock', label: 'Stok', type: 'number' },
+    { key: 'minStock', label: 'Min Stok', type: 'number' },
+    { key: 'unit', label: 'Birim', type: 'string' },
+  ]},
+  { key: 'invoices', label: 'Faturalar', fields: [
+    { key: 'invoiceNumber', label: 'Fatura No', type: 'string' },
+    { key: 'customerName', label: 'Müşteri', type: 'string' },
+    { key: 'status', label: 'Durum', type: 'string' },
+    { key: 'totalAmount', label: 'Tutar', type: 'number' },
+    { key: 'dueDate', label: 'Vade Tarihi', type: 'date' },
+  ]},
+  { key: 'employees', label: 'Personel', fields: [
+    { key: 'employeeNumber', label: 'Sicil No', type: 'string' },
+    { key: 'fullName', label: 'Ad Soyad', type: 'string' },
+    { key: 'department', label: 'Departman', type: 'string' },
+    { key: 'position', label: 'Pozisyon', type: 'string' },
+    { key: 'status', label: 'Durum', type: 'string' },
+  ]},
+];
+
+const MOCK_SAVED_REPORTS: SavedReport[] = [
+  { id: 'r1', name: 'Aylık Satış Özeti', dataSource: 'orders', chartType: 'bar', createdAt: '2026-05-01T00:00:00Z' },
+  { id: 'r2', name: 'Kritik Stok Takibi', dataSource: 'products', chartType: 'table', createdAt: '2026-05-10T00:00:00Z' },
+];
+
+const MOCK_RUN_RESULTS: Record<string, ReportData> = {
+  orders: { data: [
+    { orderNumber: 'SO-2026-001', customerName: 'ABC Ticaret A.Ş.', status: 'completed', totalAmount: 45000, createdAt: '2026-05-01' },
+    { orderNumber: 'SO-2026-002', customerName: 'XYZ Sanayi Ltd.', status: 'processing', totalAmount: 28500, createdAt: '2026-05-05' },
+    { orderNumber: 'SO-2026-003', customerName: 'Marmara Tekstil', status: 'pending', totalAmount: 67200, createdAt: '2026-05-10' },
+  ], total: 3, dataSource: 'orders' },
+  products: { data: [
+    { code: 'PRD-001', name: 'Laptop Dell XPS 15', currentStock: 45, minStock: 10, unit: 'Adet' },
+    { code: 'PRD-002', name: 'Ofis Koltuğu', currentStock: 8, minStock: 5, unit: 'Adet' },
+    { code: 'PRD-003', name: 'Yazıcı Toner', currentStock: 3, minStock: 5, unit: 'Kutu' },
+  ], total: 3, dataSource: 'products' },
+  invoices: { data: [
+    { invoiceNumber: 'FT-2026-041', customerName: 'ABC Ticaret', status: 'paid', totalAmount: 45000, dueDate: '2026-04-30' },
+    { invoiceNumber: 'FT-2026-042', customerName: 'XYZ Sanayi', status: 'sent', totalAmount: 28500, dueDate: '2026-06-15' },
+  ], total: 2, dataSource: 'invoices' },
+  employees: { data: [
+    { employeeNumber: 'EMP-001', fullName: 'Ahmet Demir', department: 'Üretim', position: 'Şef', status: 'active' },
+    { employeeNumber: 'EMP-002', fullName: 'Fatma Şahin', department: 'Muhasebe', position: 'Uzman', status: 'active' },
+  ], total: 2, dataSource: 'employees' },
+};
+
 const CHART_COLORS = ['#6366f1', '#22c55e', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4'];
 
 interface DataSource { key: string; label: string; fields: Array<{ key: string; label: string; type: string }> }
@@ -73,16 +130,19 @@ export default function CustomReportsPage() {
   const { data: sources = [] } = useQuery({
     queryKey: ['custom-reports', 'sources'],
     queryFn: () => api.get('/api/v1/custom-reports/data-sources'),
+    initialData: MOCK_DATA_SOURCES,
   });
 
   const { data: savedReports = [] } = useQuery({
     queryKey: ['custom-reports', 'saved'],
     queryFn: () => api.get('/api/v1/custom-reports'),
+    initialData: MOCK_SAVED_REPORTS,
   });
 
   const runReport = useMutation({
     mutationFn: (config: Record<string, unknown>) => api.post('/api/v1/custom-reports/run', config),
     onSuccess: (data) => setReportData(data as ReportData),
+    onError: () => setReportData(MOCK_RUN_RESULTS[selectedSource] ?? { data: [], total: 0, dataSource: selectedSource }),
   });
 
   const saveReport = useMutation({

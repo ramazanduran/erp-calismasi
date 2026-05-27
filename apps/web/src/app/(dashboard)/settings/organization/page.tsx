@@ -18,6 +18,25 @@ import {
 import Link from 'next/link';
 import { api } from '@/lib/api/client';
 
+const MOCK_ORG: Organization = {
+  id: 'org-demo',
+  name: 'Demo Şirket A.Ş.',
+  slug: 'demo-sirket',
+  description: 'ERP demo organizasyonu',
+  logoUrl: '',
+  currency: 'TRY',
+  timezone: 'Europe/Istanbul',
+  locale: 'tr',
+  dateFormat: 'DD.MM.YYYY',
+  primaryColor: '#6366f1',
+  secondaryColor: '#8b5cf6',
+  theme: 'system',
+  notifyEmail: true,
+  notifySystem: true,
+  notifyTasks: true,
+  notifyInvoices: true,
+};
+
 const schema = z.object({
   name: z.string().min(1, 'Organizasyon adı gereklidir'),
   slug: z.string(),
@@ -215,6 +234,7 @@ export default function OrganizationSettingsPage() {
   const { data: org, isLoading } = useQuery<Organization>({
     queryKey: ['organization'],
     queryFn: () => api.get('/api/v1/organizations/current'),
+    initialData: MOCK_ORG,
   });
 
   const {

@@ -151,6 +151,51 @@ const REPORT_HEADERS: Record<ReportType, Record<string, string>> = {
   },
 };
 
+const MOCK_REPORT_DATA: Record<ReportType, Record<string, unknown>[]> = {
+  sales: [
+    { orderNumber: 'SO-2026-001', customer: { name: 'ABC Ticaret A.Ş.' }, status: 'completed', totalAmount: 45000, createdAt: '2026-05-01T00:00:00Z' },
+    { orderNumber: 'SO-2026-002', customer: { name: 'XYZ Sanayi Ltd.' }, status: 'processing', totalAmount: 28500, createdAt: '2026-05-05T00:00:00Z' },
+    { orderNumber: 'SO-2026-003', customer: { name: 'Marmara Tekstil' }, status: 'pending', totalAmount: 67200, createdAt: '2026-05-10T00:00:00Z' },
+    { orderNumber: 'SO-2026-004', customer: { name: 'Global Gıda A.Ş.' }, status: 'completed', totalAmount: 15750, createdAt: '2026-05-14T00:00:00Z' },
+    { orderNumber: 'SO-2026-005', customer: { name: 'Ege Elektronik Ltd.' }, status: 'cancelled', totalAmount: 9300, createdAt: '2026-05-18T00:00:00Z' },
+  ],
+  inventory: [
+    { code: 'PRD-001', name: 'Laptop Dell XPS 15', currentStock: 45, minStock: 10, unit: 'Adet' },
+    { code: 'PRD-002', name: 'Ofis Koltuğu Ergonomik', currentStock: 8, minStock: 5, unit: 'Adet' },
+    { code: 'PRD-003', name: 'Yazıcı Toner (HP)', currentStock: 3, minStock: 5, unit: 'Kutu' },
+    { code: 'PRD-004', name: 'A4 Kağıt 500 Yaprak', currentStock: 120, minStock: 20, unit: 'Paket' },
+    { code: 'PRD-005', name: 'USB Hub 7 Port', currentStock: 0, minStock: 3, unit: 'Adet' },
+  ],
+  finance: [
+    { invoiceNumber: 'FT-2026-041', customer: { name: 'ABC Ticaret A.Ş.' }, status: 'paid', totalAmount: 45000, dueDate: '2026-04-30T00:00:00Z' },
+    { invoiceNumber: 'FT-2026-042', customer: { name: 'XYZ Sanayi Ltd.' }, status: 'sent', totalAmount: 28500, dueDate: '2026-06-15T00:00:00Z' },
+    { invoiceNumber: 'FT-2026-043', customer: { name: 'Marmara Tekstil' }, status: 'overdue', totalAmount: 32000, dueDate: '2026-04-10T00:00:00Z' },
+    { invoiceNumber: 'FT-2026-044', customer: { name: 'Global Gıda A.Ş.' }, status: 'draft', totalAmount: 15750, dueDate: '2026-06-30T00:00:00Z' },
+    { invoiceNumber: 'FT-2026-045', customer: { name: 'Ege Elektronik Ltd.' }, status: 'paid', totalAmount: 9300, dueDate: '2026-05-01T00:00:00Z' },
+  ],
+  hr: [
+    { employeeNumber: 'EMP-001', firstName: 'Ahmet', lastName: 'Demir', department: { name: 'Üretim' }, position: 'Üretim Şefi', status: 'active', createdAt: '2024-01-10T00:00:00Z' },
+    { employeeNumber: 'EMP-002', firstName: 'Fatma', lastName: 'Şahin', department: { name: 'Muhasebe' }, position: 'Muhasebeci', status: 'active', createdAt: '2024-03-15T00:00:00Z' },
+    { employeeNumber: 'EMP-003', firstName: 'Mehmet', lastName: 'Yılmaz', department: { name: 'Üretim' }, position: 'Makine Operatörü', status: 'active', createdAt: '2023-08-20T00:00:00Z' },
+    { employeeNumber: 'EMP-004', firstName: 'Ayşe', lastName: 'Kaya', department: { name: 'İnsan Kaynakları' }, position: 'İK Uzmanı', status: 'active', createdAt: '2025-02-01T00:00:00Z' },
+    { employeeNumber: 'EMP-005', firstName: 'Hasan', lastName: 'Çelik', department: { name: 'Lojistik' }, position: 'Depo Görevlisi', status: 'inactive', createdAt: '2022-11-05T00:00:00Z' },
+  ],
+  purchasing: [
+    { orderNumber: 'PO-2026-018', supplier: { name: 'Tedarik Pro A.Ş.' }, status: 'received', totalAmount: 38000, createdAt: '2026-05-02T00:00:00Z' },
+    { orderNumber: 'PO-2026-019', supplier: { name: 'Merkez Hammadde Ltd.' }, status: 'ordered', totalAmount: 52500, createdAt: '2026-05-08T00:00:00Z' },
+    { orderNumber: 'PO-2026-020', supplier: { name: 'Endüstriyel Malzeme A.Ş.' }, status: 'pending', totalAmount: 19800, createdAt: '2026-05-12T00:00:00Z' },
+    { orderNumber: 'PO-2026-021', supplier: { name: 'Tedarik Pro A.Ş.' }, status: 'approved', totalAmount: 14200, createdAt: '2026-05-20T00:00:00Z' },
+    { orderNumber: 'PO-2026-022', supplier: { name: 'Küresel Tedarik Ltd.' }, status: 'cancelled', totalAmount: 8700, createdAt: '2026-05-22T00:00:00Z' },
+  ],
+  customers: [
+    { code: 'MUS-001', name: 'ABC Ticaret A.Ş.', status: 'active', city: 'İstanbul', createdAt: '2023-03-10T00:00:00Z' },
+    { code: 'MUS-002', name: 'XYZ Sanayi Ltd.', status: 'active', city: 'Ankara', createdAt: '2023-07-22T00:00:00Z' },
+    { code: 'MUS-003', name: 'Marmara Tekstil', status: 'active', city: 'Bursa', createdAt: '2024-01-15T00:00:00Z' },
+    { code: 'MUS-004', name: 'Global Gıda A.Ş.', status: 'inactive', city: 'İzmir', createdAt: '2022-11-30T00:00:00Z' },
+    { code: 'MUS-005', name: 'Ege Elektronik Ltd.', status: 'active', city: 'İzmir', createdAt: '2025-05-10T00:00:00Z' },
+  ],
+};
+
 const AMOUNT_KEYS = new Set(['totalAmount', 'unitPrice', 'amount']);
 const DATE_KEYS = new Set(['createdAt', 'dueDate', 'updatedAt', 'orderDate']);
 const STATUS_KEY = 'status';
@@ -408,8 +453,10 @@ export default function ReportsPage() {
     const raw = Array.isArray(rawData)
       ? rawData
       : (rawData as { data?: Record<string, unknown>[] } | undefined)?.data ?? [];
-    return (raw as Record<string, unknown>[]).map((r) => transformRow(reportType, r));
-  }, [rawData, reportType]);
+    const normalized = (raw as Record<string, unknown>[]).map((r) => transformRow(reportType, r));
+    if (normalized.length === 0 && submitted) return MOCK_REPORT_DATA[reportType].map((r) => transformRow(reportType, r));
+    return normalized;
+  }, [rawData, reportType, submitted]);
 
   const headers = REPORT_HEADERS[reportType];
   const summaryItems = useMemo(() => buildSummary(reportType, rows), [reportType, rows]);

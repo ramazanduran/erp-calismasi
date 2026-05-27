@@ -7,6 +7,36 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api/client';
 import { cn, formatDate } from '@/lib/utils';
 
+const MOCK_RISKS: Risk[] = [
+  { id: 'r1', department: 'Üretim', description: 'Ağır makine kullanımında ezilme ve sıkışma riski', riskLevel: 'yuksek', likelihood: 4, impact: 5, actionPlan: 'Makine koruyucularını kontrol et, PPE kullanımını zorunlu tut', status: 'acik', createdAt: '2026-01-15T00:00:00Z' },
+  { id: 'r2', department: 'Depo', description: 'Yüksek raf sistemlerinden düşme riski', riskLevel: 'kritik', likelihood: 3, impact: 5, actionPlan: 'Emniyet kemeri kullanım protokolü oluştur', status: 'inceleniyor', createdAt: '2026-02-10T00:00:00Z' },
+  { id: 'r3', department: 'Ofis', description: 'Uzun süreli ekran kullanımından kaynaklı göz ve kas-iskelet sorunları', riskLevel: 'dusuk', likelihood: 5, impact: 2, actionPlan: 'Ergonomik ekipman sağla, mola takip sistemi kur', status: 'kapatildi', createdAt: '2026-02-20T00:00:00Z' },
+  { id: 'r4', department: 'Kimyasal İşleme', description: 'Tehlikeli kimyasal maddelere maruziyet', riskLevel: 'kritik', likelihood: 2, impact: 5, actionPlan: 'Kişisel koruyucu donanım tedariki ve eğitim', status: 'acik', createdAt: '2026-03-05T00:00:00Z' },
+  { id: 'r5', department: 'Lojistik', description: 'Forklift çarpışma ve geri vites kazası riski', riskLevel: 'orta', likelihood: 3, impact: 3, actionPlan: 'Yaya yolları ile forklift güzergahlarını ayır', status: 'inceleniyor', createdAt: '2026-04-01T00:00:00Z' },
+];
+
+const MOCK_ACCIDENTS: Accident[] = [
+  { id: 'a1', accidentNo: 'KZ-2026-001', type: 'kaza', department: 'Üretim', summary: 'Torna tezgahında el yaralanması — operatör iş eldivenini çıkarmıştı', injuredPerson: 'Mehmet Yılmaz', status: 'kapatildi', date: '2026-02-14' },
+  { id: 'a2', accidentNo: 'KZ-2026-002', type: 'ramak_kala', department: 'Depo', summary: 'Forklift ile yaya arasında yakın mesafe olayı, yaralanma yok', injuredPerson: undefined, status: 'inceleniyor', date: '2026-03-22' },
+  { id: 'a3', accidentNo: 'KZ-2026-003', type: 'tehlikeli_durum', department: 'Kimyasal İşleme', summary: 'Asit tankı contasında sızıntı tespit edildi, bölge tahliye edildi', injuredPerson: undefined, status: 'onaylandi', date: '2026-04-10' },
+  { id: 'a4', accidentNo: 'KZ-2026-004', type: 'meslek_hastaligi', department: 'Gürültülü Üretim Hattı', summary: 'Uzun süreli gürültüye maruz kalma sonucu işitme kaybı şikayeti', injuredPerson: 'Ayşe Kaya', status: 'inceleniyor', date: '2026-05-03' },
+];
+
+const MOCK_HEALTH_CHECKS: HealthCheck[] = [
+  { id: 'h1', employeeName: 'Ahmet Demir', checkType: 'İşe Giriş Muayenesi', lastCheck: '2025-06-01', nextCheck: '2026-06-01', result: 'Uygun', status: 'onaylandi' },
+  { id: 'h2', employeeName: 'Fatma Şahin', checkType: 'Periyodik Sağlık Muayenesi', lastCheck: '2025-11-15', nextCheck: '2026-11-15', result: 'Uygun', status: 'onaylandi' },
+  { id: 'h3', employeeName: 'Mehmet Yılmaz', checkType: 'Kaza Sonrası Muayene', lastCheck: '2026-02-14', nextCheck: '2026-08-14', result: 'Takip Gerekli', status: 'inceleniyor' },
+  { id: 'h4', employeeName: 'Ayşe Kaya', checkType: 'Odyoloji Testi', lastCheck: undefined, nextCheck: '2026-06-10', result: undefined, status: 'acik' },
+  { id: 'h5', employeeName: 'Hasan Çelik', checkType: 'Periyodik Sağlık Muayenesi', lastCheck: '2025-05-20', nextCheck: '2026-05-20', result: 'Uygun', status: 'inceleniyor' },
+];
+
+const MOCK_TRAININGS: ISGTraining[] = [
+  { id: 't1', title: 'Temel İSG Eğitimi', participantCount: 42, date: '2026-01-20', isMandatory: true, hasCertificate: true },
+  { id: 't2', title: 'İlk Yardım ve Acil Müdahale', participantCount: 18, date: '2026-02-28', isMandatory: true, hasCertificate: true },
+  { id: 't3', title: 'Kimyasal Maddelerle Güvenli Çalışma', participantCount: 12, date: '2026-03-15', isMandatory: true, hasCertificate: false },
+  { id: 't4', title: 'Yangın Söndürme ve Tahliye Tatbikatı', participantCount: 65, date: '2026-04-25', isMandatory: false, hasCertificate: false },
+];
+
 const RISK_LEVELS: Record<string, string> = { dusuk: 'Düşük', orta: 'Orta', yuksek: 'Yüksek', kritik: 'Kritik' };
 const RISK_COLORS: Record<string, string> = { dusuk: 'bg-green-100 text-green-700', orta: 'bg-yellow-100 text-yellow-700', yuksek: 'bg-orange-100 text-orange-700', kritik: 'bg-red-100 text-red-700' };
 const ACCIDENT_TYPES: Record<string, string> = { kaza: 'Kaza', ramak_kala: 'Ramak Kala', meslek_hastaligi: 'Meslek Hastalığı', tehlikeli_durum: 'Tehlikeli Durum' };
@@ -119,10 +149,10 @@ export default function HealthSafetyPage() {
   const [showRiskModal, setShowRiskModal] = useState(false);
   const [showAccidentModal, setShowAccidentModal] = useState(false);
 
-  const { data: risks = [] } = useQuery<Risk[]>({ queryKey: ['isg-risks'], queryFn: () => api.get('/api/v1/hr/isg/risks') });
-  const { data: accidents = [] } = useQuery<Accident[]>({ queryKey: ['isg-accidents'], queryFn: () => api.get('/api/v1/hr/isg/accidents') });
-  const { data: healthChecks = [] } = useQuery<HealthCheck[]>({ queryKey: ['isg-health-checks'], queryFn: () => api.get('/api/v1/hr/isg/health-checks') });
-  const { data: trainings = [] } = useQuery<ISGTraining[]>({ queryKey: ['isg-trainings'], queryFn: () => api.get('/api/v1/hr/isg/trainings') });
+  const { data: risks = [] } = useQuery<Risk[]>({ queryKey: ['isg-risks'], queryFn: () => api.get('/api/v1/hr/isg/risks'), initialData: MOCK_RISKS });
+  const { data: accidents = [] } = useQuery<Accident[]>({ queryKey: ['isg-accidents'], queryFn: () => api.get('/api/v1/hr/isg/accidents'), initialData: MOCK_ACCIDENTS });
+  const { data: healthChecks = [] } = useQuery<HealthCheck[]>({ queryKey: ['isg-health-checks'], queryFn: () => api.get('/api/v1/hr/isg/health-checks'), initialData: MOCK_HEALTH_CHECKS });
+  const { data: trainings = [] } = useQuery<ISGTraining[]>({ queryKey: ['isg-trainings'], queryFn: () => api.get('/api/v1/hr/isg/trainings'), initialData: MOCK_TRAININGS });
 
   const createRisk = useMutation({ mutationFn: (d: any) => api.post('/api/v1/hr/isg/risks', d), onSuccess: () => { qc.invalidateQueries({ queryKey: ['isg-risks'] }); setShowRiskModal(false); } });
   const createAccident = useMutation({ mutationFn: (d: any) => api.post('/api/v1/hr/isg/accidents', d), onSuccess: () => { qc.invalidateQueries({ queryKey: ['isg-accidents'] }); setShowAccidentModal(false); } });

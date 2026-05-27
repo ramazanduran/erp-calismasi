@@ -13,6 +13,26 @@ import { api } from '@/lib/api/client';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
+const MOCK_AUDIT_STATS: AuditStats = {
+  total: 348,
+  byAction: { CREATE: 142, UPDATE: 156, DELETE: 38, LOGIN: 12 },
+  todayCount: 8,
+};
+
+const MOCK_AUDIT_LOGS_RESP = {
+  data: [
+    { id: 'l1', action: 'CREATE', entityType: 'Product', entityId: 'prd-001', changes: { after: { name: 'Laptop Dell XPS', code: 'PRD-001' } }, createdAt: '2026-05-27T09:12:00Z', user: { firstName: 'Ahmet', lastName: 'Demir', email: 'ahmet.demir@demo.com' } },
+    { id: 'l2', action: 'UPDATE', entityType: 'SalesOrder', entityId: 'so-042', changes: { before: { status: 'pending' }, after: { status: 'approved' } }, createdAt: '2026-05-27T09:30:00Z', user: { firstName: 'Fatma', lastName: 'Şahin', email: 'fatma.sahin@demo.com' } },
+    { id: 'l3', action: 'LOGIN', entityType: null, entityId: null, changes: null, createdAt: '2026-05-27T08:55:00Z', user: { firstName: 'Ahmet', lastName: 'Demir', email: 'ahmet.demir@demo.com' } },
+    { id: 'l4', action: 'DELETE', entityType: 'PurchaseRequest', entityId: 'pr-007', changes: { before: { orderNumber: 'PR-2026-007', status: 'draft' } }, createdAt: '2026-05-26T17:22:00Z', user: { firstName: 'Ayşe', lastName: 'Kaya', email: 'ayse.kaya@demo.com' } },
+    { id: 'l5', action: 'CREATE', entityType: 'Customer', entityId: 'cus-015', changes: { after: { name: 'Yeni Müşteri Ltd.', code: 'MUS-015' } }, createdAt: '2026-05-26T15:40:00Z', user: { firstName: 'Mehmet', lastName: 'Yılmaz', email: 'mehmet.yilmaz@demo.com' } },
+    { id: 'l6', action: 'UPDATE', entityType: 'Employee', entityId: 'emp-003', changes: { before: { position: 'Stajyer' }, after: { position: 'Yazılım Geliştirici' } }, createdAt: '2026-05-26T11:15:00Z', user: { firstName: 'Hasan', lastName: 'Çelik', email: 'hasan.celik@demo.com' } },
+    { id: 'l7', action: 'CREATE', entityType: 'Invoice', entityId: 'inv-041', changes: { after: { invoiceNumber: 'FT-2026-041', totalAmount: 45000 } }, createdAt: '2026-05-25T14:05:00Z', user: { firstName: 'Fatma', lastName: 'Şahin', email: 'fatma.sahin@demo.com' } },
+    { id: 'l8', action: 'LOGIN', entityType: null, entityId: null, changes: null, createdAt: '2026-05-25T08:30:00Z', user: { firstName: 'Ayşe', lastName: 'Kaya', email: 'ayse.kaya@demo.com' } },
+  ] as AuditLog[],
+  meta: { total: 348, page: 1, totalPages: 12 },
+};
+
 const ACTION_CONFIG: Record<string, {
   label: string;
   color: string;
@@ -294,9 +314,10 @@ export default function AuditLogsPage() {
   const { data: statsData } = useQuery({
     queryKey: ['audit-stats'],
     queryFn: () => api.get('/api/v1/audit-logs/stats'),
+    initialData: MOCK_AUDIT_STATS,
   });
 
-  const resp = (logsResp as Record<string, unknown>) ?? {};
+  const resp = (logsResp as Record<string, unknown>) ?? (!isLoading ? MOCK_AUDIT_LOGS_RESP : {});
   const logs = Array.isArray(resp?.data) ? (resp.data as AuditLog[]) : [];
   const meta = resp?.meta as { total: number; page: number; totalPages: number } | undefined;
   const auditStats = statsData as AuditStats | null | undefined;

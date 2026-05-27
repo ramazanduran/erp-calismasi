@@ -8,6 +8,49 @@ import { api } from '@/lib/api/client';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
+const MOCK_TEMPLATES: Template[] = [
+  {
+    id: 'tmpl-1',
+    name: 'Standart Satış Faturası',
+    type: 'invoice',
+    description: 'KDV dahil standart satış faturası şablonu',
+    htmlContent: '<html><body><h1>FATURA</h1><p>Müşteri: {{customer_name}}</p><p>Tutar: {{total_amount}}</p></body></html>',
+    variables: [
+      { key: 'customer_name', label: 'Müşteri Adı', type: 'string' },
+      { key: 'total_amount', label: 'Toplam Tutar', type: 'currency' },
+      { key: 'invoice_date', label: 'Fatura Tarihi', type: 'date' },
+    ],
+    isActive: true,
+    _count: { documents: 42 },
+  },
+  {
+    id: 'tmpl-2',
+    name: 'Satış Sipariş Formu',
+    type: 'order',
+    description: 'Müşteri sipariş onay belgesi',
+    htmlContent: '<html><body><h1>SİPARİŞ</h1></body></html>',
+    variables: [
+      { key: 'order_number', label: 'Sipariş No', type: 'string' },
+      { key: 'customer_name', label: 'Müşteri', type: 'string' },
+    ],
+    isActive: true,
+    _count: { documents: 18 },
+  },
+  {
+    id: 'tmpl-3',
+    name: 'Teknik Servis Teklifi',
+    type: 'quote',
+    description: 'Hizmet ve teknik servis teklif belgesi',
+    htmlContent: '<html><body><h1>TEKLİF</h1></body></html>',
+    variables: [
+      { key: 'service_description', label: 'Hizmet Açıklaması', type: 'string' },
+      { key: 'price', label: 'Fiyat', type: 'currency' },
+    ],
+    isActive: false,
+    _count: { documents: 7 },
+  },
+];
+
 const TYPE_LABELS: Record<string, string> = {
   invoice: 'Fatura', order: 'Sipariş', contract: 'Sözleşme',
   quote: 'Teklif', receipt: 'Makbuz', letter: 'Yazı',
@@ -214,6 +257,7 @@ export default function DocumentTemplatesPage() {
   const { data: templates = [], isLoading } = useQuery({
     queryKey: ['document-templates', typeFilter],
     queryFn: () => api.get('/api/v1/document-templates', typeFilter ? { type: typeFilter } : undefined),
+    initialData: MOCK_TEMPLATES,
   });
 
   const { data: defaults = [] } = useQuery({

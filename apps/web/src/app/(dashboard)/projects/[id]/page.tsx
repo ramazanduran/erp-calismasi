@@ -8,6 +8,42 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api/client';
 import { cn } from '@/lib/utils';
 
+const MOCK_PROJECT_TASKS = [
+  { id: 't1', title: 'Ürün kataloğu veri aktarımı', status: 'done', priority: 'high', estimatedHours: 8, loggedHours: 7.5, dueDate: '2026-05-10', subtasks: [] },
+  { id: 't2', title: 'Kullanıcı arayüzü tasarımı', status: 'in_progress', priority: 'high', estimatedHours: 16, loggedHours: 10, dueDate: '2026-05-30', subtasks: [
+    { id: 't2a', title: 'Ana sayfa tasarımı', status: 'done', priority: 'medium', estimatedHours: 4, loggedHours: 4, dueDate: '2026-05-20', subtasks: [] },
+    { id: 't2b', title: 'Mobil uyumluluk', status: 'in_progress', priority: 'medium', estimatedHours: 6, loggedHours: 3, dueDate: '2026-05-28', subtasks: [] },
+  ]},
+  { id: 't3', title: 'Entegrasyon testleri', status: 'todo', priority: 'medium', estimatedHours: 12, loggedHours: 0, dueDate: '2026-06-05', subtasks: [] },
+  { id: 't4', title: 'Performans optimizasyonu', status: 'todo', priority: 'low', estimatedHours: 8, loggedHours: 0, dueDate: '2026-06-10', subtasks: [] },
+  { id: 't5', title: 'Dokümantasyon hazırlığı', status: 'review', priority: 'low', estimatedHours: 4, loggedHours: 3.5, dueDate: '2026-05-25', subtasks: [] },
+];
+
+const MOCK_PROJECT = {
+  id: 'proj-demo',
+  name: 'ERP Entegrasyon Projesi',
+  code: 'PRJ-2026-001',
+  status: 'active',
+  progress: 45,
+  description: 'Mevcut sistemlerin ERP platformuyla entegrasyonu ve veri aktarımı projesi',
+  budget: 250000,
+  currency: 'TRY',
+  milestones: [
+    { id: 'm1', name: 'Analiz & Tasarım', dueDate: '2026-04-30', status: 'completed' },
+    { id: 'm2', name: 'Geliştirme Aşaması 1', dueDate: '2026-05-31', status: 'pending' },
+    { id: 'm3', name: 'Test & Kabul', dueDate: '2026-06-30', status: 'pending' },
+  ],
+  tasks: MOCK_PROJECT_TASKS,
+};
+
+const MOCK_BOARD = [
+  { status: 'todo', tasks: MOCK_PROJECT_TASKS.filter((t) => t.status === 'todo') },
+  { status: 'in_progress', tasks: MOCK_PROJECT_TASKS.filter((t) => t.status === 'in_progress') },
+  { status: 'review', tasks: MOCK_PROJECT_TASKS.filter((t) => t.status === 'review') },
+  { status: 'done', tasks: MOCK_PROJECT_TASKS.filter((t) => t.status === 'done') },
+  { status: 'blocked', tasks: [] },
+];
+
 const TASK_STATUS_CONFIG: Record<string, { label: string; color: string; icon: React.ComponentType<{ className?: string }> }> = {
   todo: { label: 'Yapılacak', color: 'text-gray-500', icon: Circle },
   in_progress: { label: 'Devam Ediyor', color: 'text-blue-500', icon: Clock },
@@ -118,12 +154,14 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
     queryKey: ['projects', 'detail', id],
     queryFn: () => api.get(`/api/v1/projects/${id}`),
     enabled: !!id,
+    initialData: MOCK_PROJECT,
   });
 
   const { data: board = [] } = useQuery({
     queryKey: ['projects', 'board', id],
     queryFn: () => api.get(`/api/v1/projects/${id}/board`),
     enabled: !!id && activeTab === 'board',
+    initialData: MOCK_BOARD,
   });
 
   const createTask = useMutation({
