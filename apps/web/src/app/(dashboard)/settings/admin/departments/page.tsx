@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { Plus, Pencil, Trash2, Building2, ChevronRight, Users, Layers, FileDown } from 'lucide-react';
+import { Plus, Pencil, Trash2, Building2, ChevronRight, Users, Layers, FileDown, Search } from 'lucide-react';
 import { exportToExcel } from '@/lib/utils/excel-export';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -98,6 +98,7 @@ function DepartmentRow({
 export default function DepartmentsPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editData, setEditData] = useState<Record<string, unknown> | null>(null);
+  const [search, setSearch] = useState('');
 
   const { data: deptsData, isLoading } = useDepartments();
   const createDept = useCreateDepartment();
@@ -173,6 +174,12 @@ export default function DepartmentsPage() {
     return { total, topLevel, subDepts, totalEmployees };
   }, [allFlat, departments]);
 
+  const searchedFlat = useMemo(() => {
+    if (!search) return null;
+    const q = search.toLowerCase();
+    return allFlat.filter((d) => (d.name as string)?.toLowerCase().includes(q));
+  }, [allFlat, search]);
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -233,6 +240,19 @@ export default function DepartmentsPage() {
         ))}
       </div>
 
+      <div className="mb-4">
+        <div className="relative w-72">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <input
+            type="text"
+            placeholder="Departman adı..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-9 pr-3 py-1.5 rounded-lg border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 w-full"
+          />
+        </div>
+      </div>
+
       <div className="rounded-lg border border-border bg-card overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -255,6 +275,25 @@ export default function DepartmentsPage() {
                     ))}
                   </tr>
                 ))
+              ) : searchedFlat !== null ? (
+                searchedFlat.length === 0 ? (
+                  <tr>
+                    <td colSpan={4} className="text-center py-12 text-muted-foreground">
+                      <p>Arama sonucu bulunamadı</p>
+                    </td>
+                  </tr>
+                ) : (
+                  searchedFlat.map((dept) => (
+                    <DepartmentRow
+                      key={dept.id as string}
+                      dept={dept}
+                      level={0}
+                      allDepts={allFlat}
+                      onEdit={openModal}
+                      onDelete={handleDelete}
+                    />
+                  ))
+                )
               ) : departments.length === 0 ? (
                 <tr>
                   <td colSpan={4} className="text-center py-12 text-muted-foreground">

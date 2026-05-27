@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Landmark, X, CreditCard, FileDown } from 'lucide-react';
+import { Plus, Landmark, X, CreditCard, FileDown, Search } from 'lucide-react';
 import { exportToExcel } from '@/lib/utils/excel-export';
 import { api } from '@/lib/api/client';
 
@@ -174,6 +174,7 @@ function NewAccountModal({
 export default function BankAccountsPage() {
   const queryClient = useQueryClient();
   const [showModal, setShowModal] = useState(false);
+  const [search, setSearch] = useState('');
 
   const { data: accounts = [], isLoading } = useQuery<FinanceAccount[]>({
     queryKey: ['finance', 'accounts'],
@@ -189,8 +190,17 @@ export default function BankAccountsPage() {
     },
   });
 
-  // Client-side filter: only bank accounts
   const bankAccounts = accounts.filter((a) => a.type === 'bank');
+
+  const filteredBankAccounts = useMemo(() => {
+    if (!search) return bankAccounts;
+    const q = search.toLowerCase();
+    return bankAccounts.filter((a) =>
+      a.name?.toLowerCase().includes(q) ||
+      a.iban?.toLowerCase().includes(q) ||
+      a.swift?.toLowerCase().includes(q)
+    );
+  }, [bankAccounts, search]);
 
   const totalTRY = bankAccounts
     .filter((a) => a.isActive && a.currency === 'TRY')
@@ -213,7 +223,7 @@ export default function BankAccountsPage() {
         <div className="flex items-center gap-2">
           <button
             onClick={() => exportToExcel(
-              bankAccounts.map((a) => ({
+              filteredBankAccounts.map((a) => ({
                 name: a.name,
                 iban: a.iban ?? '',
                 swift: a.swift ?? '',
@@ -244,6 +254,18 @@ export default function BankAccountsPage() {
             Yeni Hesap Ekle
           </button>
         </div>
+      </div>
+
+      {/* Search */}
+      <div className="relative w-72">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <input
+          type="text"
+          placeholder="Hesap adı, IBAN veya SWIFT..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="pl-9 pr-3 py-1.5 rounded-lg border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 w-full"
+        />
       </div>
 
       {/* Stats Row */}
@@ -294,20 +316,22 @@ export default function BankAccountsPage() {
             </div>
           ))}
         </div>
-      ) : bankAccounts.length === 0 ? (
+      ) : filteredBankAccounts.length === 0 ? (
         <div className="rounded-xl border border-border bg-card py-16 flex flex-col items-center gap-3 text-muted-foreground">
           <Landmark className="h-10 w-10 opacity-30" />
-          <p className="text-sm font-medium">Henüz banka hesabı eklenmemiş</p>
-          <button
-            onClick={() => setShowModal(true)}
-            className="mt-1 text-sm text-primary hover:underline"
-          >
-            İlk hesabı ekle
-          </button>
+          <p className="text-sm font-medium">{search ? 'Arama sonucu bulunamadı' : 'Henüz banka hesabı eklenmemiş'}</p>
+          {!search && (
+            <button
+              onClick={() => setShowModal(true)}
+              className="mt-1 text-sm text-primary hover:underline"
+            >
+              İlk hesabı ekle
+            </button>
+          )}
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {bankAccounts.map((account) => (
+          {filteredBankAccounts.map((account) => (
             <div
               key={account.id}
               className={`rounded-xl border border-border bg-card p-5 hover:border-primary/40 hover:shadow-sm transition-all ${
