@@ -14,9 +14,11 @@ import {
   DollarSign,
   Activity,
   Inbox,
+  FileDown,
 } from 'lucide-react';
 import { useMovements } from '@/lib/api/hooks';
 import { MovementModal } from '@/components/modals/movement-modal';
+import { exportToExcel } from '@/lib/utils/excel-export';
 
 type MovementType = 'in' | 'out' | 'adjustment' | 'transfer';
 
@@ -201,13 +203,45 @@ export default function MovementsPage() {
             Stok giriş, çıkış ve düzeltme işlemlerini takip edin
           </p>
         </div>
-        <button
-          onClick={() => setModalOpen(true)}
-          className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
-        >
-          <Plus className="h-4 w-4" />
-          Yeni Hareket
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => exportToExcel(
+              filtered.map((m) => ({
+                type: TYPE_LABELS[(m.type as MovementType)] ?? m.type,
+                productName: (m.product as Record<string, unknown>)?.name ?? '',
+                productCode: (m.product as Record<string, unknown>)?.code ?? '',
+                quantity: m.quantity,
+                unitCost: m.unitCost,
+                warehouse: (m.warehouse as Record<string, unknown>)?.name ?? '',
+                reference: m.reference ?? '',
+                notes: m.notes ?? '',
+                createdAt: m.createdAt ? new Date(m.createdAt as string).toLocaleDateString('tr-TR') : '',
+              })),
+              [
+                { key: 'type', header: 'Hareket Tipi', width: 14 },
+                { key: 'productName', header: 'Ürün', width: 25 },
+                { key: 'productCode', header: 'Kod', width: 12 },
+                { key: 'quantity', header: 'Miktar', width: 10 },
+                { key: 'unitCost', header: 'Birim Maliyet', width: 14 },
+                { key: 'warehouse', header: 'Depo', width: 18 },
+                { key: 'reference', header: 'Referans', width: 16 },
+                { key: 'createdAt', header: 'Tarih', width: 12 },
+              ],
+              'stok-hareketleri',
+              'Stok Hareketleri'
+            )}
+            className="flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm hover:bg-muted"
+          >
+            <FileDown className="h-4 w-4" /> Excel
+          </button>
+          <button
+            onClick={() => setModalOpen(true)}
+            className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+          >
+            <Plus className="h-4 w-4" />
+            Yeni Hareket
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
