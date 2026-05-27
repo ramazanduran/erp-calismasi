@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { PlusCircle, BookOpen, Users, CheckCircle2, Clock } from 'lucide-react';
+import { PlusCircle, BookOpen, Users, CheckCircle2, Clock, FileDown } from 'lucide-react';
+import { exportToExcel } from '@/lib/utils/excel-export';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api/client';
 import { cn } from '@/lib/utils';
@@ -207,9 +208,44 @@ export default function TrainingPage() {
           <h1 className="text-2xl font-bold">Eğitim Yönetimi</h1>
           <p className="text-muted-foreground mt-1">Personel eğitim programları ve takibi</p>
         </div>
-        <button onClick={() => setShowForm(true)} className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-lg text-sm font-medium">
-          <PlusCircle className="h-4 w-4" />Yeni Program
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => exportToExcel(
+              programList.map((p) => ({
+                code: p.code ?? '',
+                title: p.title,
+                category: CATEGORY_LABELS[p.category ?? ''] ?? p.category ?? '',
+                format: FORMAT_LABELS[p.format] ?? p.format,
+                durationHours: p.durationHours ?? '',
+                isMandatory: p.isMandatory ? 'Evet' : 'Hayır',
+                isActive: p.isActive ? 'Aktif' : 'Pasif',
+                provider: p.provider ?? '',
+                cost: p.cost ?? '',
+                enrollments: p._count?.enrollments ?? 0,
+              })),
+              [
+                { key: 'code', header: 'Kod', width: 10 },
+                { key: 'title', header: 'Program Adı', width: 28 },
+                { key: 'category', header: 'Kategori', width: 16 },
+                { key: 'format', header: 'Format', width: 14 },
+                { key: 'durationHours', header: 'Süre (sa)', width: 10 },
+                { key: 'isMandatory', header: 'Zorunlu', width: 10 },
+                { key: 'isActive', header: 'Durum', width: 10 },
+                { key: 'provider', header: 'Sağlayıcı', width: 18 },
+                { key: 'cost', header: 'Maliyet', width: 12 },
+                { key: 'enrollments', header: 'Kayıt Sayısı', width: 12 },
+              ],
+              'egitim-programlari',
+              'Eğitim Programları'
+            )}
+            className="flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm hover:bg-muted"
+          >
+            <FileDown className="h-4 w-4" /> Excel
+          </button>
+          <button onClick={() => setShowForm(true)} className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-lg text-sm font-medium">
+            <PlusCircle className="h-4 w-4" />Yeni Program
+          </button>
+        </div>
       </div>
 
       {stats && (

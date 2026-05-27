@@ -8,8 +8,9 @@ import { cn } from '@/lib/utils';
 import {
   Plus, ClipboardList, X, CheckCircle2, Clock, FileSearch,
   Hash, Calendar, Package, TrendingUp, TrendingDown, Minus,
-  ChevronDown, ChevronUp, AlertCircle, User, Layers,
+  ChevronDown, ChevronUp, AlertCircle, User, Layers, FileDown,
 } from 'lucide-react';
+import { exportToExcel } from '@/lib/utils/excel-export';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -417,13 +418,40 @@ export default function StockCountsPage() {
             Stok sayım işlemlerini yönetin ve takip edin
           </p>
         </div>
-        <button
-          onClick={() => setShowNewModal(true)}
-          className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
-        >
-          <Plus className="h-4 w-4" />
-          Yeni Sayım Başlat
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => exportToExcel(
+              filteredCounts.map((c) => ({
+                countNumber: c.countNumber,
+                status: STATUS_LABELS[c.status] ?? c.status,
+                createdBy: c.createdBy ? `${c.createdBy.firstName} ${c.createdBy.lastName}` : '',
+                lineCount: c._count?.lines ?? 0,
+                startedAt: c.startedAt ? new Date(c.startedAt).toLocaleDateString('tr-TR') : '',
+                completedAt: c.completedAt ? new Date(c.completedAt).toLocaleDateString('tr-TR') : '',
+              })),
+              [
+                { key: 'countNumber', header: 'Sayım No', width: 14 },
+                { key: 'status', header: 'Durum', width: 14 },
+                { key: 'createdBy', header: 'Oluşturan', width: 20 },
+                { key: 'lineCount', header: 'Kalem Sayısı', width: 12 },
+                { key: 'startedAt', header: 'Başlangıç', width: 12 },
+                { key: 'completedAt', header: 'Tamamlanma', width: 12 },
+              ],
+              'stok-sayim',
+              'Stok Sayım'
+            )}
+            className="flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm hover:bg-muted"
+          >
+            <FileDown className="h-4 w-4" /> Excel
+          </button>
+          <button
+            onClick={() => setShowNewModal(true)}
+            className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+          >
+            <Plus className="h-4 w-4" />
+            Yeni Sayım Başlat
+          </button>
+        </div>
       </div>
 
       {/* Summary Cards */}

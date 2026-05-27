@@ -16,7 +16,9 @@ import {
   Trash2,
   CalendarDays,
   Star,
+  FileDown,
 } from 'lucide-react';
+import { exportToExcel } from '@/lib/utils/excel-export';
 import { toast } from 'sonner';
 import { useLeads, useUpdateLeadStatus, useDeleteLead } from '@/lib/api/hooks';
 import { LeadModal } from '@/components/modals/lead-modal';
@@ -243,6 +245,35 @@ export default function LeadsPage() {
               Liste
             </button>
           </div>
+          <button
+            onClick={() => exportToExcel(
+              leads.map((lead) => ({
+                name: lead.name as string ?? '',
+                email: lead.email as string ?? '',
+                phone: lead.phone as string ?? '',
+                company: lead.company as string ?? '',
+                source: SOURCE_LABELS[(lead.source as string)] ?? lead.source as string ?? '',
+                status: COLUMNS.find((c) => c.id === lead.status)?.label ?? lead.status as string ?? '',
+                value: Number(lead.value ?? 0),
+                expectedClose: lead.expectedClose ? new Date(lead.expectedClose as string).toLocaleDateString('tr-TR') : '',
+              })),
+              [
+                { key: 'name', header: 'Lead Adı', width: 22 },
+                { key: 'email', header: 'E-posta', width: 24 },
+                { key: 'phone', header: 'Telefon', width: 14 },
+                { key: 'company', header: 'Şirket', width: 20 },
+                { key: 'source', header: 'Kaynak', width: 14 },
+                { key: 'status', header: 'Durum', width: 14 },
+                { key: 'value', header: 'Değer', width: 14 },
+                { key: 'expectedClose', header: 'Tahmini Kapanış', width: 16 },
+              ],
+              'leads',
+              'CRM Leads'
+            )}
+            className="flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm hover:bg-muted"
+          >
+            <FileDown className="h-4 w-4" /> Excel
+          </button>
           <button
             onClick={() => { setEditData(null); setInitialStatus(undefined); setModalOpen(true); }}
             className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90 transition-opacity"

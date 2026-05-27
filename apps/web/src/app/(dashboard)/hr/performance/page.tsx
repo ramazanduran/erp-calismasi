@@ -12,7 +12,9 @@ import {
   AlertCircle,
   Loader2,
   ChevronDown,
+  FileDown,
 } from 'lucide-react';
+import { exportToExcel } from '@/lib/utils/excel-export';
 import { toast } from 'sonner';
 import { api } from '@/lib/api/client';
 
@@ -523,13 +525,48 @@ export default function PerformancePage() {
             </p>
           </div>
         </div>
-        <button
-          onClick={() => setModalOpen(true)}
-          className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors self-start sm:self-auto"
-        >
-          <Plus className="h-4 w-4" />
-          Yeni Değerlendirme
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => exportToExcel(
+              reviews.map((r) => ({
+                employeeName: `${r.employee.firstName} ${r.employee.lastName}`,
+                employeeNumber: r.employee.employeeNumber,
+                department: r.employee.department?.name ?? '',
+                reviewPeriod: r.reviewPeriod,
+                rating: r.rating,
+                reviewedBy: r.reviewedBy ? `${r.reviewedBy.firstName} ${r.reviewedBy.lastName}` : '',
+                goals: r.goals ?? '',
+                strengths: r.strengths ?? '',
+                improvements: r.improvements ?? '',
+                createdAt: new Date(r.createdAt).toLocaleDateString('tr-TR'),
+              })),
+              [
+                { key: 'employeeName', header: 'Çalışan', width: 22 },
+                { key: 'employeeNumber', header: 'Sicil No', width: 12 },
+                { key: 'department', header: 'Departman', width: 18 },
+                { key: 'reviewPeriod', header: 'Dönem', width: 14 },
+                { key: 'rating', header: 'Puan', width: 8 },
+                { key: 'reviewedBy', header: 'Değerlendiren', width: 20 },
+                { key: 'goals', header: 'Hedefler', width: 30 },
+                { key: 'strengths', header: 'Güçlü Yönler', width: 30 },
+                { key: 'improvements', header: 'Gelişim Alanları', width: 30 },
+                { key: 'createdAt', header: 'Tarih', width: 12 },
+              ],
+              'performans-degerlendirme',
+              'Performans Değerlendirme'
+            )}
+            className="flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm hover:bg-muted self-start sm:self-auto"
+          >
+            <FileDown className="h-4 w-4" /> Excel
+          </button>
+          <button
+            onClick={() => setModalOpen(true)}
+            className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors self-start sm:self-auto"
+          >
+            <Plus className="h-4 w-4" />
+            Yeni Değerlendirme
+          </button>
+        </div>
       </div>
 
       {/* ── Filters ── */}

@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { PlusCircle, Users, Briefcase, TrendingUp, UserCheck, ChevronRight } from 'lucide-react';
+import { PlusCircle, Users, Briefcase, TrendingUp, UserCheck, ChevronRight, FileDown } from 'lucide-react';
+import { exportToExcel } from '@/lib/utils/excel-export';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api/client';
 import { cn } from '@/lib/utils';
@@ -210,9 +211,46 @@ export default function RecruitmentPage() {
           <h1 className="text-2xl font-bold">İşe Alım</h1>
           <p className="text-muted-foreground mt-1">İş ilanları ve aday takibi</p>
         </div>
-        <button onClick={() => setShowForm(true)} className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-lg text-sm font-medium">
-          <PlusCircle className="h-4 w-4" />Yeni İlan
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => exportToExcel(
+              postings.map((p) => ({
+                code: p.code ?? '',
+                title: p.title,
+                department: p.department?.name ?? '',
+                workType: p.workType,
+                experienceLevel: p.experienceLevel,
+                status: STATUS_CONFIG[p.status]?.label ?? p.status,
+                headcount: p.headcount,
+                applications: p._count?.applications ?? 0,
+                location: p.location ?? '',
+                publishedAt: p.publishedAt ? new Date(p.publishedAt).toLocaleDateString('tr-TR') : '',
+                closingDate: p.closingDate ? new Date(p.closingDate).toLocaleDateString('tr-TR') : '',
+              })),
+              [
+                { key: 'code', header: 'Kod', width: 10 },
+                { key: 'title', header: 'Pozisyon', width: 26 },
+                { key: 'department', header: 'Departman', width: 18 },
+                { key: 'workType', header: 'Çalışma Şekli', width: 16 },
+                { key: 'experienceLevel', header: 'Deneyim', width: 14 },
+                { key: 'status', header: 'Durum', width: 14 },
+                { key: 'headcount', header: 'Kadro', width: 8 },
+                { key: 'applications', header: 'Başvuru', width: 10 },
+                { key: 'location', header: 'Lokasyon', width: 16 },
+                { key: 'publishedAt', header: 'Yayın Tarihi', width: 14 },
+                { key: 'closingDate', header: 'Kapanış Tarihi', width: 14 },
+              ],
+              'ise-alim',
+              'İşe Alım İlanları'
+            )}
+            className="flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm hover:bg-muted"
+          >
+            <FileDown className="h-4 w-4" /> Excel
+          </button>
+          <button onClick={() => setShowForm(true)} className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-lg text-sm font-medium">
+            <PlusCircle className="h-4 w-4" />Yeni İlan
+          </button>
+        </div>
       </div>
 
       {stats && (
