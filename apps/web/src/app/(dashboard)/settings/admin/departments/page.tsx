@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { Plus, Pencil, Trash2, Building2, ChevronRight, Users, Layers } from 'lucide-react';
+import { Plus, Pencil, Trash2, Building2, ChevronRight, Users, Layers, FileDown } from 'lucide-react';
+import { exportToExcel } from '@/lib/utils/excel-export';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -179,13 +180,36 @@ export default function DepartmentsPage() {
           <h1 className="text-2xl font-bold text-foreground">Departman Yönetimi</h1>
           <p className="text-sm text-muted-foreground mt-1">Organizasyon yapısını ve departmanları yönetin</p>
         </div>
-        <button
-          onClick={() => openModal()}
-          className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
-        >
-          <Plus className="h-4 w-4" />
-          Yeni Departman
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => exportToExcel(
+              departments.map((d) => ({
+                name: d.name as string ?? '',
+                description: d.description as string ?? '',
+                parentName: (d.parent as Record<string, unknown> | undefined)?.name as string ?? '',
+                employeeCount: (d._count as Record<string, unknown> | undefined)?.employees as number ?? 0,
+              })),
+              [
+                { key: 'name', header: 'Departman Adı', width: 24 },
+                { key: 'description', header: 'Açıklama', width: 30 },
+                { key: 'parentName', header: 'Üst Departman', width: 22 },
+                { key: 'employeeCount', header: 'Çalışan Sayısı', width: 14 },
+              ],
+              'departmanlar',
+              'Departmanlar'
+            )}
+            className="flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm hover:bg-muted"
+          >
+            <FileDown className="h-4 w-4" /> Excel
+          </button>
+          <button
+            onClick={() => openModal()}
+            className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+          >
+            <Plus className="h-4 w-4" />
+            Yeni Departman
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">

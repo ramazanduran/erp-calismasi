@@ -8,8 +8,9 @@ import { cn } from '@/lib/utils';
 import {
   Plus, Tag, Star, X, Search, Package, DollarSign,
   Percent, AlertCircle, Calendar, CheckCircle2,
-  BadgeDollarSign, Layers, ShoppingCart, ChevronRight,
+  BadgeDollarSign, Layers, ShoppingCart, ChevronRight, FileDown,
 } from 'lucide-react';
+import { exportToExcel } from '@/lib/utils/excel-export';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -821,13 +822,46 @@ export default function PriceListsPage() {
             Ürün fiyatlandırma listelerini yönetin
           </p>
         </div>
-        <button
-          onClick={() => setShowNewModal(true)}
-          className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
-        >
-          <Plus className="h-4 w-4" />
-          Yeni Liste Oluştur
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => exportToExcel(
+              allLists.map((pl) => ({
+                code: pl.code,
+                name: pl.name,
+                currency: pl.currency,
+                isDefault: pl.isDefault ? 'Evet' : 'Hayır',
+                isActive: pl.isActive ? 'Aktif' : 'Pasif',
+                itemCount: pl._count?.items ?? 0,
+                description: pl.description ?? '',
+                startDate: pl.startDate ? new Date(pl.startDate).toLocaleDateString('tr-TR') : '',
+                endDate: pl.endDate ? new Date(pl.endDate).toLocaleDateString('tr-TR') : '',
+              })),
+              [
+                { key: 'code', header: 'Kod', width: 10 },
+                { key: 'name', header: 'Liste Adı', width: 26 },
+                { key: 'currency', header: 'Para Birimi', width: 12 },
+                { key: 'isDefault', header: 'Varsayılan', width: 12 },
+                { key: 'isActive', header: 'Durum', width: 10 },
+                { key: 'itemCount', header: 'Ürün Sayısı', width: 12 },
+                { key: 'description', header: 'Açıklama', width: 26 },
+                { key: 'startDate', header: 'Başlangıç', width: 12 },
+                { key: 'endDate', header: 'Bitiş', width: 12 },
+              ],
+              'fiyat-listeleri',
+              'Fiyat Listeleri'
+            )}
+            className="flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm hover:bg-muted"
+          >
+            <FileDown className="h-4 w-4" /> Excel
+          </button>
+          <button
+            onClick={() => setShowNewModal(true)}
+            className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+          >
+            <Plus className="h-4 w-4" />
+            Yeni Liste Oluştur
+          </button>
+        </div>
       </div>
 
       {/* Summary Cards */}

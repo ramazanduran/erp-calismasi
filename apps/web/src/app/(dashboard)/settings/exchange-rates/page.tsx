@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { RefreshCw, PlusCircle, Trash2 } from 'lucide-react';
+import { RefreshCw, PlusCircle, Trash2, FileDown } from 'lucide-react';
+import { exportToExcel } from '@/lib/utils/excel-export';
 import { useExchangeRates, useUpsertRate, useDeleteRate, useBulkUpsertRates } from '@/lib/api/hooks';
 
 const CURRENCIES = ['USD', 'EUR', 'GBP', 'CHF', 'JPY', 'TRY'];
@@ -136,6 +137,29 @@ export default function ExchangeRatesPage() {
             value={date}
             onChange={(e) => setDate(e.target.value)}
           />
+          <button
+            onClick={() => exportToExcel(
+              (rates as ExchangeRate[]).map((r) => ({
+                baseCurrency: r.baseCurrency,
+                targetCurrency: r.targetCurrency,
+                rate: Number(r.rate),
+                date: new Date(r.date).toLocaleDateString('tr-TR'),
+                source: r.source,
+              })),
+              [
+                { key: 'baseCurrency', header: 'Baz Para', width: 12 },
+                { key: 'targetCurrency', header: 'Hedef Para', width: 12 },
+                { key: 'rate', header: 'Kur', width: 14 },
+                { key: 'date', header: 'Tarih', width: 12 },
+                { key: 'source', header: 'Kaynak', width: 14 },
+              ],
+              'doviz-kurlari',
+              'Döviz Kurları'
+            )}
+            className="flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm hover:bg-muted"
+          >
+            <FileDown className="h-4 w-4" /> Excel
+          </button>
           <button
             onClick={() => setShowForm(true)}
             className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-lg text-sm font-medium"
