@@ -8,7 +8,7 @@ import {
   Factory, Users, Truck, BarChart3, FolderKanban, FileText, Bell, Settings,
   ChevronDown, ChevronRight, X, GitBranch, CheckSquare, Calculator, Target,
   Layers, ClipboardList, FileSignature, Wrench, TrendingUp, CalendarDays, Cog,
-  FolderOpen, ShieldCheck,
+  FolderOpen, ShieldCheck, Sparkles, Link2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { AuthUser } from '@erp/shared-types';
@@ -148,6 +148,16 @@ const navigation = [
   { id: 'workflows', label: 'İş Akışları', icon: GitBranch, href: '/workflows' },
   { id: 'notifications', label: 'Bildirimler', icon: Bell, href: '/notifications' },
   { id: 'documents', label: 'Dokümanlar', icon: FolderOpen, href: '/documents' },
+  { id: 'ai', label: 'AI Asistan', icon: Sparkles, href: '/ai' },
+  {
+    id: 'settings-extra',
+    label: 'Sistem',
+    icon: Link2,
+    children: [
+      { label: 'Entegrasyonlar', href: '/settings/integrations' },
+      { label: 'Uyumluluk (KVKK)', href: '/settings/compliance' },
+    ],
+  },
 ];
 
 interface SidebarProps {

@@ -1,30 +1,34 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { BarChart3, Package, TrendingUp, AlertTriangle, FileDown, Search, RefreshCw } from 'lucide-react';
+import { BarChart3, Package, TrendingUp, AlertTriangle, FileDown, Search } from 'lucide-react';
 import { exportToExcel } from '@/lib/utils/excel-export';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api/client';
-import { cn, formatCurrency } from '@/lib/utils';
+import { cn, formatCurrency, formatDate } from '@/lib/utils';
 
-type ReportTab = 'current' | 'abc' | 'aging' | 'minmax' | 'turnover';
+type ReportTab = 'current' | 'abc' | 'aging' | 'minmax' | 'movements' | 'turnover';
 
 const TABS: { key: ReportTab; label: string; icon: any }[] = [
-  { key: 'current', label: 'Anlık Stok', icon: Package },
-  { key: 'abc', label: 'ABC Analizi', icon: BarChart3 },
-  { key: 'aging', label: 'Stok Yaşlandırma', icon: AlertTriangle },
-  { key: 'minmax', label: 'Min/Max Analizi', icon: TrendingUp },
-  { key: 'turnover', label: 'Stok Devir Hızı', icon: RefreshCw },
+  { key: 'current',   label: 'Anlık Stok',       icon: Package },
+  { key: 'abc',       label: 'ABC Analizi',       icon: BarChart3 },
+  { key: 'aging',     label: 'Stok Yaşlandırma',  icon: AlertTriangle },
+  { key: 'minmax',    label: 'Min/Max Analizi',   icon: TrendingUp },
+  { key: 'movements', label: 'Hareket Geçmişi',   icon: Package },
+  { key: 'turnover',  label: 'Stok Devir Hızı',   icon: TrendingUp },
 ];
 
 const ABC_COLORS: Record<string, string> = { A: 'bg-green-100 text-green-700', B: 'bg-blue-100 text-blue-700', C: 'bg-gray-100 text-gray-600' };
 const STOCK_STATUS_COLORS: Record<string, string> = { normal: 'bg-green-100 text-green-700', low: 'bg-yellow-100 text-yellow-700', critical: 'bg-red-100 text-red-700', overstock: 'bg-blue-100 text-blue-700' };
 const STOCK_STATUS_LABELS: Record<string, string> = { normal: 'Normal', low: 'Düşük', critical: 'Kritik', overstock: 'Fazla Stok' };
+const MOVEMENT_COLORS: Record<string, string> = { in: 'bg-green-100 text-green-700', out: 'bg-red-100 text-red-700', transfer: 'bg-blue-100 text-blue-700', adjust: 'bg-gray-100 text-gray-600' };
+const MOVEMENT_LABELS: Record<string, string> = { in: 'Giriş', out: 'Çıkış', transfer: 'Transfer', adjust: 'Düzeltme' };
 
 interface CurrentStockRow { id: string; code: string; name: string; warehouse: string; currentStock: number; reserved: number; available: number; unit: string; minStock: number; status: string; }
 interface ABCRow { rank: number; productName: string; annualValue: number; cumulativePercent: number; abcClass: string; }
 interface AgingRow { id: string; productName: string; d0_30: number; d31_60: number; d61_90: number; d90plus: number; total: number; risk: string; }
 interface MinMaxRow { id: string; productName: string; minStock: number; maxStock: number; currentStock: number; needsOrder: boolean; }
+interface MovementRow { id: string; date: string; productCode: string; productName: string; warehouse: string; type: string; quantity: number; unit: string; reference?: string; }
 interface TurnoverRow { id: string; productName: string; periodSales: number; avgStock: number; turnoverRate: number; turnoverDays: number; }
 
 export default function InventoryReportsPage() {
@@ -34,13 +38,14 @@ export default function InventoryReportsPage() {
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
 
-  const { data: currentStock = [], isLoading: loadingCurrent } = useQuery<CurrentStockRow[]>({ queryKey: ['inv-report-current', warehouseFilter], queryFn: () => api.get('/api/v1/inventory/reports/current-stock', { warehouse: warehouseFilter || undefined }) });
-  const { data: abcData = [], isLoading: loadingABC } = useQuery<ABCRow[]>({ queryKey: ['inv-report-abc', dateFrom, dateTo], queryFn: () => api.get('/api/v1/inventory/reports/abc', { from: dateFrom || undefined, to: dateTo || undefined }) });
-  const { data: agingData = [], isLoading: loadingAging } = useQuery<AgingRow[]>({ queryKey: ['inv-report-aging'], queryFn: () => api.get('/api/v1/inventory/reports/aging') });
-  const { data: minMaxData = [], isLoading: loadingMinMax } = useQuery<MinMaxRow[]>({ queryKey: ['inv-report-minmax'], queryFn: () => api.get('/api/v1/inventory/reports/min-max') });
-  const { data: turnoverData = [], isLoading: loadingTurnover } = useQuery<TurnoverRow[]>({ queryKey: ['inv-report-turnover', dateFrom, dateTo], queryFn: () => api.get('/api/v1/inventory/reports/turnover', { from: dateFrom || undefined, to: dateTo || undefined }) });
+  const { data: currentStock = [], isLoading: loadingCurrent } = useQuery<CurrentStockRow[]>({ queryKey: ['inventory-report-current', warehouseFilter], queryFn: () => api.get('/api/v1/inventory/reports/current-stock', { warehouse: warehouseFilter || undefined }) });
+  const { data: abcData = [], isLoading: loadingABC } = useQuery<ABCRow[]>({ queryKey: ['inventory-report-abc', dateFrom, dateTo], queryFn: () => api.get('/api/v1/inventory/reports/abc', { from: dateFrom || undefined, to: dateTo || undefined }) });
+  const { data: agingData = [], isLoading: loadingAging } = useQuery<AgingRow[]>({ queryKey: ['inventory-report-aging'], queryFn: () => api.get('/api/v1/inventory/reports/aging') });
+  const { data: minMaxData = [], isLoading: loadingMinMax } = useQuery<MinMaxRow[]>({ queryKey: ['inventory-report-minmax'], queryFn: () => api.get('/api/v1/inventory/reports/minmax') });
+  const { data: movementsData = [], isLoading: loadingMovements } = useQuery<MovementRow[]>({ queryKey: ['inventory-report-movements', dateFrom, dateTo, warehouseFilter], queryFn: () => api.get('/api/v1/inventory/reports/movements', { from: dateFrom || undefined, to: dateTo || undefined, warehouse: warehouseFilter || undefined }) });
+  const { data: turnoverData = [], isLoading: loadingTurnover } = useQuery<TurnoverRow[]>({ queryKey: ['inventory-report-turnover', dateFrom, dateTo], queryFn: () => api.get('/api/v1/inventory/reports/turnover', { from: dateFrom || undefined, to: dateTo || undefined }) });
 
-  const isLoading = { current: loadingCurrent, abc: loadingABC, aging: loadingAging, minmax: loadingMinMax, turnover: loadingTurnover }[activeTab];
+  const isLoading = { current: loadingCurrent, abc: loadingABC, aging: loadingAging, minmax: loadingMinMax, movements: loadingMovements, turnover: loadingTurnover }[activeTab];
 
   const filteredCurrent = useMemo(() => {
     if (!search) return currentStock;
@@ -66,6 +71,12 @@ export default function InventoryReportsPage() {
     return minMaxData.filter((r) => r.productName?.toLowerCase().includes(q));
   }, [minMaxData, search]);
 
+  const filteredMovements = useMemo(() => {
+    if (!search) return movementsData;
+    const q = search.toLowerCase();
+    return movementsData.filter((r) => r.productCode?.toLowerCase().includes(q) || r.productName?.toLowerCase().includes(q) || r.reference?.toLowerCase().includes(q));
+  }, [movementsData, search]);
+
   const filteredTurnover = useMemo(() => {
     if (!search) return turnoverData;
     const q = search.toLowerCase();
@@ -73,11 +84,36 @@ export default function InventoryReportsPage() {
   }, [turnoverData, search]);
 
   function handleExcel() {
-    if (activeTab === 'current') exportToExcel(filteredCurrent.map((r) => ({ Kod: r.code, Ürün: r.name, Depo: r.warehouse, 'Mevcut Stok': r.currentStock, Rezerve: r.reserved, 'Kullanılabilir': r.available, Birim: r.unit, 'Min Stok': r.minStock, Durum: STOCK_STATUS_LABELS[r.status] ?? r.status })), 'anlik-stok');
-    if (activeTab === 'abc') exportToExcel(filteredABC.map((r) => ({ Sıra: r.rank, Ürün: r.productName, 'Yıllık Değer': r.annualValue, '% Kümülatif': r.cumulativePercent, 'ABC Sınıfı': r.abcClass })), 'abc-analizi');
-    if (activeTab === 'aging') exportToExcel(filteredAging.map((r) => ({ Ürün: r.productName, '0-30 Gün': r.d0_30, '31-60 Gün': r.d31_60, '61-90 Gün': r.d61_90, '90+ Gün': r.d90plus, Toplam: r.total, Risk: r.risk })), 'stok-yaslandirma');
-    if (activeTab === 'minmax') exportToExcel(filteredMinMax.map((r) => ({ Ürün: r.productName, 'Min Stok': r.minStock, 'Maks Stok': r.maxStock, 'Mevcut': r.currentStock, 'Sipariş Gerekli': r.needsOrder ? 'Evet' : 'Hayır' })), 'min-max-analizi');
-    if (activeTab === 'turnover') exportToExcel(filteredTurnover.map((r) => ({ Ürün: r.productName, 'Dönem Satışı': r.periodSales, 'Ort. Stok': r.avgStock, 'Devir Hızı': r.turnoverRate, 'Devir Günü': r.turnoverDays })), 'stok-devir-hizi');
+    if (activeTab === 'current') exportToExcel(
+      filteredCurrent.map((r) => ({ kod: r.code, urun: r.name, depo: r.warehouse, mevcutStok: r.currentStock, rezerve: r.reserved, kullanilabilir: r.available, birim: r.unit, minStok: r.minStock, durum: STOCK_STATUS_LABELS[r.status] ?? r.status })),
+      [{ key: 'kod', header: 'Ürün Kodu', width: 14 }, { key: 'urun', header: 'Ürün Adı', width: 28 }, { key: 'depo', header: 'Depo', width: 16 }, { key: 'mevcutStok', header: 'Mevcut Stok', width: 14 }, { key: 'rezerve', header: 'Rezerve', width: 12 }, { key: 'kullanilabilir', header: 'Kullanılabilir', width: 14 }, { key: 'birim', header: 'Birim', width: 10 }, { key: 'minStok', header: 'Min Stok', width: 12 }, { key: 'durum', header: 'Durum', width: 12 }],
+      'anlik-stok', 'Anlık Stok'
+    );
+    if (activeTab === 'abc') exportToExcel(
+      filteredABC.map((r) => ({ sira: r.rank, urun: r.productName, yillikDeger: r.annualValue, kumulatifYuzde: r.cumulativePercent?.toFixed(1) + '%', abcSinifi: r.abcClass })),
+      [{ key: 'sira', header: 'Sıra', width: 8 }, { key: 'urun', header: 'Ürün', width: 28 }, { key: 'yillikDeger', header: 'Yıllık Satış Değeri', width: 20 }, { key: 'kumulatifYuzde', header: '% Kümülatif', width: 14 }, { key: 'abcSinifi', header: 'ABC Sınıfı', width: 12 }],
+      'abc-analizi', 'ABC Analizi'
+    );
+    if (activeTab === 'aging') exportToExcel(
+      filteredAging.map((r) => ({ urun: r.productName, gun0_30: r.d0_30, gun31_60: r.d31_60, gun61_90: r.d61_90, gun90p: r.d90plus, toplam: r.total, risk: r.risk })),
+      [{ key: 'urun', header: 'Ürün', width: 28 }, { key: 'gun0_30', header: '0-30 Gün', width: 12 }, { key: 'gun31_60', header: '31-60 Gün', width: 12 }, { key: 'gun61_90', header: '61-90 Gün', width: 12 }, { key: 'gun90p', header: '90+ Gün', width: 12 }, { key: 'toplam', header: 'Toplam', width: 12 }, { key: 'risk', header: 'Risk', width: 12 }],
+      'stok-yaslandirma', 'Stok Yaşlandırma'
+    );
+    if (activeTab === 'minmax') exportToExcel(
+      filteredMinMax.map((r) => ({ urun: r.productName, minStok: r.minStock, maksStok: r.maxStock, mevcut: r.currentStock, siparisOnerisi: r.needsOrder ? 'Evet' : 'Hayır' })),
+      [{ key: 'urun', header: 'Ürün', width: 28 }, { key: 'minStok', header: 'Min Stok', width: 12 }, { key: 'maksStok', header: 'Maks Stok', width: 12 }, { key: 'mevcut', header: 'Mevcut', width: 12 }, { key: 'siparisOnerisi', header: 'Sipariş Önerildi mi', width: 16 }],
+      'min-max-analizi', 'Min/Max Analizi'
+    );
+    if (activeTab === 'movements') exportToExcel(
+      filteredMovements.map((r) => ({ tarih: r.date ? formatDate(r.date) : '', urunKodu: r.productCode, urun: r.productName, depo: r.warehouse, tur: MOVEMENT_LABELS[r.type] ?? r.type, miktar: r.quantity, birim: r.unit, referans: r.reference ?? '' })),
+      [{ key: 'tarih', header: 'Tarih', width: 12 }, { key: 'urunKodu', header: 'Ürün Kodu', width: 14 }, { key: 'urun', header: 'Ürün Adı', width: 28 }, { key: 'depo', header: 'Depo', width: 16 }, { key: 'tur', header: 'Hareket Türü', width: 14 }, { key: 'miktar', header: 'Miktar', width: 12 }, { key: 'birim', header: 'Birim', width: 10 }, { key: 'referans', header: 'Referans', width: 16 }],
+      'hareket-gecmisi', 'Hareket Geçmişi'
+    );
+    if (activeTab === 'turnover') exportToExcel(
+      filteredTurnover.map((r) => ({ urun: r.productName, donemSatisi: r.periodSales, ortStok: r.avgStock, devirHizi: r.turnoverRate?.toFixed(2), devirGunu: r.turnoverDays })),
+      [{ key: 'urun', header: 'Ürün', width: 28 }, { key: 'donemSatisi', header: 'Dönem Satışı', width: 16 }, { key: 'ortStok', header: 'Ort. Stok', width: 14 }, { key: 'devirHizi', header: 'Devir Hızı', width: 14 }, { key: 'devirGunu', header: 'Devir Günü', width: 14 }],
+      'stok-devir-hizi', 'Stok Devir Hızı'
+    );
   }
 
   return (
@@ -104,15 +140,21 @@ export default function InventoryReportsPage() {
             })}
           </div>
           <div className="flex items-center gap-2 flex-wrap">
-            {(activeTab === 'abc' || activeTab === 'turnover') && (
+            {(activeTab === 'abc' || activeTab === 'turnover' || activeTab === 'movements') && (
               <>
+                <label className="text-sm text-muted-foreground">Başlangıç</label>
                 <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="rounded-lg border border-border bg-background px-3 py-1.5 text-sm" />
-                <span className="text-muted-foreground text-sm">—</span>
+                <label className="text-sm text-muted-foreground">Bitiş</label>
                 <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="rounded-lg border border-border bg-background px-3 py-1.5 text-sm" />
               </>
             )}
-            {activeTab === 'current' && (
-              <input value={warehouseFilter} onChange={(e) => setWarehouseFilter(e.target.value)} placeholder="Depo filtrele..." className="rounded-lg border border-border bg-background px-3 py-1.5 text-sm w-36" />
+            {(activeTab === 'current' || activeTab === 'movements') && (
+              <select value={warehouseFilter} onChange={(e) => setWarehouseFilter(e.target.value)} className="rounded-lg border border-border bg-background px-3 py-1.5 text-sm">
+                <option value="">Tüm Depolar</option>
+                <option value="main">Ana Depo</option>
+                <option value="satellite">Yardımcı Depo</option>
+                <option value="transit">Transit Depo</option>
+              </select>
             )}
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -213,6 +255,30 @@ export default function InventoryReportsPage() {
                           <td className="py-3 text-right text-muted-foreground">{r.maxStock}</td>
                           <td className={cn('py-3 text-right font-semibold', r.currentStock <= r.minStock ? 'text-red-600' : 'text-green-600')}>{r.currentStock}</td>
                           <td className="py-3 text-center">{r.needsOrder ? <span className="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-full font-medium">Sipariş Ver</span> : <span className="text-xs text-muted-foreground">—</span>}</td>
+                        </tr>
+                      ))}
+                  </tbody>
+                </table>
+              )}
+
+              {/* Movements */}
+              {activeTab === 'movements' && (
+                <table className="w-full text-sm">
+                  <thead><tr className="border-b border-border text-left text-muted-foreground">
+                    <th className="pb-3 font-medium">Tarih</th><th className="pb-3 font-medium">Ürün Kodu</th><th className="pb-3 font-medium">Ürün Adı</th><th className="pb-3 font-medium">Depo</th><th className="pb-3 font-medium">Hareket Türü</th><th className="pb-3 font-medium text-right">Miktar</th><th className="pb-3 font-medium">Birim</th><th className="pb-3 font-medium">Referans</th>
+                  </tr></thead>
+                  <tbody>
+                    {filteredMovements.length === 0 ? <tr><td colSpan={8} className="py-8 text-center text-muted-foreground">Hareket kaydı bulunamadı</td></tr>
+                      : filteredMovements.map((r) => (
+                        <tr key={r.id} className="border-b border-border last:border-0 hover:bg-muted/30">
+                          <td className="py-3 text-muted-foreground text-xs">{r.date ? formatDate(r.date) : '—'}</td>
+                          <td className="py-3 font-mono text-xs text-muted-foreground">{r.productCode}</td>
+                          <td className="py-3 font-medium">{r.productName}</td>
+                          <td className="py-3 text-muted-foreground">{r.warehouse}</td>
+                          <td className="py-3"><span className={cn('px-2 py-0.5 rounded-full text-xs font-medium', MOVEMENT_COLORS[r.type] ?? 'bg-gray-100 text-gray-600')}>{MOVEMENT_LABELS[r.type] ?? r.type}</span></td>
+                          <td className={cn('py-3 text-right font-semibold', r.type === 'out' ? 'text-red-600' : 'text-green-600')}>{r.type === 'out' ? '-' : '+'}{r.quantity}</td>
+                          <td className="py-3 text-muted-foreground">{r.unit}</td>
+                          <td className="py-3 text-muted-foreground text-xs">{r.reference ?? '—'}</td>
                         </tr>
                       ))}
                   </tbody>
