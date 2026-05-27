@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { Search, Plus, KeyRound, ToggleLeft, ToggleRight, Pencil, Trash2, UserCircle, Users, UserCheck, UserX, Clock } from 'lucide-react';
+import { Search, Plus, KeyRound, ToggleLeft, ToggleRight, Pencil, Trash2, UserCircle, Users, UserCheck, UserX, Clock, FileDown } from 'lucide-react';
+import { exportToExcel } from '@/lib/utils/excel-export';
 import { toast } from 'sonner';
 import { useUsers, useSetUserStatus, useDeleteUser, useResetUserPassword } from '@/lib/api/hooks/use-users';
 import { UserModal } from '@/components/modals/user-modal';
@@ -87,13 +88,40 @@ export default function UsersAdminPage() {
           <h1 className="text-2xl font-bold text-foreground">Kullanıcı Yönetimi</h1>
           <p className="text-sm text-muted-foreground mt-1">Sisteme kayıtlı kullanıcıları yönetin</p>
         </div>
-        <button
-          onClick={() => { setEditData(null); setModalOpen(true); }}
-          className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
-        >
-          <Plus className="h-4 w-4" />
-          Yeni Kullanıcı
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => exportToExcel(
+              users.map((u) => ({
+                name: `${u.firstName ?? ''} ${u.lastName ?? ''}`.trim(),
+                email: u.email as string ?? '',
+                status: u.status === 'active' ? 'Aktif' : 'Pasif',
+                role: u.role as string ?? '',
+                lastLoginAt: u.lastLoginAt ? new Date(u.lastLoginAt as string).toLocaleDateString('tr-TR') : '',
+                createdAt: u.createdAt ? new Date(u.createdAt as string).toLocaleDateString('tr-TR') : '',
+              })),
+              [
+                { key: 'name', header: 'Ad Soyad', width: 22 },
+                { key: 'email', header: 'E-posta', width: 28 },
+                { key: 'status', header: 'Durum', width: 10 },
+                { key: 'role', header: 'Rol', width: 14 },
+                { key: 'lastLoginAt', header: 'Son Giriş', width: 14 },
+                { key: 'createdAt', header: 'Kayıt Tarihi', width: 14 },
+              ],
+              'kullanicilar',
+              'Kullanıcılar'
+            )}
+            className="flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm hover:bg-muted"
+          >
+            <FileDown className="h-4 w-4" /> Excel
+          </button>
+          <button
+            onClick={() => { setEditData(null); setModalOpen(true); }}
+            className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+          >
+            <Plus className="h-4 w-4" />
+            Yeni Kullanıcı
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">

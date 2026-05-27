@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Landmark, X, CreditCard } from 'lucide-react';
+import { Plus, Landmark, X, CreditCard, FileDown } from 'lucide-react';
+import { exportToExcel } from '@/lib/utils/excel-export';
 import { api } from '@/lib/api/client';
 
 interface FinanceAccount {
@@ -209,13 +210,40 @@ export default function BankAccountsPage() {
             Şirkete ait banka hesaplarını yönetin
           </p>
         </div>
-        <button
-          onClick={() => setShowModal(true)}
-          className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
-        >
-          <Plus className="h-4 w-4" />
-          Yeni Hesap Ekle
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => exportToExcel(
+              bankAccounts.map((a) => ({
+                name: a.name,
+                iban: a.iban ?? '',
+                swift: a.swift ?? '',
+                currency: a.currency,
+                balance: Number(a.balance),
+                isActive: a.isActive ? 'Aktif' : 'Pasif',
+              })),
+              [
+                { key: 'name', header: 'Hesap Adı', width: 24 },
+                { key: 'iban', header: 'IBAN', width: 30 },
+                { key: 'swift', header: 'SWIFT', width: 14 },
+                { key: 'currency', header: 'Para Birimi', width: 12 },
+                { key: 'balance', header: 'Bakiye', width: 16 },
+                { key: 'isActive', header: 'Durum', width: 10 },
+              ],
+              'banka-hesaplari',
+              'Banka Hesapları'
+            )}
+            className="flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm hover:bg-muted"
+          >
+            <FileDown className="h-4 w-4" /> Excel
+          </button>
+          <button
+            onClick={() => setShowModal(true)}
+            className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+          >
+            <Plus className="h-4 w-4" />
+            Yeni Hesap Ekle
+          </button>
+        </div>
       </div>
 
       {/* Stats Row */}

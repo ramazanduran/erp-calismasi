@@ -3,8 +3,9 @@
 import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
-  Plus, BookOpen, ChevronDown, ChevronRight, X, Trash2, AlertCircle, CheckCircle2,
+  Plus, BookOpen, ChevronDown, ChevronRight, X, Trash2, AlertCircle, CheckCircle2, FileDown,
 } from 'lucide-react';
+import { exportToExcel } from '@/lib/utils/excel-export';
 import { toast } from 'sonner';
 import { api } from '@/lib/api/client';
 
@@ -324,13 +325,44 @@ export default function JournalPage() {
             </p>
           </div>
         </div>
-        <button
-          onClick={() => setModalOpen(true)}
-          className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors shadow-sm"
-        >
-          <Plus className="h-4 w-4" />
-          Yeni Kayıt
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => exportToExcel(
+              entries.flatMap((e) =>
+                e.lines.map((l) => ({
+                  entryNumber: e.entryNumber,
+                  date: new Date(e.date).toLocaleDateString('tr-TR'),
+                  description: e.description,
+                  accountCode: l.account.code,
+                  accountName: l.account.name,
+                  type: l.type === 'debit' ? 'Borç' : 'Alacak',
+                  amount: Number(l.amount),
+                }))
+              ),
+              [
+                { key: 'entryNumber', header: 'Kayıt No', width: 12 },
+                { key: 'date', header: 'Tarih', width: 12 },
+                { key: 'description', header: 'Açıklama', width: 30 },
+                { key: 'accountCode', header: 'Hesap Kodu', width: 12 },
+                { key: 'accountName', header: 'Hesap Adı', width: 24 },
+                { key: 'type', header: 'Tip', width: 10 },
+                { key: 'amount', header: 'Tutar', width: 14 },
+              ],
+              'yevmiye',
+              'Yevmiye Defteri'
+            )}
+            className="flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm hover:bg-muted"
+          >
+            <FileDown className="h-4 w-4" /> Excel
+          </button>
+          <button
+            onClick={() => setModalOpen(true)}
+            className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors shadow-sm"
+          >
+            <Plus className="h-4 w-4" />
+            Yeni Kayıt
+          </button>
+        </div>
       </div>
 
       {/* Filters */}
