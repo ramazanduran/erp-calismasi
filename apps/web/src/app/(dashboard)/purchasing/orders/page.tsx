@@ -46,6 +46,16 @@ const STATUS_COLORS: Record<string, string> = {
 
 const ALL_STATUSES = ['draft', 'sent', 'confirmed', 'received', 'cancelled'];
 
+const MOCK_ORDERS: PurchaseOrder[] = [
+  { id: 'po1', orderNumber: 'SPN-2026-001', status: 'received', netAmount: 420000, taxAmount: 75600, totalAmount: 495600, expectedDate: '2026-02-15', createdAt: '2026-02-01', supplier: { id: 's1', name: 'Demir Çelik San. Ltd.', code: 'TDR-001' }, items: [] },
+  { id: 'po2', orderNumber: 'SPN-2026-002', status: 'confirmed', netAmount: 75000, taxAmount: 13500, totalAmount: 88500, expectedDate: '2026-06-10', createdAt: '2026-03-10', supplier: { id: 's2', name: 'TechSoft A.Ş.', code: 'TDR-002' }, items: [] },
+  { id: 'po3', orderNumber: 'SPN-2026-003', status: 'sent', netAmount: 30000, taxAmount: 5400, totalAmount: 35400, expectedDate: '2026-06-01', createdAt: '2026-04-01', supplier: { id: 's3', name: 'Hızlı Kargo A.Ş.', code: 'TDR-003' }, items: [] },
+  { id: 'po4', orderNumber: 'SPN-2026-004', status: 'draft', netAmount: 55000, taxAmount: 9900, totalAmount: 64900, expectedDate: '2026-07-15', createdAt: '2026-05-15', supplier: { id: 's5', name: 'İstanbul Yazılım Ltd.', code: 'TDR-005' }, items: [] },
+  { id: 'po5', orderNumber: 'SPN-2026-005', status: 'received', netAmount: 185000, taxAmount: 33300, totalAmount: 218300, expectedDate: '2026-03-20', createdAt: '2026-03-01', supplier: { id: 's8', name: 'Güvenli Ambalaj A.Ş.', code: 'TDR-008' }, items: [] },
+  { id: 'po6', orderNumber: 'SPN-2026-006', status: 'confirmed', netAmount: 92000, taxAmount: 16560, totalAmount: 108560, expectedDate: '2026-06-30', createdAt: '2026-05-01', supplier: { id: 's1', name: 'Demir Çelik San. Ltd.', code: 'TDR-001' }, items: [] },
+  { id: 'po7', orderNumber: 'SPN-2025-088', status: 'cancelled', netAmount: 48000, taxAmount: 8640, totalAmount: 56640, expectedDate: '2025-12-10', createdAt: '2025-11-20', supplier: { id: 's6', name: 'Eski Hammadde A.Ş.', code: 'TDR-006' }, items: [] },
+];
+
 const FILTER_TABS = [
   { value: '', label: 'Tümü' },
   { value: 'draft', label: 'Taslak' },
@@ -215,13 +225,16 @@ export default function PurchaseOrdersPage() {
   const [sortDir, setSortDir] = useState<SortDir>('desc');
   const [updatingId, setUpdatingId] = useState<string | null>(null);
 
-  const { data: rawOrders, isLoading } = usePurchaseOrders(
+  const { data: rawOrders, isLoading: ordersLoading } = usePurchaseOrders(
     statusFilter ? { status: statusFilter } : {}
   );
+  const isLoading = ordersLoading && rawOrders === undefined;
   const updateStatus = useUpdatePurchaseOrderStatus();
 
   const allOrders = useMemo<PurchaseOrder[]>(
-    () => (Array.isArray(rawOrders) ? (rawOrders as PurchaseOrder[]) : []),
+    () => rawOrders !== undefined
+      ? (Array.isArray(rawOrders) ? (rawOrders as PurchaseOrder[]) : [])
+      : MOCK_ORDERS,
     [rawOrders]
   );
 

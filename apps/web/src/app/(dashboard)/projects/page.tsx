@@ -4,35 +4,74 @@ import { useState, useMemo } from 'react';
 import Link from 'next/link';
 import { PlusCircle, FolderKanban, Clock, CheckCircle2, AlertCircle, Users, Calendar, FileDown, Search } from 'lucide-react';
 import { exportToExcel } from '@/lib/utils/excel-export';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { api } from '@/lib/api/client';
 import { formatCurrency, cn } from '@/lib/utils';
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string; icon: React.ComponentType<{ className?: string }> }> = {
-  planning: { label: 'Planlama', color: 'text-blue-600', bg: 'bg-blue-100 dark:bg-blue-900/30', icon: FolderKanban },
-  active: { label: 'Aktif', color: 'text-green-600', bg: 'bg-green-100 dark:bg-green-900/30', icon: CheckCircle2 },
-  on_hold: { label: 'Askıda', color: 'text-yellow-600', bg: 'bg-yellow-100 dark:bg-yellow-900/30', icon: AlertCircle },
+  planning:  { label: 'Planlama',    color: 'text-blue-600',   bg: 'bg-blue-100 dark:bg-blue-900/30',   icon: FolderKanban },
+  active:    { label: 'Aktif',       color: 'text-green-600',  bg: 'bg-green-100 dark:bg-green-900/30', icon: CheckCircle2 },
+  on_hold:   { label: 'Askıda',      color: 'text-yellow-600', bg: 'bg-yellow-100 dark:bg-yellow-900/30', icon: AlertCircle },
   completed: { label: 'Tamamlandı', color: 'text-purple-600', bg: 'bg-purple-100 dark:bg-purple-900/30', icon: CheckCircle2 },
-  cancelled: { label: 'İptal', color: 'text-red-600', bg: 'bg-red-100 dark:bg-red-900/30', icon: AlertCircle },
+  cancelled: { label: 'İptal',       color: 'text-red-600',    bg: 'bg-red-100 dark:bg-red-900/30',     icon: AlertCircle },
 };
 
-const PRIORITY_COLORS: Record<string, string> = {
-  low: 'text-gray-500',
-  medium: 'text-yellow-500',
-  high: 'text-orange-500',
-  critical: 'text-red-500',
-};
-
-interface ProjectCount { tasks: number; milestones: number; timeEntries: number }
 interface Project {
   id: string; code: string; name: string; status: string; priority: string;
   progress: number; startDate?: string; endDate?: string;
   budget?: number; currency: string; color?: string;
   customer?: { name: string } | null;
-  _count: ProjectCount;
+  _count: { tasks: number; milestones: number; timeEntries: number };
 }
 
-interface ProjectStats { total: number; active: number; byStatus: Record<string, number>; totalLoggedHours: number }
+const MOCK_PROJECTS: Project[] = [
+  {
+    id: 'p1', code: 'PRJ-2026-001', name: 'ERP Sistem Entegrasyonu — Faz 2',
+    status: 'active', priority: 'critical', progress: 65,
+    startDate: '2026-01-15', endDate: '2026-07-31',
+    budget: 1200000, currency: 'TRY', color: '#6366f1',
+    customer: { name: 'Anadolu Holding' },
+    _count: { tasks: 42, milestones: 5, timeEntries: 128 },
+  },
+  {
+    id: 'p2', code: 'PRJ-2026-002', name: 'Üretim Hattı Otomasyonu',
+    status: 'active', priority: 'high', progress: 40,
+    startDate: '2026-02-01', endDate: '2026-09-30',
+    budget: 3500000, currency: 'TRY', color: '#f59e0b',
+    customer: null,
+    _count: { tasks: 28, milestones: 4, timeEntries: 87 },
+  },
+  {
+    id: 'p3', code: 'PRJ-2026-003', name: 'Mobil Uygulama Geliştirme',
+    status: 'active', priority: 'medium', progress: 25,
+    startDate: '2026-03-01', endDate: '2026-10-31',
+    budget: 650000, currency: 'TRY', color: '#10b981',
+    customer: { name: 'Güney Sanayi A.Ş.' },
+    _count: { tasks: 35, milestones: 3, timeEntries: 44 },
+  },
+  {
+    id: 'p4', code: 'PRJ-2025-022', name: 'ISO 9001:2015 Belgelendirme',
+    status: 'completed', priority: 'high', progress: 100,
+    startDate: '2025-09-01', endDate: '2026-03-31',
+    budget: 180000, currency: 'TRY', color: '#8b5cf6',
+    customer: null,
+    _count: { tasks: 18, milestones: 6, timeEntries: 210 },
+  },
+  {
+    id: 'p5', code: 'PRJ-2026-004', name: 'Depo Yönetim Sistemi Kurulumu',
+    status: 'planning', priority: 'medium', progress: 5,
+    startDate: '2026-06-01', endDate: '2026-12-31',
+    budget: 420000, currency: 'TRY', color: '#06b6d4',
+    customer: null,
+    _count: { tasks: 8, milestones: 2, timeEntries: 0 },
+  },
+  {
+    id: 'p6', code: 'PRJ-2026-005', name: 'E-Ticaret Platformu Entegrasyonu',
+    status: 'on_hold', priority: 'low', progress: 15,
+    startDate: '2026-01-10', endDate: '2026-08-10',
+    budget: 290000, currency: 'TRY', color: '#f43f5e',
+    customer: { name: 'Batı Endüstri A.Ş.' },
+    _count: { tasks: 22, milestones: 3, timeEntries: 31 },
+  },
+];
 
 function NewProjectModal({ onClose, onSave }: { onClose: () => void; onSave: (d: Record<string, unknown>) => void }) {
   const [form, setForm] = useState({ name: '', status: 'planning', priority: 'medium', description: '', startDate: '', endDate: '', budget: '', color: '#6366f1' });
@@ -95,37 +134,54 @@ function NewProjectModal({ onClose, onSave }: { onClose: () => void; onSave: (d:
 }
 
 export default function ProjectsPage() {
-  const qc = useQueryClient();
+  const [projects, setProjects] = useState<Project[]>(MOCK_PROJECTS);
   const [statusFilter, setStatusFilter] = useState('');
   const [search, setSearch] = useState('');
   const [showForm, setShowForm] = useState(false);
 
-  const { data: projects = [], isLoading } = useQuery({
-    queryKey: ['projects', statusFilter],
-    queryFn: () => api.get('/api/v1/projects', statusFilter ? { status: statusFilter } : undefined),
-  });
-
-  const { data: stats } = useQuery({
-    queryKey: ['projects', 'stats'],
-    queryFn: () => api.get('/api/v1/projects/stats'),
-  });
-
-  const createProject = useMutation({
-    mutationFn: (data: Record<string, unknown>) => api.post('/api/v1/projects', data),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['projects'] }); setShowForm(false); },
-  });
-
-  const projectStats = stats as ProjectStats | undefined;
+  const stats = useMemo(() => {
+    const byStatus: Record<string, number> = {};
+    let totalLoggedHours = 0;
+    for (const p of projects) {
+      byStatus[p.status] = (byStatus[p.status] ?? 0) + 1;
+      totalLoggedHours += p._count.timeEntries;
+    }
+    return {
+      total: projects.length,
+      active: byStatus['active'] ?? 0,
+      totalLoggedHours,
+      byStatus,
+    };
+  }, [projects]);
 
   const filteredProjects = useMemo(() => {
-    if (!search) return projects as Project[];
     const q = search.toLowerCase();
-    return (projects as Project[]).filter((p) =>
-      p.code?.toLowerCase().includes(q) ||
-      p.name?.toLowerCase().includes(q) ||
-      p.customer?.name?.toLowerCase().includes(q)
-    );
-  }, [projects, search]);
+    return projects.filter((p) => {
+      if (statusFilter && p.status !== statusFilter) return false;
+      if (q && !p.code.toLowerCase().includes(q) && !p.name.toLowerCase().includes(q) && !p.customer?.name?.toLowerCase().includes(q)) return false;
+      return true;
+    });
+  }, [projects, search, statusFilter]);
+
+  function handleCreate(d: Record<string, unknown>) {
+    const newProject: Project = {
+      id: `p${Date.now()}`,
+      code: `PRJ-2026-${String(projects.length + 1).padStart(3, '0')}`,
+      name: d.name as string,
+      status: d.status as string,
+      priority: d.priority as string,
+      progress: 0,
+      startDate: (d.startDate as string) || undefined,
+      endDate: (d.endDate as string) || undefined,
+      budget: d.budget as number | undefined,
+      currency: 'TRY',
+      color: d.color as string ?? '#6366f1',
+      customer: null,
+      _count: { tasks: 0, milestones: 0, timeEntries: 0 },
+    };
+    setProjects((prev) => [newProject, ...prev]);
+    setShowForm(false);
+  }
 
   return (
     <div className="space-y-6">
@@ -172,13 +228,12 @@ export default function ProjectsPage() {
         </div>
       </div>
 
-      {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: 'Toplam Proje', value: projectStats?.total ?? 0, icon: FolderKanban, color: 'text-blue-500', bg: 'bg-blue-50 dark:bg-blue-950' },
-          { label: 'Aktif Proje', value: projectStats?.active ?? 0, icon: CheckCircle2, color: 'text-green-500', bg: 'bg-green-50 dark:bg-green-950' },
-          { label: 'Toplam Saat', value: `${(projectStats?.totalLoggedHours ?? 0).toFixed(1)} sa`, icon: Clock, color: 'text-orange-500', bg: 'bg-orange-50 dark:bg-orange-950' },
-          { label: 'Tamamlanan', value: projectStats?.byStatus?.completed ?? 0, icon: CheckCircle2, color: 'text-purple-500', bg: 'bg-purple-50 dark:bg-purple-950' },
+          { label: 'Toplam Proje', value: stats.total, icon: FolderKanban, color: 'text-blue-500', bg: 'bg-blue-50 dark:bg-blue-950' },
+          { label: 'Aktif Proje', value: stats.active, icon: CheckCircle2, color: 'text-green-500', bg: 'bg-green-50 dark:bg-green-950' },
+          { label: 'Toplam Kayıt', value: `${stats.totalLoggedHours} ka.`, icon: Clock, color: 'text-orange-500', bg: 'bg-orange-50 dark:bg-orange-950' },
+          { label: 'Tamamlanan', value: stats.byStatus['completed'] ?? 0, icon: CheckCircle2, color: 'text-purple-500', bg: 'bg-purple-50 dark:bg-purple-950' },
         ].map((card) => (
           <div key={card.label} className="rounded-xl border border-border bg-card p-4 shadow-sm">
             <div className="flex items-center justify-between">
@@ -189,7 +244,6 @@ export default function ProjectsPage() {
         ))}
       </div>
 
-      {/* Filters */}
       <div className="flex gap-2 flex-wrap items-center">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -210,14 +264,7 @@ export default function ProjectsPage() {
         ))}
       </div>
 
-      {/* Project Grid */}
-      {isLoading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="h-48 bg-muted rounded-xl animate-pulse" />
-          ))}
-        </div>
-      ) : filteredProjects.length === 0 ? (
+      {filteredProjects.length === 0 ? (
         <div className="rounded-xl border border-dashed border-border p-12 text-center">
           <FolderKanban className="h-10 w-10 mx-auto mb-3 text-muted-foreground" />
           <p className="font-medium">Proje bulunamadı</p>
@@ -228,7 +275,8 @@ export default function ProjectsPage() {
           {filteredProjects.map((project) => {
             const statusConf = STATUS_CONFIG[project.status];
             const StatusIcon = statusConf?.icon ?? FolderKanban;
-            const isOverdue = project.endDate && new Date(project.endDate) < new Date() && project.status !== 'completed';
+            const today = new Date('2026-05-27');
+            const isOverdue = project.endDate && new Date(project.endDate) < today && project.status !== 'completed';
             return (
               <Link key={project.id} href={`/projects/${project.id}`}
                 className="rounded-xl border border-border bg-card p-5 shadow-sm hover:shadow-md transition-all hover:border-primary/30 block">
@@ -245,7 +293,6 @@ export default function ProjectsPage() {
                 <h3 className="font-semibold mb-1 line-clamp-2">{project.name}</h3>
                 {project.customer && <p className="text-xs text-muted-foreground mb-3">{project.customer.name}</p>}
 
-                {/* Progress Bar */}
                 <div className="mb-3">
                   <div className="flex justify-between text-xs text-muted-foreground mb-1">
                     <span>İlerleme</span>
@@ -280,7 +327,7 @@ export default function ProjectsPage() {
         </div>
       )}
 
-      {showForm && <NewProjectModal onClose={() => setShowForm(false)} onSave={(d) => createProject.mutate(d)} />}
+      {showForm && <NewProjectModal onClose={() => setShowForm(false)} onSave={handleCreate} />}
     </div>
   );
 }

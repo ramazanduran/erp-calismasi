@@ -60,6 +60,19 @@ interface Product {
   salePrice?: number;
 }
 
+// ─── Mock Data ───────────────────────────────────────────────────────────────
+
+const MOCK_QUOTES: Quote[] = [
+  { id: 'q1', quoteNumber: 'TKL-2026-001', customer: { id: 'c1', name: 'Anadolu Holding' }, status: 'accepted', totalAmount: 295000, validUntil: '2026-03-31', createdAt: '2026-01-15', items: [{ description: 'ERP Lisans', quantity: 1, unitPrice: 250000, discount: 0, vatRate: 18 }] },
+  { id: 'q2', quoteNumber: 'TKL-2026-002', customer: { id: 'c2', name: 'Güney Sanayi A.Ş.' }, status: 'sent', totalAmount: 177200, validUntil: '2026-06-15', createdAt: '2026-02-10', items: [{ description: 'Yazılım Geliştirme', quantity: 150, unitPrice: 1000, discount: 0, vatRate: 18 }] },
+  { id: 'q3', quoteNumber: 'TKL-2026-003', customer: { id: 'c3', name: 'Kuzey Lojistik Ltd.' }, status: 'draft', totalAmount: 59000, validUntil: '2026-06-30', createdAt: '2026-03-05', items: [{ description: 'Lojistik Yazılım Modülü', quantity: 1, unitPrice: 50000, discount: 0, vatRate: 18 }] },
+  { id: 'q4', quoteNumber: 'TKL-2026-004', customer: { id: 'c4', name: 'Batı Endüstri A.Ş.' }, status: 'accepted', totalAmount: 472000, validUntil: '2026-04-30', createdAt: '2026-02-20', items: [{ description: 'ERP + CRM Paketi', quantity: 1, unitPrice: 400000, discount: 0, vatRate: 18 }] },
+  { id: 'q5', quoteNumber: 'TKL-2026-005', customer: { id: 'c5', name: 'Ege Tekstil A.Ş.' }, status: 'rejected', totalAmount: 118000, validUntil: '2026-03-15', createdAt: '2026-01-28', items: [{ description: 'Üretim Planlama Modülü', quantity: 1, unitPrice: 100000, discount: 0, vatRate: 18 }] },
+  { id: 'q6', quoteNumber: 'TKL-2026-006', customer: { id: 'c2', name: 'Güney Sanayi A.Ş.' }, status: 'sent', totalAmount: 89300, validUntil: '2026-07-01', createdAt: '2026-04-15', items: [{ description: 'Bakım & Destek Paketi', quantity: 12, unitPrice: 6300, discount: 5, vatRate: 18 }] },
+  { id: 'q7', quoteNumber: 'TKL-2026-007', customer: { id: 'c6', name: 'Orta Anadolu Tarım' }, status: 'expired', totalAmount: 141600, validUntil: '2026-04-01', createdAt: '2026-01-10', items: [{ description: 'Stok Yönetim Modülü', quantity: 1, unitPrice: 120000, discount: 0, vatRate: 18 }] },
+  { id: 'q8', quoteNumber: 'TKL-2026-008', customer: { id: 'c1', name: 'Anadolu Holding' }, status: 'draft', totalAmount: 826000, validUntil: '2026-08-31', createdAt: '2026-05-10', items: [{ description: 'Kurumsal ERP Genişletme', quantity: 1, unitPrice: 700000, discount: 0, vatRate: 18 }] },
+];
+
 // ─── Constants ───────────────────────────────────────────────────────────────
 
 const STATUS_LABELS: Record<QuoteStatus, string> = {
@@ -485,6 +498,7 @@ export default function QuotesPage() {
   const [search, setSearch] = useState('');
   const [page] = useState(1);
   const [modalOpen, setModalOpen] = useState(false);
+  const [localQuotes, setLocalQuotes] = useState<Quote[]>(MOCK_QUOTES);
 
   const { data: quotesRaw, isLoading } = useQuery({
     queryKey: ['quotes', statusFilter, page],
@@ -501,37 +515,49 @@ export default function QuotesPage() {
     queryFn: () => api.get<QuoteStats>('api/v1/quotes/stats'),
   });
 
-  const quotes: Quote[] = useMemo(() => {
+  const apiQuotes: Quote[] | null = useMemo(() => {
     const raw = quotesRaw as unknown;
     if (Array.isArray(raw)) return raw as Quote[];
-    if (raw && typeof raw === 'object' && 'data' in raw) return (raw as { data: Quote[] }).data ?? [];
-    return [];
+    if (raw && typeof raw === 'object' && 'data' in raw) {
+      const data = (raw as { data: Quote[] }).data;
+      if (Array.isArray(data)) return data;
+    }
+    return null;
   }, [quotesRaw]);
 
-  const total: number = useMemo(() => {
-    const raw = quotesRaw as unknown;
-    if (raw && typeof raw === 'object' && 'total' in raw) return (raw as { total: number }).total ?? 0;
-    return quotes.length;
-  }, [quotesRaw, quotes.length]);
+  const allQuotes = apiQuotes ?? localQuotes;
 
-  const stats = statsRaw as QuoteStats | undefined;
-
-  const filteredQuotes = useMemo(() => {
-    if (!search) return quotes;
+  const quotes = useMemo(() => {
+    const base = statusFilter ? allQuotes.filter((q) => q.status === statusFilter) : allQuotes;
+    if (!search) return base;
     const q = search.toLowerCase();
-    return quotes.filter((qt) =>
+    return base.filter((qt) =>
       qt.quoteNumber?.toLowerCase().includes(q) ||
-      (qt.customer as any)?.name?.toLowerCase().includes(q) ||
-      (qt.notes as string)?.toLowerCase().includes(q)
+      qt.customer?.name?.toLowerCase().includes(q)
     );
-  }, [quotes, search]);
+  }, [allQuotes, statusFilter, search]);
 
-  const acceptedCount = stats?.byStatus?.find((s) => s.status === 'accepted')?._count ?? 0;
-  const acceptedQuotes = quotes.filter((q) => q.status === 'accepted');
+  const total = allQuotes.length;
+
+  const stats: QuoteStats = useMemo(() => {
+    const apiStats = statsRaw as QuoteStats | undefined;
+    if (apiStats) return apiStats;
+    const byStatus = (['draft', 'sent', 'accepted', 'rejected', 'expired'] as QuoteStatus[]).map(
+      (s) => ({ status: s, _count: allQuotes.filter((q) => q.status === s).length })
+    );
+    return { total: allQuotes.length, byStatus };
+  }, [statsRaw, allQuotes]);
+
+  const filteredQuotes = quotes;
+
+  const acceptedCount = stats.byStatus?.find((s) => s.status === 'accepted')?._count ?? 0;
+  const acceptedQuotes = allQuotes.filter((q) => q.status === 'accepted');
   const acceptedTotal = acceptedQuotes.reduce((sum, q) => sum + (q.totalAmount ?? 0), 0);
-  const conversionRate = (stats?.total ?? 0) > 0
-    ? ((acceptedCount / (stats?.total ?? 1)) * 100).toFixed(1)
+  const conversionRate = total > 0
+    ? ((acceptedCount / total) * 100).toFixed(1)
     : '0.0';
+
+  const showSkeleton = isLoading && apiQuotes === null;
 
   const FILTER_TABS: { value: QuoteStatus | ''; label: string }[] = [
     { value: '', label: 'Tümü' },
@@ -669,7 +695,7 @@ export default function QuotesPage() {
               </tr>
             </thead>
             <tbody>
-              {isLoading ? (
+              {showSkeleton ? (
                 <SkeletonRows cols={7} />
               ) : filteredQuotes.length === 0 ? (
                 <tr>
@@ -727,7 +753,7 @@ export default function QuotesPage() {
             </tbody>
           </table>
         </div>
-        {!isLoading && (
+        {!showSkeleton && (
           <div className="border-t border-border px-4 py-3 text-sm text-muted-foreground">
             {quotes.length} / {total} teklif gösteriliyor
           </div>
