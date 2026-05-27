@@ -29,6 +29,17 @@ import { toast } from 'sonner';
 import { cn, formatCurrency, formatDate } from '@/lib/utils';
 import { exportToExcel } from '@/lib/utils/excel-export';
 
+const MOCK_SUPPLIERS: Supplier[] = [
+  { id: 's1', code: 'TDR-001', name: 'Demir Çelik San. Ltd.', email: 'info@demircelik.com.tr', phone: '0212 555 0101', address: 'Gebze OSB, Kocaeli', taxNumber: '1234567890', taxOffice: 'Gebze', contactPerson: 'Ahmet Yılmaz', paymentTerms: 30, balance: -285000, creditLimit: 1000000, currency: 'TRY', status: 'active', notes: 'Uzun vadeli hammadde tedarikçisi.' },
+  { id: 's2', code: 'TDR-002', name: 'TechSoft A.Ş.', email: 'satis@techsoft.com.tr', phone: '0216 444 0202', address: 'Maslak, İstanbul', taxNumber: '9876543210', taxOffice: 'Sarıyer', contactPerson: 'Zeynep Kaya', paymentTerms: 15, balance: -88500, creditLimit: 500000, currency: 'TRY', status: 'active' },
+  { id: 's3', code: 'TDR-003', name: 'Hızlı Kargo A.Ş.', email: 'kurumsal@hizlikargo.com', phone: '0850 222 0303', address: 'Pendik, İstanbul', taxNumber: '1122334455', taxOffice: 'Pendik', contactPerson: 'Mehmet Demir', paymentTerms: 7, balance: -35400, creditLimit: 200000, currency: 'TRY', status: 'active' },
+  { id: 's4', code: 'TDR-004', name: 'Metropol GYO', email: 'kira@metropolgyo.com', phone: '0212 333 0404', address: 'Levent, İstanbul', taxNumber: '5544332211', taxOffice: 'Levent', contactPerson: 'Ayşe Çelik', paymentTerms: 30, balance: 0, currency: 'TRY', status: 'active' },
+  { id: 's5', code: 'TDR-005', name: 'İstanbul Yazılım Ltd.', email: 'info@istanbulyzlm.com', phone: '0216 777 0505', address: 'Ümraniye, İstanbul', taxNumber: '6677889900', taxOffice: 'Ümraniye', contactPerson: 'Can Öztürk', paymentTerms: 30, balance: -64900, creditLimit: 300000, currency: 'TRY', status: 'active' },
+  { id: 's6', code: 'TDR-006', name: 'Eski Hammadde A.Ş.', email: 'info@eskihammadde.com', phone: '0262 111 0606', address: 'Dilovası, Kocaeli', taxNumber: '1029384756', taxOffice: 'Dilovası', contactPerson: 'Ali Veli', paymentTerms: 45, balance: 0, currency: 'TRY', status: 'inactive', notes: 'Sözleşme sona erdi.' },
+  { id: 's7', code: 'TDR-007', name: 'CloudTech Ltd.', email: 'sales@cloudtech.io', phone: '0850 444 0707', address: 'Çankaya, Ankara', taxNumber: '3456789012', taxOffice: 'Çankaya', contactPerson: 'Deniz Akın', paymentTerms: 30, balance: 0, creditLimit: 250000, currency: 'TRY', status: 'active' },
+  { id: 's8', code: 'TDR-008', name: 'Güvenli Ambalaj A.Ş.', email: 'info@guvenliambalaj.com', phone: '0212 888 0808', address: 'Esenyurt, İstanbul', taxNumber: '7890123456', taxOffice: 'Esenyurt', contactPerson: 'Fatma Şahin', paymentTerms: 14, balance: -42000, creditLimit: 150000, currency: 'TRY', status: 'active' },
+];
+
 type StatusFilter = 'all' | 'active' | 'inactive';
 
 const STATUS_TABS: { value: StatusFilter; label: string }[] = [
@@ -314,10 +325,17 @@ export default function SuppliersPage() {
   const { data: rawSuppliers, isLoading } = useSuppliers(queryParams);
   const deleteMutation = useDeleteSupplier();
 
-  const suppliers = useMemo<Supplier[]>(
-    () => (Array.isArray(rawSuppliers) ? (rawSuppliers as Supplier[]) : []),
-    [rawSuppliers]
-  );
+  const suppliers = useMemo<Supplier[]>(() => {
+    if (rawSuppliers !== undefined) {
+      return Array.isArray(rawSuppliers) ? (rawSuppliers as Supplier[]) : [];
+    }
+    const q = (queryParams.search ?? '').toLowerCase();
+    return MOCK_SUPPLIERS.filter((s) => {
+      if (queryParams.status && s.status !== queryParams.status) return false;
+      if (q && !s.name.toLowerCase().includes(q) && !s.code.toLowerCase().includes(q)) return false;
+      return true;
+    });
+  }, [rawSuppliers, queryParams]);
 
   const stats = useMemo(() => {
     const total = suppliers.length;

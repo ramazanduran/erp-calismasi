@@ -1,10 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { PlusCircle, FileText, AlertTriangle, CheckCircle2, Clock, DollarSign, FileDown } from 'lucide-react';
 import { exportToExcel } from '@/lib/utils/excel-export';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { api } from '@/lib/api/client';
 import { formatCurrency, cn } from '@/lib/utils';
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
@@ -44,13 +42,147 @@ interface Contract {
   _count?: { amendments: number };
 }
 
-interface Stats {
-  total: number;
-  active: number;
-  totalActiveValue: number;
-  byStatus: Record<string, number>;
-  byType: Record<string, { count: number; value: number }>;
-}
+const MOCK_CONTRACTS: Contract[] = [
+  {
+    id: 'c1',
+    contractNumber: 'KNT-2026-001',
+    title: 'Yazılım Lisans ve Destek Hizmetleri Sözleşmesi',
+    type: 'service',
+    status: 'active',
+    partyName: 'TechSoft A.Ş.',
+    startDate: '2026-01-01',
+    endDate: '2026-06-05',
+    value: 450000,
+    currency: 'TRY',
+    autoRenew: true,
+    _count: { amendments: 1 },
+  },
+  {
+    id: 'c2',
+    contractNumber: 'KNT-2026-002',
+    title: 'Hammadde Tedarik Çerçeve Sözleşmesi',
+    type: 'purchase',
+    status: 'active',
+    partyName: 'Demir Çelik San. Ltd.',
+    startDate: '2026-01-15',
+    endDate: '2026-12-31',
+    value: 2800000,
+    currency: 'TRY',
+    autoRenew: false,
+    _count: { amendments: 0 },
+  },
+  {
+    id: 'c3',
+    contractNumber: 'KNT-2026-003',
+    title: 'Kurumsal Yazılım Satış Sözleşmesi — Müşteri A',
+    type: 'sales',
+    status: 'active',
+    partyName: 'Anadolu Holding',
+    startDate: '2026-02-01',
+    endDate: '2027-01-31',
+    value: 1200000,
+    currency: 'TRY',
+    autoRenew: true,
+    _count: { amendments: 2 },
+  },
+  {
+    id: 'c4',
+    contractNumber: 'KNT-2026-004',
+    title: 'Lojistik ve Taşımacılık Hizmet Sözleşmesi',
+    type: 'service',
+    status: 'review',
+    partyName: 'Hızlı Kargo A.Ş.',
+    startDate: '2026-06-01',
+    endDate: '2027-05-31',
+    value: 360000,
+    currency: 'TRY',
+    autoRenew: false,
+    _count: { amendments: 0 },
+  },
+  {
+    id: 'c5',
+    contractNumber: 'KNT-2026-005',
+    title: 'Ofis Kira Sözleşmesi — Merkez Bina',
+    type: 'lease',
+    status: 'active',
+    partyName: 'Metropol GYO',
+    startDate: '2025-07-01',
+    endDate: '2026-06-10',
+    value: 85000,
+    currency: 'TRY',
+    autoRenew: true,
+    _count: { amendments: 0 },
+  },
+  {
+    id: 'c6',
+    contractNumber: 'KNT-2026-006',
+    title: 'Kıdemli Yazılım Geliştirici İstihdam Sözleşmesi',
+    type: 'employment',
+    status: 'active',
+    partyName: 'Ahmet Kaya',
+    startDate: '2025-09-01',
+    endDate: '2026-08-31',
+    value: 720000,
+    currency: 'TRY',
+    autoRenew: true,
+    _count: { amendments: 0 },
+  },
+  {
+    id: 'c7',
+    contractNumber: 'KNT-2026-007',
+    title: 'Gizlilik ve Fikri Mülkiyet Sözleşmesi',
+    type: 'nda',
+    status: 'active',
+    partyName: 'İnovasyon Labs',
+    startDate: '2026-01-01',
+    endDate: '2028-12-31',
+    currency: 'TRY',
+    autoRenew: false,
+    _count: { amendments: 0 },
+  },
+  {
+    id: 'c8',
+    contractNumber: 'KNT-2025-045',
+    title: 'Eski Bulut Altyapı Hizmet Sözleşmesi',
+    type: 'service',
+    status: 'expired',
+    partyName: 'CloudTech Ltd.',
+    startDate: '2025-01-01',
+    endDate: '2025-12-31',
+    value: 540000,
+    currency: 'TRY',
+    autoRenew: false,
+    _count: { amendments: 3 },
+  },
+  {
+    id: 'c9',
+    contractNumber: 'KNT-2026-008',
+    title: 'Stratejik İş Ortaklığı Çerçeve Anlaşması',
+    type: 'partnership',
+    status: 'draft',
+    partyName: 'Ortak Teknoloji A.Ş.',
+    startDate: '2026-07-01',
+    endDate: '2028-06-30',
+    value: 5000000,
+    currency: 'USD',
+    autoRenew: true,
+    _count: { amendments: 0 },
+  },
+  {
+    id: 'c10',
+    contractNumber: 'KNT-2026-009',
+    title: 'ERP Sistemleri Satış Sözleşmesi — Müşteri B',
+    type: 'sales',
+    status: 'active',
+    partyName: 'Güney Sanayi A.Ş.',
+    startDate: '2026-03-01',
+    endDate: '2027-02-28',
+    value: 890000,
+    currency: 'TRY',
+    autoRenew: false,
+    _count: { amendments: 1 },
+  },
+];
 
 function NewContractModal({ onClose, onSave }: { onClose: () => void; onSave: (d: any) => void }) {
   const [form, setForm] = useState({
@@ -124,49 +256,76 @@ function NewContractModal({ onClose, onSave }: { onClose: () => void; onSave: (d
 }
 
 export default function ContractsPage() {
-  const qc = useQueryClient();
+  const [contracts, setContracts] = useState<Contract[]>(MOCK_CONTRACTS);
   const [statusFilter, setStatusFilter] = useState('');
   const [typeFilter, setTypeFilter] = useState('');
   const [searchText, setSearchText] = useState('');
   const [showForm, setShowForm] = useState(false);
 
-  const { data: statsData } = useQuery({
-    queryKey: ['contracts', 'stats'],
-    queryFn: () => api.get('/api/v1/contracts/stats'),
-  });
+  const today = new Date('2026-05-27');
 
-  const { data: expiringData = [] } = useQuery({
-    queryKey: ['contracts', 'expiring'],
-    queryFn: () => api.get('/api/v1/contracts/expiring', { days: '30' }),
-  });
+  const stats = useMemo(() => {
+    const active = contracts.filter((c) => c.status === 'active');
+    const byStatus: Record<string, number> = {};
+    const byType: Record<string, { count: number; value: number }> = {};
+    for (const c of contracts) {
+      byStatus[c.status] = (byStatus[c.status] ?? 0) + 1;
+      if (!byType[c.type]) byType[c.type] = { count: 0, value: 0 };
+      byType[c.type].count += 1;
+      if (c.value && c.currency === 'TRY') byType[c.type].value += c.value;
+    }
+    const totalActiveValue = active.reduce((s, c) => s + (c.value && c.currency === 'TRY' ? c.value : 0), 0);
+    return { total: contracts.length, active: active.length, totalActiveValue, byStatus, byType };
+  }, [contracts]);
 
-  const { data: contractsData = [], isLoading } = useQuery({
-    queryKey: ['contracts', 'list', statusFilter, typeFilter, searchText],
-    queryFn: () => api.get('/api/v1/contracts', {
-      ...(statusFilter && { status: statusFilter }),
-      ...(typeFilter && { type: typeFilter }),
-      ...(searchText && { search: searchText }),
+  const expiring = useMemo(() =>
+    contracts.filter((c) => {
+      if (c.status !== 'active' || !c.endDate) return false;
+      const days = Math.floor((new Date(c.endDate).getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+      return days >= 0 && days <= 30;
     }),
-  });
+    [contracts]
+  );
 
-  const create = useMutation({
-    mutationFn: (data: any) => api.post('/api/v1/contracts', data),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['contracts'] }); setShowForm(false); },
-  });
+  const filtered = useMemo(() => {
+    const q = searchText.toLowerCase();
+    return contracts.filter((c) => {
+      if (statusFilter && c.status !== statusFilter) return false;
+      if (typeFilter && c.type !== typeFilter) return false;
+      if (q && !c.title.toLowerCase().includes(q) && !c.partyName.toLowerCase().includes(q) && !c.contractNumber.toLowerCase().includes(q)) return false;
+      return true;
+    });
+  }, [contracts, statusFilter, typeFilter, searchText]);
 
-  const updateStatus = useMutation({
-    mutationFn: ({ id, status }: { id: string; status: string }) => api.put(`/api/v1/contracts/${id}`, { status }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['contracts'] }),
-  });
+  function handleCreate(d: any) {
+    const num = `KNT-2026-${String(contracts.length + 1).padStart(3, '0')}`;
+    const newContract: Contract = {
+      id: `c${Date.now()}`,
+      contractNumber: num,
+      title: d.title,
+      type: d.type,
+      status: 'draft',
+      partyName: d.partyName,
+      startDate: d.startDate || undefined,
+      endDate: d.endDate || undefined,
+      value: d.value,
+      currency: d.currency,
+      autoRenew: d.autoRenew,
+      _count: { amendments: 0 },
+    };
+    setContracts((prev) => [newContract, ...prev]);
+    setShowForm(false);
+  }
 
-  const deleteContract = useMutation({
-    mutationFn: (id: string) => api.delete(`/api/v1/contracts/${id}`),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['contracts'] }),
-  });
+  function handleActivate(id: string) {
+    setContracts((prev) => prev.map((c) => c.id === id ? { ...c, status: 'active' } : c));
+  }
 
-  const stats = statsData as Stats | undefined;
-  const contracts = contractsData as Contract[];
-  const expiring = expiringData as Contract[];
+  function handleDelete(id: string) {
+    if (confirm('Silmek istediğinizden emin misiniz?')) {
+      setContracts((prev) => prev.filter((c) => c.id !== id));
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -178,7 +337,7 @@ export default function ContractsPage() {
         <div className="flex items-center gap-2">
           <button
             onClick={() => exportToExcel(
-              contracts.map((c) => ({
+              filtered.map((c) => ({
                 contractNumber: c.contractNumber,
                 title: c.title,
                 type: TYPE_LABELS[c.type] ?? c.type,
@@ -215,23 +374,20 @@ export default function ContractsPage() {
         </div>
       </div>
 
-      {stats && (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          {[
-            { label: 'Toplam', value: stats.total, icon: FileText },
-            { label: 'Aktif', value: stats.active, icon: CheckCircle2 },
-            { label: 'Yakında Sona Erecek', value: expiring.length, icon: AlertTriangle },
-            { label: 'Aktif Kontrat Değeri', value: formatCurrency(stats.totalActiveValue), icon: DollarSign },
-          ].map((card) => (
-            <div key={card.label} className="rounded-xl border border-border bg-card p-4 shadow-sm">
-              <p className="text-xs text-muted-foreground">{card.label}</p>
-              <p className="text-2xl font-bold mt-0.5">{card.value}</p>
-            </div>
-          ))}
-        </div>
-      )}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {[
+          { label: 'Toplam', value: stats.total, icon: FileText },
+          { label: 'Aktif', value: stats.active, icon: CheckCircle2 },
+          { label: 'Yakında Sona Erecek', value: expiring.length, icon: AlertTriangle },
+          { label: 'Aktif Kontrat Değeri', value: formatCurrency(stats.totalActiveValue), icon: DollarSign },
+        ].map((card) => (
+          <div key={card.label} className="rounded-xl border border-border bg-card p-4 shadow-sm">
+            <p className="text-xs text-muted-foreground">{card.label}</p>
+            <p className="text-2xl font-bold mt-0.5">{card.value}</p>
+          </div>
+        ))}
+      </div>
 
-      {/* Expiring Alerts */}
       {expiring.length > 0 && (
         <div className="rounded-xl border border-yellow-200 bg-yellow-50 p-4">
           <div className="flex items-center gap-2 mb-2">
@@ -248,7 +404,6 @@ export default function ContractsPage() {
         </div>
       )}
 
-      {/* Filters */}
       <div className="flex flex-wrap gap-2 items-center">
         <input
           className="rounded border border-border bg-background px-3 py-1.5 text-sm w-64"
@@ -256,7 +411,7 @@ export default function ContractsPage() {
           value={searchText}
           onChange={(e) => setSearchText(e.target.value)}
         />
-        <div className="flex gap-1">
+        <div className="flex gap-1 flex-wrap">
           {[{ v: '', l: 'Tüm Durumlar' }, ...Object.entries(STATUS_CONFIG).map(([v, c]) => ({ v, l: c.label }))].map((f) => (
             <button key={f.v} onClick={() => setStatusFilter(f.v)}
               className={cn('px-3 py-1.5 rounded-lg text-sm', statusFilter === f.v ? 'bg-primary text-primary-foreground' : 'border border-border hover:bg-muted')}>
@@ -264,7 +419,7 @@ export default function ContractsPage() {
             </button>
           ))}
         </div>
-        <div className="flex gap-1">
+        <div className="flex gap-1 flex-wrap">
           {[{ v: '', l: 'Tüm Tipler' }, ...Object.entries(TYPE_LABELS).map(([v, l]) => ({ v, l }))].map((f) => (
             <button key={f.v} onClick={() => setTypeFilter(f.v)}
               className={cn('px-3 py-1.5 rounded-lg text-sm', typeFilter === f.v ? 'bg-secondary text-secondary-foreground' : 'border border-border hover:bg-muted')}>
@@ -274,10 +429,7 @@ export default function ContractsPage() {
         </div>
       </div>
 
-      {/* Table */}
-      {isLoading ? (
-        <div className="py-8 text-center text-muted-foreground">Yükleniyor...</div>
-      ) : contracts.length === 0 ? (
+      {filtered.length === 0 ? (
         <div className="rounded-xl border border-dashed border-border p-12 text-center">
           <FileText className="h-10 w-10 mx-auto mb-3 text-muted-foreground" />
           <p className="font-medium">Kontrat bulunamadı</p>
@@ -293,9 +445,9 @@ export default function ContractsPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {contracts.map((c) => {
+              {filtered.map((c) => {
                 const sc = STATUS_CONFIG[c.status];
-                const daysLeft = c.endDate ? Math.floor((new Date(c.endDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24)) : null;
+                const daysLeft = c.endDate ? Math.floor((new Date(c.endDate).getTime() - today.getTime()) / (1000 * 60 * 60 * 24)) : null;
                 return (
                   <tr key={c.id} className="hover:bg-muted/30">
                     <td className="px-4 py-3 font-mono text-xs">{c.contractNumber}</td>
@@ -322,12 +474,12 @@ export default function ContractsPage() {
                     <td className="px-4 py-3">
                       <div className="flex gap-1">
                         {c.status === 'draft' && (
-                          <button onClick={() => updateStatus.mutate({ id: c.id, status: 'active' })}
+                          <button onClick={() => handleActivate(c.id)}
                             className="text-xs px-2 py-1 bg-green-100 text-green-700 rounded hover:bg-green-200">
                             Aktifleştir
                           </button>
                         )}
-                        <button onClick={() => { if (confirm('Silmek istediğinizden emin misiniz?')) deleteContract.mutate(c.id); }}
+                        <button onClick={() => handleDelete(c.id)}
                           className="text-xs px-2 py-1 text-muted-foreground hover:text-destructive">
                           Sil
                         </button>
@@ -341,7 +493,7 @@ export default function ContractsPage() {
         </div>
       )}
 
-      {showForm && <NewContractModal onClose={() => setShowForm(false)} onSave={(d) => create.mutate(d)} />}
+      {showForm && <NewContractModal onClose={() => setShowForm(false)} onSave={handleCreate} />}
     </div>
   );
 }

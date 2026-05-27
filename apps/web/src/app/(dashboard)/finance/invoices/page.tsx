@@ -8,6 +8,23 @@ import { toast } from 'sonner';
 import { api } from '@/lib/api/client';
 import { cn } from '@/lib/utils';
 
+const MOCK_INVOICES: Invoice[] = [
+  { id: 'inv1', invoiceNumber: 'FTR-2026-001', customer: { name: 'Anadolu Holding' }, type: 'sale', status: 'paid', netAmount: 250000, totalAmount: 295000, currency: 'TRY', issueDate: '2026-01-15', dueDate: '2026-02-14' },
+  { id: 'inv2', invoiceNumber: 'FTR-2026-002', customer: { name: 'Güney Sanayi A.Ş.' }, type: 'sale', status: 'paid', netAmount: 180000, totalAmount: 212400, currency: 'TRY', issueDate: '2026-01-20', dueDate: '2026-02-19' },
+  { id: 'inv3', invoiceNumber: 'FTR-2026-003', customer: { name: 'Demir Çelik San. Ltd.' }, type: 'purchase', status: 'paid', netAmount: 420000, totalAmount: 495600, currency: 'TRY', issueDate: '2026-02-01', dueDate: '2026-03-03' },
+  { id: 'inv4', invoiceNumber: 'FTR-2026-004', customer: { name: 'TechSoft A.Ş.' }, type: 'purchase', status: 'paid', netAmount: 75000, totalAmount: 88500, currency: 'TRY', issueDate: '2026-02-10', dueDate: '2026-03-12' },
+  { id: 'inv5', invoiceNumber: 'FTR-2026-005', customer: { name: 'Kuzey Lojistik Ltd.' }, type: 'sale', status: 'sent', netAmount: 95000, totalAmount: 112100, currency: 'TRY', issueDate: '2026-03-01', dueDate: '2026-03-31' },
+  { id: 'inv6', invoiceNumber: 'FTR-2026-006', customer: { name: 'Ege Tekstil A.Ş.' }, type: 'sale', status: 'overdue', netAmount: 320000, totalAmount: 377600, currency: 'TRY', issueDate: '2026-03-05', dueDate: '2026-04-04' },
+  { id: 'inv7', invoiceNumber: 'FTR-2026-007', customer: { name: 'Hızlı Kargo A.Ş.' }, type: 'purchase', status: 'sent', netAmount: 30000, totalAmount: 35400, currency: 'TRY', issueDate: '2026-04-01', dueDate: '2026-05-01' },
+  { id: 'inv8', invoiceNumber: 'FTR-2026-008', customer: { name: 'Global Elektronik Ltd.' }, type: 'sale', status: 'overdue', netAmount: 145000, totalAmount: 171100, currency: 'TRY', issueDate: '2026-04-10', dueDate: '2026-05-10' },
+  { id: 'inv9', invoiceNumber: 'FTR-2026-009', customer: { name: 'Metropol GYO' }, type: 'purchase', status: 'paid', netAmount: 85000, totalAmount: 85000, currency: 'TRY', issueDate: '2026-04-15', dueDate: '2026-04-15' },
+  { id: 'inv10', invoiceNumber: 'FTR-2026-010', customer: { name: 'Batı Endüstri A.Ş.' }, type: 'sale', status: 'draft', netAmount: 210000, totalAmount: 247800, currency: 'TRY', issueDate: '2026-05-01', dueDate: '2026-05-31' },
+  { id: 'inv11', invoiceNumber: 'FTR-2026-011', customer: { name: 'Orta Anadolu Tarım' }, type: 'sale', status: 'sent', netAmount: 68000, totalAmount: 80240, currency: 'TRY', issueDate: '2026-05-10', dueDate: '2026-06-09' },
+  { id: 'inv12', invoiceNumber: 'FTR-2026-012', customer: { name: 'İstanbul Yazılım Ltd.' }, type: 'purchase', status: 'draft', netAmount: 55000, totalAmount: 64900, currency: 'TRY', issueDate: '2026-05-15', dueDate: '2026-06-14' },
+  { id: 'inv13', invoiceNumber: 'FTR-2026-013', customer: { name: 'Anadolu Holding' }, type: 'refund', status: 'paid', netAmount: 18000, totalAmount: 21240, currency: 'TRY', issueDate: '2026-05-20', dueDate: '2026-05-20' },
+  { id: 'inv14', invoiceNumber: 'FTR-2026-014', customer: { name: 'Karadeniz Çelik A.Ş.' }, type: 'sale', status: 'cancelled', netAmount: 95000, totalAmount: 112100, currency: 'TRY', issueDate: '2026-05-22', dueDate: '2026-06-21' },
+];
+
 type InvoiceStatus = 'draft' | 'sent' | 'paid' | 'overdue' | 'cancelled';
 type InvoiceType = 'sale' | 'purchase' | 'refund';
 
@@ -72,6 +89,7 @@ export default function FinanceInvoicesPage() {
   const [statusFilter, setStatusFilter] = useState('');
   const [typeFilter, setTypeFilter] = useState('');
   const [pendingId, setPendingId] = useState<string | null>(null);
+  const [localInvoices, setLocalInvoices] = useState<Invoice[]>(MOCK_INVOICES);
 
   const { data: rawData, isLoading } = useQuery({
     queryKey: ['finance-invoices', search, statusFilter, typeFilter],
@@ -90,10 +108,28 @@ export default function FinanceInvoicesPage() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['finance-invoices'] }),
   });
 
-  const invoices: Invoice[] = useMemo(() => {
+  const apiInvoices: Invoice[] | null = useMemo(() => {
     if (Array.isArray(rawData)) return rawData as Invoice[];
-    return ((rawData as { data?: Invoice[] } | undefined)?.data ?? []) as Invoice[];
+    const nested = (rawData as { data?: Invoice[] } | undefined)?.data;
+    if (Array.isArray(nested)) return nested as Invoice[];
+    return null;
   }, [rawData]);
+
+  const invoices: Invoice[] = useMemo(() => {
+    const base = apiInvoices ?? localInvoices;
+    const q = search.toLowerCase();
+    return base.filter((i) => {
+      if (statusFilter && i.status !== statusFilter) return false;
+      if (typeFilter && i.type !== typeFilter) return false;
+      if (q) {
+        const customer = i.customer as Record<string, unknown> | undefined;
+        const name = ((customer?.name as string) ?? (i.customerName as string) ?? '').toLowerCase();
+        const num = ((i.invoiceNumber as string) ?? '').toLowerCase();
+        if (!name.includes(q) && !num.includes(q)) return false;
+      }
+      return true;
+    });
+  }, [apiInvoices, localInvoices, search, statusFilter, typeFilter]);
 
   const stats = useMemo(() => {
     const paid = invoices.filter((i) => i.status === 'paid');
@@ -120,6 +156,10 @@ export default function FinanceInvoicesPage() {
   }, [invoices]);
 
   const handleStatusUpdate = async (id: string, status: string) => {
+    if (!apiInvoices) {
+      setLocalInvoices((prev) => prev.map((i) => i.id === id ? { ...i, status } : i));
+      return;
+    }
     setPendingId(id);
     try {
       await updateInvoice.mutateAsync({ id, data: { status } });
@@ -130,6 +170,8 @@ export default function FinanceInvoicesPage() {
       setPendingId(null);
     }
   };
+
+  const showSkeleton = isLoading && apiInvoices === null;
 
   const totalVisible = useMemo(
     () => invoices.reduce((s, i) => s + Number(i.totalAmount ?? 0), 0),
@@ -328,7 +370,7 @@ export default function FinanceInvoicesPage() {
               </tr>
             </thead>
             <tbody>
-              {isLoading ? (
+              {showSkeleton ? (
                 <SkeletonRows />
               ) : invoices.length === 0 ? (
                 <tr>
@@ -448,7 +490,7 @@ export default function FinanceInvoicesPage() {
             </tbody>
           </table>
         </div>
-        {!isLoading && (
+        {!showSkeleton && (
           <div className="border-t border-border px-4 py-3 flex items-center justify-between text-sm text-muted-foreground">
             <span>{invoices.length} fatura gösteriliyor</span>
             <span className="font-medium text-foreground">
