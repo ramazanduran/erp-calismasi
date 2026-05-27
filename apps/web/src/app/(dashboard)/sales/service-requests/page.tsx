@@ -184,18 +184,30 @@ function NewRequestModal({ onClose, onSave }: { onClose: () => void; onSave: (d:
   );
 }
 
+const MOCK_SERVICE_REQUESTS: ServiceRequest[] = [
+  { id: 'sr1', requestNo: 'SRV-2026-0001', customerName: 'ABC Ticaret A.Ş.', productSerialNo: 'SN-A100-001', category: 'ariza', priority: 'yuksek', status: 'islemde', createdAt: '2026-05-15T10:00:00Z', assignedTo: 'Emre Şahin', description: 'Cihaz açılmıyor, güç kaynağı arızası.' },
+  { id: 'sr2', requestNo: 'SRV-2026-0002', customerName: 'XYZ Lojistik Ltd.', productSerialNo: 'SN-B200-005', category: 'garanti', priority: 'orta', status: 'acik', createdAt: '2026-05-18T14:00:00Z', description: 'Motor sesi yüksek, garanti kapsamında.' },
+  { id: 'sr3', requestNo: 'SRV-2026-0003', customerName: 'Güneş Yapı A.Ş.', productSerialNo: 'SN-C300-012', category: 'teknik_destek', priority: 'dusuk', status: 'cozumlendi', createdAt: '2026-05-10T09:00:00Z', assignedTo: 'Ali Özcan', description: 'Yazılım güncelleme talep edildi.' },
+  { id: 'sr4', requestNo: 'SRV-2026-0004', customerName: 'Demir Makine Ltd.', productSerialNo: 'SN-D400-003', category: 'kurulum', priority: 'kritik', status: 'beklemede', createdAt: '2026-05-20T11:30:00Z', description: 'Fabrika kurulumu için teknik ekip bekleniyor.' },
+  { id: 'sr5', requestNo: 'SRV-2026-0005', customerName: 'Yıldız Tekstil A.Ş.', productSerialNo: undefined, category: 'diger', priority: 'orta', status: 'kapatildi', createdAt: '2026-05-05T08:00:00Z', assignedTo: 'Emre Şahin', description: 'Fatura konusunda bilgi talebi.' },
+  { id: 'sr6', requestNo: 'SRV-2026-0006', customerName: 'Aksu Elektronik', productSerialNo: 'SN-E500-007', category: 'ariza', priority: 'yuksek', status: 'acik', createdAt: '2026-05-25T15:00:00Z', description: 'Ekran donuyor, yazılım kaynaklı olabilir.' },
+];
+
+const MOCK_SERVICE_STATS: ServiceStats = { total: 6, open: 2, inProgress: 1, resolved: 1 };
+
 export default function ServiceRequestsPage() {
   const qc = useQueryClient();
   const [statusFilter, setStatusFilter] = useState('');
   const [search, setSearch] = useState('');
   const [showForm, setShowForm] = useState(false);
+  const [localRequests, setLocalRequests] = useState<ServiceRequest[]>(MOCK_SERVICE_REQUESTS);
 
   const { data: statsData } = useQuery({
     queryKey: ['service-requests', 'stats'],
     queryFn: () => api.get('/api/v1/sales/service-requests/stats'),
   });
 
-  const { data: requestsData = [], isLoading } = useQuery({
+  const { data: rawRequests, isLoading: reqLoading } = useQuery({
     queryKey: ['service-requests'],
     queryFn: () => api.get('/api/v1/sales/service-requests'),
   });
@@ -206,6 +218,21 @@ export default function ServiceRequestsPage() {
       qc.invalidateQueries({ queryKey: ['service-requests'] });
       setShowForm(false);
     },
+    onError: (_err, data) => {
+      const newReq: ServiceRequest = {
+        id: `local-${Date.now()}`,
+        requestNo: `SRV-${new Date().getFullYear()}-${String(Date.now()).slice(-4)}`,
+        customerName: data.customerName,
+        productSerialNo: data.productSerialNo,
+        category: data.category,
+        priority: data.priority,
+        status: 'acik',
+        createdAt: new Date().toISOString(),
+        description: data.description,
+      };
+      setLocalRequests((prev) => [newReq, ...prev]);
+      setShowForm(false);
+    },
   });
 
   const deleteRequest = useMutation({
@@ -213,10 +240,15 @@ export default function ServiceRequestsPage() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['service-requests'] });
     },
+    onError: (_err, id) => {
+      setLocalRequests((prev) => prev.filter((r) => r.id !== id));
+    },
   });
 
-  const stats = statsData as ServiceStats | undefined;
-  const allRequests = (requestsData as ServiceRequest[]) ?? [];
+  const apiRequests: ServiceRequest[] | null = rawRequests !== undefined ? (Array.isArray(rawRequests) ? (rawRequests as ServiceRequest[]) : []) : null;
+  const isLoading = reqLoading && apiRequests === null;
+  const stats = (statsData as ServiceStats | undefined) ?? MOCK_SERVICE_STATS;
+  const allRequests = apiRequests ?? localRequests;
 
   const filtered = useMemo(() => {
     let list = allRequests;

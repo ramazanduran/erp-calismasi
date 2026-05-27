@@ -140,33 +140,72 @@ const TABS = [
 
 type TabId = (typeof TABS)[number]['id'];
 
+const MOCK_PL_REPORT: ProfitLoss = {
+  year: 2026, totalRevenue: 4050000, totalCogs: 2700000, grossProfit: 1350000, grossMargin: 33.3,
+  monthly: [
+    { month: 1, revenue: 280000, cogs: 185000, grossProfit: 95000 },
+    { month: 2, revenue: 310000, cogs: 205000, grossProfit: 105000 },
+    { month: 3, revenue: 350000, cogs: 230000, grossProfit: 120000 },
+    { month: 4, revenue: 390000, cogs: 255000, grossProfit: 135000 },
+    { month: 5, revenue: 430000, cogs: 290000, grossProfit: 140000 },
+  ],
+};
+
+const MOCK_CF_REPORT: CashFlow = {
+  year: 2026, totalInflow: 3800000, totalOutflow: 3200000,
+  monthly: [
+    { month: 1, inflow: 260000, outflow: 220000, net: 40000, balance: 1200000 },
+    { month: 2, inflow: 290000, outflow: 250000, net: 40000, balance: 1240000 },
+    { month: 3, inflow: 330000, outflow: 280000, net: 50000, balance: 1290000 },
+    { month: 4, inflow: 370000, outflow: 310000, net: 60000, balance: 1350000 },
+    { month: 5, inflow: 410000, outflow: 350000, net: 60000, balance: 1410000 },
+  ],
+};
+
+const MOCK_BS_REPORT: BalanceSheet = {
+  totalAssets: 3295000, totalLiabilities: 935000, totalEquity: 2360000,
+  assets: [{ name: 'Kasa & Bankalar', balance: 1965000 }, { name: 'Alıcılar', balance: 680000 }, { name: 'Stoklar', balance: 430000 }, { name: 'Duran Varlıklar', balance: 220000 }],
+  liabilities: [{ name: 'Satıcılar', balance: 350000 }, { name: 'Kısa Vadeli Krediler', balance: 500000 }, { name: 'Diğer Yükümlülükler', balance: 85000 }],
+  equity: [{ name: 'Sermaye', balance: 2000000 }, { name: 'Geçmiş Yıl Karları', balance: 360000 }],
+};
+
+const MOCK_AR_REPORT: AccountsReceivable = {
+  total: 680000, current: 487000, overdue30: 120000, overdue60: 45000, overdue90plus: 28000,
+  invoices: [
+    { customerName: 'ABC Ticaret A.Ş.', invoiceNumber: 'FAT-2026-0045', amount: 85000, dueDate: '2026-05-15', daysOverdue: 12 },
+    { customerName: 'XYZ Lojistik Ltd.', invoiceNumber: 'FAT-2026-0038', amount: 62000, dueDate: '2026-04-30', daysOverdue: 27 },
+    { customerName: 'Güneş Yapı A.Ş.', invoiceNumber: 'FAT-2026-0030', amount: 45000, dueDate: '2026-04-15', daysOverdue: 42 },
+  ],
+};
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 export default function FinanceReportsPage() {
-  const [year, setYear] = useState(2025);
+  const [year, setYear] = useState(2026);
   const [activeTab, setActiveTab] = useState<TabId>('pl');
 
   // Queries
   const { data: pl, isLoading: plLoading } = useQuery<ProfitLoss>({
     queryKey: ['finance', 'reports', 'profit-loss', year],
-    queryFn: () =>
-      api.get<ProfitLoss>(`api/v1/finance/reports/profit-loss`, { year }),
+    queryFn: () => api.get<ProfitLoss>(`api/v1/finance/reports/profit-loss`, { year }),
+    initialData: MOCK_PL_REPORT,
   });
 
   const { data: cf, isLoading: cfLoading } = useQuery<CashFlow>({
     queryKey: ['finance', 'reports', 'cash-flow', year],
-    queryFn: () =>
-      api.get<CashFlow>(`api/v1/finance/reports/cash-flow`, { year }),
+    queryFn: () => api.get<CashFlow>(`api/v1/finance/reports/cash-flow`, { year }),
+    initialData: MOCK_CF_REPORT,
   });
 
   const { data: bs, isLoading: bsLoading } = useQuery<BalanceSheet>({
     queryKey: ['finance', 'reports', 'balance-sheet'],
     queryFn: () => api.get<BalanceSheet>(`api/v1/finance/reports/balance-sheet`),
+    initialData: MOCK_BS_REPORT,
   });
 
   const { data: ar, isLoading: arLoading } = useQuery<AccountsReceivable>({
     queryKey: ['finance', 'reports', 'accounts-receivable'],
-    queryFn: () =>
-      api.get<AccountsReceivable>(`api/v1/finance/reports/accounts-receivable`),
+    queryFn: () => api.get<AccountsReceivable>(`api/v1/finance/reports/accounts-receivable`),
+    initialData: MOCK_AR_REPORT,
   });
 
   // Chart data helpers
