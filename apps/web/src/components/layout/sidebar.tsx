@@ -8,7 +8,7 @@ import {
   Factory, Users, Truck, BarChart3, FolderKanban, FileText, Bell, Settings,
   ChevronDown, ChevronRight, X, GitBranch, CheckSquare, Calculator, Target,
   Layers, ClipboardList, FileSignature, Wrench, TrendingUp, CalendarDays, Cog,
-  FolderOpen, ShieldCheck, Sparkles, Link2,
+  FolderOpen, ShieldCheck, Sparkles, Link2, Lightbulb,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { AuthUser } from '@erp/shared-types';
@@ -129,6 +129,19 @@ const navigation = [
   },
   { id: 'assets', label: 'Demirbaşlar', icon: Layers, href: '/assets' },
   { id: 'quality-control', label: 'Kalite Kontrol', icon: ClipboardList, href: '/quality-control' },
+  {
+    id: 'kaizen',
+    label: 'Kaizen',
+    icon: Lightbulb,
+    children: [
+      { label: 'Genel Bakış', href: '/kaizen' },
+      { label: 'Öneri Yönetimi', href: '/kaizen/proposals' },
+      { label: 'A3 Canvas', href: '/kaizen/a3' },
+      { label: 'Dijital 5S', href: '/kaizen/5s' },
+      { label: 'Andon Panosu', href: '/kaizen/andon' },
+      { label: 'Liderlik Tablosu', href: '/kaizen/leaderboard' },
+    ],
+  },
   { id: 'contracts', label: 'Kontratlar', icon: FileSignature, href: '/contracts' },
   { id: 'maintenance', label: 'Bakım İstekleri', icon: Wrench, href: '/maintenance' },
   {
