@@ -12,6 +12,7 @@ import {
   Trash2,
   X,
   FileDown,
+  Search,
 } from 'lucide-react';
 import { api } from '@/lib/api/client';
 import { cn, formatCurrency, formatDate } from '@/lib/utils';
@@ -481,6 +482,7 @@ function StatusDropdown({ quote }: { quote: Quote }) {
 
 export default function QuotesPage() {
   const [statusFilter, setStatusFilter] = useState<QuoteStatus | ''>('');
+  const [search, setSearch] = useState('');
   const [page] = useState(1);
   const [modalOpen, setModalOpen] = useState(false);
 
@@ -513,6 +515,16 @@ export default function QuotesPage() {
   }, [quotesRaw, quotes.length]);
 
   const stats = statsRaw as QuoteStats | undefined;
+
+  const filteredQuotes = useMemo(() => {
+    if (!search) return quotes;
+    const q = search.toLowerCase();
+    return quotes.filter((qt) =>
+      qt.quoteNumber?.toLowerCase().includes(q) ||
+      (qt.customer as any)?.name?.toLowerCase().includes(q) ||
+      (qt.notes as string)?.toLowerCase().includes(q)
+    );
+  }, [quotes, search]);
 
   const acceptedCount = stats?.byStatus?.find((s) => s.status === 'accepted')?._count ?? 0;
   const acceptedQuotes = quotes.filter((q) => q.status === 'accepted');
@@ -608,8 +620,19 @@ export default function QuotesPage() {
         />
       </div>
 
-      {/* Status Filter Tabs */}
-      <div className="flex gap-1 border-b border-border overflow-x-auto pb-px">
+      {/* Search + Status Filter */}
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <input
+            type="text"
+            placeholder="Teklif no veya müşteri adı..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-9 pr-3 py-1.5 rounded-lg border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 w-56"
+          />
+        </div>
+        <div className="flex gap-1 border-b border-border overflow-x-auto pb-px flex-1">
         {FILTER_TABS.map((tab) => (
           <button
             key={tab.value}
@@ -629,6 +652,7 @@ export default function QuotesPage() {
             )}
           </button>
         ))}
+        </div>
       </div>
 
       {/* Table */}
@@ -647,22 +671,24 @@ export default function QuotesPage() {
             <tbody>
               {isLoading ? (
                 <SkeletonRows cols={7} />
-              ) : quotes.length === 0 ? (
+              ) : filteredQuotes.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="text-center py-12 text-muted-foreground">
                     <div className="space-y-2">
-                      <p>Henüz teklif oluşturulmamış</p>
-                      <button
-                        onClick={() => setModalOpen(true)}
-                        className="text-primary hover:underline text-sm"
-                      >
-                        İlk Teklifi Oluştur
-                      </button>
+                      <p>{search ? 'Aranan kriterlere uygun teklif bulunamadı' : 'Henüz teklif oluşturulmamış'}</p>
+                      {!search && (
+                        <button
+                          onClick={() => setModalOpen(true)}
+                          className="text-primary hover:underline text-sm"
+                        >
+                          İlk Teklifi Oluştur
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>
               ) : (
-                quotes.map((quote) => (
+                filteredQuotes.map((quote) => (
                   <tr
                     key={quote.id}
                     className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors"

@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import Link from 'next/link';
-import { PlusCircle, FolderKanban, Clock, CheckCircle2, AlertCircle, Users, Calendar, FileDown } from 'lucide-react';
+import { PlusCircle, FolderKanban, Clock, CheckCircle2, AlertCircle, Users, Calendar, FileDown, Search } from 'lucide-react';
 import { exportToExcel } from '@/lib/utils/excel-export';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api/client';
@@ -97,6 +97,7 @@ function NewProjectModal({ onClose, onSave }: { onClose: () => void; onSave: (d:
 export default function ProjectsPage() {
   const qc = useQueryClient();
   const [statusFilter, setStatusFilter] = useState('');
+  const [search, setSearch] = useState('');
   const [showForm, setShowForm] = useState(false);
 
   const { data: projects = [], isLoading } = useQuery({
@@ -116,6 +117,16 @@ export default function ProjectsPage() {
 
   const projectStats = stats as ProjectStats | undefined;
 
+  const filteredProjects = useMemo(() => {
+    if (!search) return projects as Project[];
+    const q = search.toLowerCase();
+    return (projects as Project[]).filter((p) =>
+      p.code?.toLowerCase().includes(q) ||
+      p.name?.toLowerCase().includes(q) ||
+      p.customer?.name?.toLowerCase().includes(q)
+    );
+  }, [projects, search]);
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -126,7 +137,7 @@ export default function ProjectsPage() {
         <div className="flex items-center gap-2">
           <button
             onClick={() => exportToExcel(
-              (projects as Project[]).map((p) => ({
+              filteredProjects.map((p) => ({
                 code: p.code,
                 name: p.name,
                 status: STATUS_CONFIG[p.status]?.label ?? p.status,
@@ -179,7 +190,17 @@ export default function ProjectsPage() {
       </div>
 
       {/* Filters */}
-      <div className="flex gap-2 flex-wrap">
+      <div className="flex gap-2 flex-wrap items-center">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <input
+            type="text"
+            placeholder="Proje kodu, adı veya müşteri..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-9 pr-3 py-1.5 rounded-lg border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 w-56"
+          />
+        </div>
         {[{ value: '', label: 'Tümü' }, ...Object.entries(STATUS_CONFIG).map(([v, c]) => ({ value: v, label: c.label }))].map((f) => (
           <button key={f.value} onClick={() => setStatusFilter(f.value)}
             className={cn('px-3 py-1.5 rounded-lg text-sm font-medium transition-colors',
@@ -196,7 +217,7 @@ export default function ProjectsPage() {
             <div key={i} className="h-48 bg-muted rounded-xl animate-pulse" />
           ))}
         </div>
-      ) : (projects as Project[]).length === 0 ? (
+      ) : filteredProjects.length === 0 ? (
         <div className="rounded-xl border border-dashed border-border p-12 text-center">
           <FolderKanban className="h-10 w-10 mx-auto mb-3 text-muted-foreground" />
           <p className="font-medium">Proje bulunamadı</p>
@@ -204,7 +225,7 @@ export default function ProjectsPage() {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {(projects as Project[]).map((project) => {
+          {filteredProjects.map((project) => {
             const statusConf = STATUS_CONFIG[project.status];
             const StatusIcon = statusConf?.icon ?? FolderKanban;
             const isOverdue = project.endDate && new Date(project.endDate) < new Date() && project.status !== 'completed';
