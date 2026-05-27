@@ -188,34 +188,43 @@ function RequestDetailModal({ request, onClose }: { request: MaintenanceRequest;
   );
 }
 
+const MOCK_REQUESTS: MaintenanceRequest[] = [
+  { id: 'm1', requestNumber: 'BAK-2026-0041', title: 'CNC Tezgahı #3 Periyodik Bakım', category: 'equipment', priority: 'high', status: 'in_progress', location: 'Üretim Hattı - Zona 2', estimatedCost: 3500, scheduledDate: '2026-05-27', requestedBy: { firstName: 'Burak', lastName: 'Yıldız' }, assignedTo: { firstName: 'Murat', lastName: 'Şahin' }, asset: { name: 'CNC Tezgahı #3', code: 'CNC-03' }, _count: { comments: 2 } },
+  { id: 'm2', requestNumber: 'BAK-2026-0042', title: 'Klima Sistemi Filtre Değişimi', category: 'hvac', priority: 'medium', status: 'open', location: 'Ofis Katı - 2. Kat', estimatedCost: 800, scheduledDate: '2026-05-30', requestedBy: { firstName: 'Selin', lastName: 'Arslan' }, assignedTo: null, asset: null, _count: { comments: 0 } },
+  { id: 'm3', requestNumber: 'BAK-2026-0043', title: 'Kompresör Yağ Sızıntısı', category: 'equipment', priority: 'critical', status: 'assigned', location: 'Makine Dairesi', estimatedCost: 2200, requestedBy: { firstName: 'Emre', lastName: 'Güler' }, assignedTo: { firstName: 'Burak', lastName: 'Yıldız' }, asset: { name: 'Hava Kompresörü', code: 'KMP-001' }, _count: { comments: 3 } },
+  { id: 'm4', requestNumber: 'BAK-2026-0044', title: 'Elektrik Panosu Gözden Geçirme', category: 'electrical', priority: 'high', status: 'open', location: 'Elektrik Odası - A Blok', estimatedCost: 1500, requestedBy: { firstName: 'Cem', lastName: 'Kaya' }, assignedTo: null, asset: null, _count: { comments: 1 } },
+  { id: 'm5', requestNumber: 'BAK-2026-0039', title: 'Forklift #2 Bakım', category: 'vehicle', priority: 'medium', status: 'completed', location: 'Depo', estimatedCost: 4500, actualCost: 4200, scheduledDate: '2026-05-20', completedAt: '2026-05-22', requestedBy: { firstName: 'Nil', lastName: 'Şen' }, assignedTo: { firstName: 'Murat', lastName: 'Şahin' }, asset: { name: 'Forklift #2', code: 'FLT-02' }, _count: { comments: 4 } },
+  { id: 'm6', requestNumber: 'BAK-2026-0045', title: 'Tuvalet Sızıntı Tamiri', category: 'plumbing', priority: 'low', status: 'open', location: 'Personel Tuvaleti - Zemin Kat', estimatedCost: 350, requestedBy: { firstName: 'Kemal', lastName: 'Acar' }, assignedTo: null, asset: null, _count: { comments: 0 } },
+  { id: 'm7', requestNumber: 'BAK-2026-0040', title: 'Server Odası UPS Değişimi', category: 'it', priority: 'critical', status: 'completed', location: 'Server Odası', estimatedCost: 8500, actualCost: 8800, completedAt: '2026-05-15', requestedBy: { firstName: 'Dilek', lastName: 'Yılmaz' }, assignedTo: { firstName: 'Burak', lastName: 'Yıldız' }, asset: { name: 'UPS Sistemi', code: 'UPS-001' }, _count: { comments: 5 } },
+];
+
+const MOCK_STATS: Stats = {
+  total: MOCK_REQUESTS.length,
+  open: MOCK_REQUESTS.filter((r) => r.status === 'open' || r.status === 'assigned').length,
+  critical: MOCK_REQUESTS.filter((r) => r.priority === 'critical').length,
+  avgResolutionHours: 48,
+  byStatus: MOCK_REQUESTS.reduce<Record<string, number>>((acc, r) => { acc[r.status] = (acc[r.status] ?? 0) + 1; return acc; }, {}),
+  byPriority: MOCK_REQUESTS.reduce<Record<string, number>>((acc, r) => { acc[r.priority] = (acc[r.priority] ?? 0) + 1; return acc; }, {}),
+};
+
 export default function MaintenancePage() {
-  const qc = useQueryClient();
+  const [requests, setRequests] = useState<MaintenanceRequest[]>(MOCK_REQUESTS);
   const [statusFilter, setStatusFilter] = useState('');
   const [priorityFilter, setPriorityFilter] = useState('');
   const [search, setSearch] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [detailRequest, setDetailRequest] = useState<MaintenanceRequest | null>(null);
 
-  const { data: statsData } = useQuery({
-    queryKey: ['maintenance', 'stats'],
-    queryFn: () => api.get('/api/v1/maintenance/stats'),
-  });
+  const isLoading = false;
 
-  const { data: requestsData = [], isLoading } = useQuery({
-    queryKey: ['maintenance', 'list', statusFilter, priorityFilter],
-    queryFn: () => api.get('/api/v1/maintenance', {
-      ...(statusFilter && { status: statusFilter }),
-      ...(priorityFilter && { priority: priorityFilter }),
-    }),
-  });
-
-  const create = useMutation({
-    mutationFn: (data: any) => api.post('/api/v1/maintenance', data),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['maintenance'] }); setShowForm(false); },
-  });
-
-  const stats = statsData as Stats | undefined;
-  const requests = requestsData as MaintenanceRequest[];
+  const stats: Stats = useMemo(() => ({
+    total: requests.length,
+    open: requests.filter((r) => r.status === 'open' || r.status === 'assigned').length,
+    critical: requests.filter((r) => r.priority === 'critical').length,
+    avgResolutionHours: 48,
+    byStatus: requests.reduce<Record<string, number>>((acc, r) => { acc[r.status] = (acc[r.status] ?? 0) + 1; return acc; }, {}),
+    byPriority: requests.reduce<Record<string, number>>((acc, r) => { acc[r.priority] = (acc[r.priority] ?? 0) + 1; return acc; }, {}),
+  }), [requests]);
 
   const filteredRequests = useMemo(() => {
     if (!search) return requests;
@@ -375,7 +384,7 @@ export default function MaintenancePage() {
         </div>
       )}
 
-      {showForm && <NewRequestModal onClose={() => setShowForm(false)} onSave={(d) => create.mutate(d)} />}
+      {showForm && <NewRequestModal onClose={() => setShowForm(false)} onSave={(d) => { const newReq: MaintenanceRequest = { id: `m${Date.now()}`, requestNumber: `BAK-2026-${String(Math.floor(Math.random() * 9000) + 1000)}`, ...d, status: 'open', _count: { comments: 0 } }; setRequests((prev) => [newReq, ...prev]); setShowForm(false); }} />}
       {detailRequest && <RequestDetailModal request={detailRequest} onClose={() => setDetailRequest(null)} />}
     </div>
   );

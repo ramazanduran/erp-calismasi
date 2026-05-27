@@ -62,6 +62,16 @@ interface Department {
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
+const MOCK_REQUESTS: PurchaseRequest[] = [
+  { id: 'pr1', requestNumber: 'STT-2026-001', requestedBy: { firstName: 'Mehmet', lastName: 'Demir' }, department: { name: 'Üretim' }, status: 'pending', priority: 'high', neededBy: '2026-06-10', createdAt: '2026-05-20', items: [{ description: 'Çelik Sac 3mm', quantity: 500, unit: 'adet', estimatedPrice: 37 }, { description: 'Kaynak Elektrotu', quantity: 100, unit: 'kutu', estimatedPrice: 85 }] },
+  { id: 'pr2', requestNumber: 'STT-2026-002', requestedBy: { firstName: 'Ahmet', lastName: 'Yılmaz' }, department: { name: 'Yazılım Geliştirme' }, status: 'approved', priority: 'medium', neededBy: '2026-06-30', createdAt: '2026-05-15', items: [{ description: 'Yazılım Lisansı — JetBrains', quantity: 5, unit: 'lisans', estimatedPrice: 1500 }] },
+  { id: 'pr3', requestNumber: 'STT-2026-003', requestedBy: { firstName: 'Zeynep', lastName: 'Kaya' }, department: { name: 'Satış' }, status: 'pending', priority: 'medium', neededBy: '2026-06-15', createdAt: '2026-05-22', items: [{ description: 'Kurumsal Broşür Baskı', quantity: 1000, unit: 'adet', estimatedPrice: 3 }] },
+  { id: 'pr4', requestNumber: 'STT-2026-004', requestedBy: { firstName: 'Can', lastName: 'Öztürk' }, department: { name: 'Ofis' }, status: 'ordered', priority: 'low', neededBy: '2026-06-01', createdAt: '2026-05-10', items: [{ description: 'A4 Kağıt (Koli)', quantity: 20, unit: 'koli', estimatedPrice: 85 }, { description: 'Kalem Seti', quantity: 50, unit: 'paket', estimatedPrice: 15 }] },
+  { id: 'pr5', requestNumber: 'STT-2026-005', requestedBy: { firstName: 'Fatma', lastName: 'Şahin' }, department: { name: 'İnsan Kaynakları' }, status: 'draft', priority: 'low', neededBy: '2026-07-01', createdAt: '2026-05-25', items: [{ description: 'Eğitim Materyalleri Seti', quantity: 30, unit: 'set', estimatedPrice: 150 }] },
+  { id: 'pr6', requestNumber: 'STT-2026-006', requestedBy: { firstName: 'Berk', lastName: 'Çelik' }, department: { name: 'Bakım' }, status: 'pending', priority: 'urgent', neededBy: '2026-05-30', createdAt: '2026-05-24', items: [{ description: 'Rulman Seti — SKF 6205', quantity: 10, unit: 'adet', estimatedPrice: 280 }] },
+  { id: 'pr7', requestNumber: 'STT-2026-007', requestedBy: { firstName: 'Selin', lastName: 'Arslan' }, department: { name: 'Muhasebe' }, status: 'rejected', priority: 'low', neededBy: null, createdAt: '2026-05-05', items: [{ description: 'Yedek Mobilya', quantity: 2, unit: 'adet', estimatedPrice: 8000 }] },
+];
+
 const STATUS_LABELS: Record<RequestStatus, string> = {
   draft: 'Taslak',
   pending: 'Bekliyor',
@@ -683,12 +693,16 @@ export default function PurchaseRequestsPage() {
   });
 
   const requests: PurchaseRequest[] = useMemo(() => {
-    const raw = requestsRaw as unknown;
-    if (Array.isArray(raw)) return raw as PurchaseRequest[];
-    if (raw && typeof raw === 'object' && 'data' in raw)
-      return (raw as { data: PurchaseRequest[] }).data ?? [];
-    return [];
-  }, [requestsRaw]);
+    if (requestsRaw !== undefined) {
+      const raw = requestsRaw as unknown;
+      if (Array.isArray(raw)) return raw as PurchaseRequest[];
+      if (raw && typeof raw === 'object' && 'data' in raw)
+        return (raw as { data: PurchaseRequest[] }).data ?? [];
+      return [];
+    }
+    const filtered = MOCK_REQUESTS.filter((r) => !statusFilter || r.status === statusFilter);
+    return filtered;
+  }, [requestsRaw, statusFilter]);
 
   const total: number = useMemo(() => {
     const raw = requestsRaw as unknown;
@@ -707,13 +721,20 @@ export default function PurchaseRequestsPage() {
     );
   }, [requests, search]);
 
-  const stats = statsRaw as RequestStats | undefined;
+  const stats: RequestStats = useMemo(() => {
+    const apiStats = statsRaw as RequestStats | undefined;
+    if (apiStats) return apiStats;
+    const byStatus = (['draft', 'pending', 'approved', 'rejected', 'ordered', 'cancelled'] as RequestStatus[]).map(
+      (s) => ({ status: s, _count: MOCK_REQUESTS.filter((r) => r.status === s).length })
+    );
+    return { byStatus };
+  }, [statsRaw]);
 
   const getCount = (status: RequestStatus) =>
-    stats?.byStatus?.find((s) => s.status === status)?._count ?? 0;
+    stats.byStatus?.find((s) => s.status === status)?._count ?? 0;
 
   const totalCount =
-    stats?.byStatus?.reduce((sum, s) => sum + s._count, 0) ?? 0;
+    stats.byStatus?.reduce((sum, s) => sum + s._count, 0) ?? 0;
 
   const toggleExpand = (id: string) => {
     setExpandedRows((prev) => {
