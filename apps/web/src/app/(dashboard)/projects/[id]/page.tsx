@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { use } from 'react';
-import { ArrowLeft, PlusCircle, Clock, CheckCircle2, AlertCircle, Circle } from 'lucide-react';
+import { ArrowLeft, PlusCircle, Clock, CheckCircle2, AlertCircle, Circle, DollarSign, Target, BarChart3 } from 'lucide-react';
 import Link from 'next/link';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api/client';
@@ -143,6 +143,17 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
   const p = project as { id: string; name: string; code: string; status: string; progress: number; description?: string; budget?: number; currency: string; milestones: Array<{ id: string; name: string; dueDate: string; status: string }>; tasks: Array<ProjectTask & { subtasks: ProjectTask[] }> };
   const boardColumns = board as Array<{ status: string; tasks: ProjectTask[] }>;
 
+  const taskStats = useMemo(() => {
+    const all = (p.tasks ?? []).flatMap((t) => [t, ...(t.subtasks ?? [])]);
+    const total = all.length;
+    const done = all.filter((t) => t.status === 'done').length;
+    const inProgress = all.filter((t) => t.status === 'in_progress').length;
+    const blocked = all.filter((t) => t.status === 'blocked').length;
+    const totalEstimated = all.reduce((s, t) => s + (t.estimatedHours ?? 0), 0);
+    const totalLogged = all.reduce((s, t) => s + Number(t.loggedHours ?? 0), 0);
+    return { total, done, inProgress, blocked, totalEstimated, totalLogged };
+  }, [p.tasks]);
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -172,6 +183,34 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
             <div className="bg-primary h-2 rounded-full transition-all" style={{ width: `${p.progress}%` }} />
           </div>
         </div>
+      </div>
+
+      {/* Stats Cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {[
+          { label: 'Toplam Görev', value: taskStats.total, icon: Target, color: 'text-blue-500', bg: 'bg-blue-50 dark:bg-blue-950' },
+          { label: 'Tamamlanan', value: taskStats.done, icon: CheckCircle2, color: 'text-green-500', bg: 'bg-green-50 dark:bg-green-950' },
+          { label: 'Devam Eden', value: taskStats.inProgress, icon: Clock, color: 'text-yellow-500', bg: 'bg-yellow-50 dark:bg-yellow-950' },
+          {
+            label: 'Bütçe',
+            value: p.budget ? Number(p.budget).toLocaleString('tr-TR', { style: 'currency', currency: p.currency || 'TRY' }) : '-',
+            icon: DollarSign,
+            color: 'text-purple-500',
+            bg: 'bg-purple-50 dark:bg-purple-950',
+          },
+        ].map((card) => (
+          <div key={card.label} className="rounded-xl border border-border bg-card p-4 shadow-sm">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-muted-foreground">{card.label}</p>
+                <p className="text-xl font-bold mt-0.5">{card.value}</p>
+              </div>
+              <div className={cn('p-2 rounded-lg', card.bg)}>
+                <card.icon className={cn('h-4 w-4', card.color)} />
+              </div>
+            </div>
+          </div>
+        ))}
       </div>
 
       {/* Tabs */}
@@ -256,6 +295,73 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
               })}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {/* Time Tab */}
+      {activeTab === 'time' && (
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {[
+              { label: 'Toplam Tahmin', value: `${taskStats.totalEstimated.toFixed(1)} saat`, icon: Target, color: 'text-blue-500', bg: 'bg-blue-50 dark:bg-blue-950' },
+              { label: 'Harcanan Süre', value: `${taskStats.totalLogged.toFixed(1)} saat`, icon: Clock, color: 'text-green-500', bg: 'bg-green-50 dark:bg-green-950' },
+              { label: 'Kullanım Oranı', value: taskStats.totalEstimated > 0 ? `%${Math.round((taskStats.totalLogged / taskStats.totalEstimated) * 100)}` : '—', icon: BarChart3, color: 'text-purple-500', bg: 'bg-purple-50 dark:bg-purple-950' },
+            ].map((card) => (
+              <div key={card.label} className="rounded-xl border border-border bg-card p-4 shadow-sm">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs text-muted-foreground">{card.label}</p>
+                    <p className="text-xl font-bold mt-0.5">{card.value}</p>
+                  </div>
+                  <div className={cn('p-2 rounded-lg', card.bg)}>
+                    <card.icon className={cn('h-4 w-4', card.color)} />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="rounded-xl border border-border bg-card overflow-hidden">
+            <div className="p-4 border-b border-border">
+              <h2 className="font-semibold text-foreground">Görev Zaman Dökümü</h2>
+            </div>
+            <table className="w-full text-sm">
+              <thead className="bg-muted/50">
+                <tr>
+                  {['Görev', 'Tahmin', 'Harcanan', 'Kalan', 'İlerleme'].map((h) => (
+                    <th key={h} className="px-4 py-3 text-left font-medium text-muted-foreground">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {(p.tasks ?? []).map((task) => {
+                  const logged = Number(task.loggedHours ?? 0);
+                  const estimated = task.estimatedHours ?? 0;
+                  const remaining = estimated - logged;
+                  const pct = estimated > 0 ? Math.min(100, Math.round((logged / estimated) * 100)) : 0;
+                  return (
+                    <tr key={task.id} className="hover:bg-muted/30">
+                      <td className="px-4 py-3 font-medium">{task.title}</td>
+                      <td className="px-4 py-3 text-muted-foreground">{estimated ? `${estimated} sa` : '-'}</td>
+                      <td className="px-4 py-3">{logged.toFixed(1)} sa</td>
+                      <td className={cn('px-4 py-3', remaining < 0 ? 'text-red-600 font-medium' : 'text-muted-foreground')}>
+                        {estimated ? `${remaining.toFixed(1)} sa` : '-'}
+                      </td>
+                      <td className="px-4 py-3 w-32">
+                        {estimated > 0 && (
+                          <div>
+                            <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                              <div className={cn('h-full rounded-full', pct > 100 ? 'bg-red-500' : 'bg-primary')} style={{ width: `${Math.min(100, pct)}%` }} />
+                            </div>
+                            <p className="text-xs text-muted-foreground mt-0.5">%{pct}</p>
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 
