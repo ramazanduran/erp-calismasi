@@ -1,12 +1,13 @@
 'use client';
 
-import { useState } from 'react';
-import { Search, Plus, User, Phone, Mail, Pencil, Trash2, FileDown } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { Search, Plus, User, Phone, Mail, Pencil, Trash2, FileDown, Users, UserCheck, UserX, DollarSign } from 'lucide-react';
 import { toast } from 'sonner';
 import { useEmployees, useDeleteEmployee } from '@/lib/api/hooks';
 import { EmployeeModal } from '@/components/modals/employee-modal';
 import { BulkActionsBar } from '@/components/ui/bulk-actions-bar';
 import { exportToExcel } from '@/lib/utils/excel-export';
+import { cn } from '@/lib/utils';
 
 type EmployeeStatus = 'active' | 'inactive' | 'terminated';
 
@@ -49,6 +50,14 @@ export default function EmployeesPage() {
   const deleteEmployee = useDeleteEmployee();
 
   const employeesList = Array.isArray(employees) ? employees : [];
+
+  const employeeStats = useMemo(() => {
+    const total = employeesList.length;
+    const active = employeesList.filter((e: Record<string, unknown>) => e.status === 'active').length;
+    const inactive = employeesList.filter((e: Record<string, unknown>) => e.status === 'inactive' || e.status === 'terminated').length;
+    const totalSalary = employeesList.reduce((s: number, e: Record<string, unknown>) => s + Number(e.salary ?? 0), 0);
+    return { total, active, inactive, totalSalary };
+  }, [employeesList]);
 
   const toggleSelect = (id: string) => {
     setSelectedIds(prev => {
@@ -115,6 +124,27 @@ export default function EmployeesPage() {
             Yeni Çalışan
           </button>
         </div>
+      </div>
+
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {[
+          { label: 'Toplam Çalışan', value: employeeStats.total, icon: Users, color: 'text-blue-500', bg: 'bg-blue-50 dark:bg-blue-950' },
+          { label: 'Aktif', value: employeeStats.active, icon: UserCheck, color: 'text-green-500', bg: 'bg-green-50 dark:bg-green-950' },
+          { label: 'Pasif / Ayrılan', value: employeeStats.inactive, icon: UserX, color: 'text-gray-500', bg: 'bg-gray-50 dark:bg-gray-900' },
+          { label: 'Toplam Maaş', value: employeeStats.totalSalary.toLocaleString('tr-TR', { style: 'currency', currency: 'TRY' }), icon: DollarSign, color: 'text-purple-500', bg: 'bg-purple-50 dark:bg-purple-950' },
+        ].map((card) => (
+          <div key={card.label} className="rounded-xl border border-border bg-card p-4 shadow-sm">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-muted-foreground">{card.label}</p>
+                <p className="text-xl font-bold mt-0.5">{card.value}</p>
+              </div>
+              <div className={cn('p-2 rounded-lg', card.bg)}>
+                <card.icon className={cn('h-4 w-4', card.color)} />
+              </div>
+            </div>
+          </div>
+        ))}
       </div>
 
       <div className="flex flex-col sm:flex-row gap-3">

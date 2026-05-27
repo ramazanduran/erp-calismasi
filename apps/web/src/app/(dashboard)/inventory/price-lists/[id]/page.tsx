@@ -1,9 +1,10 @@
 'use client';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Plus, Trash2 } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, Package } from 'lucide-react';
 import { usePriceList, useAddPriceListItem, useRemovePriceListItem, useProducts } from '@/lib/api/hooks';
 import { toast } from 'sonner';
+import { formatCurrency } from '@/lib/utils';
 
 export default function PriceListDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -18,6 +19,19 @@ export default function PriceListDetailPage() {
 
   const pl = priceList as any;
   const products = (productsData as any)?.data ?? (Array.isArray(productsData) ? productsData : []);
+
+  const stats = useMemo(() => {
+    const items: any[] = pl?.items ?? [];
+    const count = items.length;
+    const avgDiscount = count > 0
+      ? items.reduce((sum: number, it: any) => sum + Number(it.discountRate ?? 0), 0) / count
+      : 0;
+    const prices = items.map((it: any) => Number(it.price));
+    const minPrice = count > 0 ? Math.min(...prices) : 0;
+    const maxPrice = count > 0 ? Math.max(...prices) : 0;
+    const currency = pl?.currency || 'TRY';
+    return { count, avgDiscount, minPrice, maxPrice, currency };
+  }, [pl]);
 
   const handleAddItem = async () => {
     if (!form.productId || !form.price) { toast.error('Ürün ve fiyat zorunludur'); return; }
@@ -59,6 +73,7 @@ export default function PriceListDetailPage() {
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <button onClick={() => router.back()} className="p-2 rounded-lg hover:bg-muted">
@@ -79,6 +94,31 @@ export default function PriceListDetailPage() {
         </button>
       </div>
 
+      {/* Stats row */}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <div className="rounded-xl border border-border bg-card px-4 py-3 shadow-sm">
+          <p className="text-xs text-muted-foreground mb-1">Toplam Ürün</p>
+          <p className="text-xl font-bold">{stats.count}</p>
+        </div>
+        <div className="rounded-xl border border-border bg-card px-4 py-3 shadow-sm">
+          <p className="text-xs text-muted-foreground mb-1">Ortalama İskonto</p>
+          <p className="text-xl font-bold">%{stats.avgDiscount.toFixed(1)}</p>
+        </div>
+        <div className="rounded-xl border border-border bg-card px-4 py-3 shadow-sm">
+          <p className="text-xs text-muted-foreground mb-1">Min Fiyat</p>
+          <p className="text-xl font-bold">
+            {stats.count > 0 ? formatCurrency(stats.minPrice, stats.currency) : '—'}
+          </p>
+        </div>
+        <div className="rounded-xl border border-border bg-card px-4 py-3 shadow-sm">
+          <p className="text-xs text-muted-foreground mb-1">Max Fiyat</p>
+          <p className="text-xl font-bold">
+            {stats.count > 0 ? formatCurrency(stats.maxPrice, stats.currency) : '—'}
+          </p>
+        </div>
+      </div>
+
+      {/* Add item form */}
       {showForm && (
         <div className="rounded-xl border border-border bg-card p-4 shadow-sm space-y-3">
           <h2 className="font-semibold">Ürün Ekle</h2>
@@ -134,29 +174,53 @@ export default function PriceListDetailPage() {
         </div>
       )}
 
+      {/* Items table */}
       <div className="rounded-xl border border-border bg-card shadow-sm overflow-hidden">
         <table className="w-full text-sm">
           <thead className="bg-muted/50 text-muted-foreground">
             <tr>
-              {['Ürün ID', 'Fiyat', 'İskonto (%)', 'Net Fiyat', 'İşlemler'].map(h => (
+              {['Ürün', 'Fiyat', 'İskonto (%)', 'Net Fiyat', 'İşlemler'].map(h => (
                 <th key={h} className="px-4 py-3 text-left font-medium">{h}</th>
               ))}
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
             {!pl.items?.length ? (
-              <tr><td colSpan={5} className="px-4 py-8 text-center text-muted-foreground">Bu fiyat listesine henüz ürün eklenmemiş</td></tr>
+              <tr>
+                <td colSpan={5} className="px-4 py-12 text-center">
+                  <div className="flex flex-col items-center gap-3 text-muted-foreground">
+                    <Package className="h-10 w-10 opacity-40" />
+                    <p className="font-medium">Fiyat listesi boş</p>
+                    <p className="text-xs">Henüz ürün eklenmemiş.</p>
+                    <button
+                      onClick={() => setShowForm(true)}
+                      className="mt-1 flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90">
+                      <Plus className="h-4 w-4" /> İlk Ürünü Ekle
+                    </button>
+                  </div>
+                </td>
+              </tr>
             ) : pl.items.map((item: any) => {
-              const netPrice = Number(item.price) * (1 - Number(item.discountRate) / 100);
+              const discountRate = Number(item.discountRate ?? 0);
+              const price = Number(item.price);
+              const netPrice = price * (1 - discountRate / 100);
+              const currency = pl.currency || 'TRY';
               return (
                 <tr key={item.id} className="hover:bg-muted/30 transition-colors">
-                  <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{item.productId.substring(0, 8)}...</td>
-                  <td className="px-4 py-3 font-medium">
-                    {Number(item.price).toLocaleString('tr-TR', { style: 'currency', currency: pl.currency || 'TRY' })}
+                  <td className="px-4 py-3">
+                    <span className="font-medium">{item.product?.name ?? '—'}</span>
+                    {item.product?.code && (
+                      <span className="ml-2 font-mono text-xs text-muted-foreground">{item.product.code}</span>
+                    )}
                   </td>
-                  <td className="px-4 py-3 text-muted-foreground">%{Number(item.discountRate).toFixed(2)}</td>
+                  <td className="px-4 py-3 font-medium">
+                    {formatCurrency(price, currency)}
+                  </td>
+                  <td className="px-4 py-3 text-muted-foreground">
+                    {discountRate === 0 ? '—' : `%${discountRate.toFixed(2)}`}
+                  </td>
                   <td className="px-4 py-3 font-semibold text-green-600">
-                    {netPrice.toLocaleString('tr-TR', { style: 'currency', currency: pl.currency || 'TRY' })}
+                    {formatCurrency(netPrice, currency)}
                   </td>
                   <td className="px-4 py-3">
                     <button
