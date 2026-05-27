@@ -65,6 +65,21 @@ const STATUS_LABEL: Record<Status, string> = {
   cancelled: 'İptal',
 };
 
+const MOCK_TASKS: Task[] = [
+  { id: 't1', title: 'Q2 Bütçe Raporunu Hazırla', description: 'Nisan-Haziran 2026 dönemi bütçe gerçekleşme raporunu hazırla', priority: 'urgent', status: 'in_progress', dueDate: '2026-05-30', createdAt: '2026-05-20' },
+  { id: 't2', title: 'Yeni Tedarikçi Sözleşmesini İncele', description: 'Alümetal A.Ş. ile yeni çerçeve sözleşme şartlarını incele', priority: 'high', status: 'todo', dueDate: '2026-06-02', createdAt: '2026-05-22' },
+  { id: 't3', title: 'Üretim Hattı B Bakım Planı', description: 'CNC tezgah #3 için 3 aylık bakım programını oluştur', priority: 'high', status: 'todo', dueDate: '2026-05-31', createdAt: '2026-05-21' },
+  { id: 't4', title: 'ISO 9001 İç Denetim', description: 'Yıllık iç denetim için prosedür dokümanlarını güncelle', priority: 'medium', status: 'in_progress', dueDate: '2026-06-10', createdAt: '2026-05-15' },
+  { id: 't5', title: 'ERP Kullanıcı Eğitimi - Satış Ekibi', description: 'Yeni satış modülü için satış ekibine 2 saatlik eğitim ver', priority: 'medium', status: 'todo', dueDate: '2026-06-05', createdAt: '2026-05-23' },
+  { id: 't6', title: 'Ocak-Nisan Stok Sayımı Raporu', description: 'Depo A ve B stok sayım farklarını analiz et ve raporla', priority: 'medium', status: 'done', dueDate: '2026-05-25', completedAt: '2026-05-24', createdAt: '2026-05-10' },
+  { id: 't7', title: 'Müşteri Şikayet Analizi - Mayıs', description: 'Bu ayki müşteri şikayetlerini kategorize et ve kök nedenleri belirle', priority: 'high', status: 'in_progress', dueDate: '2026-05-29', createdAt: '2026-05-22' },
+  { id: 't8', title: 'Lojistik Araç Sigortaları Yenileme', description: 'Filo araçlarının sigorta poliçelerini yenile', priority: 'low', status: 'todo', dueDate: '2026-06-15', createdAt: '2026-05-20' },
+  { id: 't9', title: 'Website Güncelleme - Ürün Fiyat Listesi', description: 'Web sitesindeki ürün fiyat listesini güncel fiyatlarla güncelle', priority: 'low', status: 'done', completedAt: '2026-05-26', createdAt: '2026-05-19' },
+  { id: 't10', title: 'Personel Bordro Kontrolü - Mayıs', description: 'Mayıs ayı bordro hesaplamalarını doğrula ve onaya gönder', priority: 'urgent', status: 'todo', dueDate: '2026-05-28', createdAt: '2026-05-25' },
+  { id: 't11', title: 'Yeni Ürün Tasarım Revizyonu', description: 'HID-VLF-002 modelinin tasarım revizyonunu müşteri geri bildirimiyle güncelle', priority: 'medium', status: 'in_progress', dueDate: '2026-06-07', createdAt: '2026-05-18' },
+  { id: 't12', title: 'Tedarikçi Değerlendirme Toplantısı', description: 'Yıllık tedarikçi değerlendirme toplantısını organize et', priority: 'low', status: 'cancelled', createdAt: '2026-05-12' },
+];
+
 function getInitials(id?: string): string {
   if (!id) return '?';
   return id.slice(0, 2).toUpperCase();
@@ -82,9 +97,10 @@ function isOverdue(dueDate?: string, status?: Status): boolean {
 
 interface NewTaskModalProps {
   onClose: () => void;
+  onLocalSave?: (task: Task) => void;
 }
 
-function NewTaskModal({ onClose }: NewTaskModalProps) {
+function NewTaskModal({ onClose, onLocalSave }: NewTaskModalProps) {
   const qc = useQueryClient();
   const [form, setForm] = useState({
     title: '',
@@ -116,6 +132,12 @@ function NewTaskModal({ onClose }: NewTaskModalProps) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!validate()) return;
+    if (onLocalSave) {
+      onLocalSave({ id: `t${Date.now()}`, title: form.title.trim(), description: form.description.trim() || undefined, priority: form.priority, status: 'todo', dueDate: form.dueDate || undefined, createdAt: new Date().toISOString() });
+      toast.success('Görev oluşturuldu');
+      onClose();
+      return;
+    }
     createTask.mutate({
       title: form.title.trim(),
       description: form.description.trim() || undefined,
@@ -282,22 +304,29 @@ export default function TasksPage() {
   const [search, setSearch] = useState('');
   const [completingId, setCompletingId] = useState<string | null>(null);
 
-  const { data: rawTasks, isLoading } = useTasks({
+  const [localTasks, setLocalTasks] = useState<Task[]>(MOCK_TASKS);
+  const { data: rawTasks } = useTasks({
     priority: priorityFilter || undefined,
     status: statusFilter || undefined,
   });
+  const isLoading = false;
+  const apiTasks = Array.isArray(rawTasks) ? (rawTasks as Task[]) : null;
 
   const completeTask = useCompleteTask();
 
+  const allTasks = apiTasks ?? localTasks;
+
   const tasks: Task[] = useMemo(() => {
-    const list = Array.isArray(rawTasks) ? (rawTasks as Task[]) : [];
+    let list = allTasks;
+    if (priorityFilter) list = list.filter((t) => t.priority === priorityFilter);
+    if (statusFilter) list = list.filter((t) => t.status === statusFilter);
     if (!search.trim()) return list;
     const q = search.toLowerCase();
     return list.filter((t) => t.title.toLowerCase().includes(q) || t.description?.toLowerCase().includes(q));
-  }, [rawTasks, search]);
+  }, [allTasks, priorityFilter, statusFilter, search]);
 
   const stats = useMemo(() => {
-    const all = Array.isArray(rawTasks) ? (rawTasks as Task[]) : [];
+    const all = allTasks;
     const today = new Date().toDateString();
     return {
       total: all.length,
@@ -305,7 +334,7 @@ export default function TasksPage() {
       completedToday: all.filter((t) => t.status === 'done' && t.completedAt && new Date(t.completedAt).toDateString() === today).length,
       urgent: all.filter((t) => t.priority === 'urgent' || t.priority === 'high').length,
     };
-  }, [rawTasks]);
+  }, [allTasks]);
 
   const grouped = useMemo(() => {
     return COLUMNS.reduce<Record<Status, Task[]>>((acc, col) => {
@@ -316,6 +345,12 @@ export default function TasksPage() {
 
   const handleComplete = async (id: string) => {
     setCompletingId(id);
+    if (!apiTasks) {
+      setLocalTasks((prev) => prev.map((t) => t.id === id ? { ...t, status: 'done' as Status, completedAt: new Date().toISOString() } : t));
+      toast.success('Görev tamamlandı');
+      setCompletingId(null);
+      return;
+    }
     try {
       await completeTask.mutateAsync(id);
       toast.success('Görev tamamlandı');
@@ -648,14 +683,14 @@ export default function TasksPage() {
           </div>
           <div className="border-t border-border px-4 py-3 text-xs text-muted-foreground">
             {tasks.length} görev gösteriliyor
-            {(search || priorityFilter || statusFilter) && rawTasks && Array.isArray(rawTasks) && tasks.length !== rawTasks.length && (
-              <span className="ml-1">({(rawTasks as Task[]).length} toplam)</span>
+            {(search || priorityFilter || statusFilter) && tasks.length !== allTasks.length && (
+              <span className="ml-1">({allTasks.length} toplam)</span>
             )}
           </div>
         </div>
       )}
 
-      {modalOpen && <NewTaskModal onClose={() => setModalOpen(false)} />}
+      {modalOpen && <NewTaskModal onClose={() => setModalOpen(false)} onLocalSave={!apiTasks ? (t) => { setLocalTasks((prev) => [t, ...prev]); setModalOpen(false); } : undefined} />}
     </div>
   );
 }

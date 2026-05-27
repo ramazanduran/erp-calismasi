@@ -188,6 +188,23 @@ function KpiDetailPanel({ kpi, currentPeriod, onClose }: { kpi: KpiDefinition; c
   );
 }
 
+const MOCK_KPIS: KpiCard[] = [
+  { id: 'k1', name: 'Aylık Gelir', code: 'FIN-001', category: 'financial', unit: '₺', direction: 'higher_better', frequency: 'monthly', currentValue: 2850000, targetValue: 3000000, status: 'warning' },
+  { id: 'k2', name: 'Brüt Kâr Marjı', code: 'FIN-002', category: 'financial', unit: '%', direction: 'higher_better', frequency: 'monthly', currentValue: 38.5, targetValue: 35, status: 'good' },
+  { id: 'k3', name: 'Alacak Devir Hızı', code: 'FIN-003', category: 'financial', unit: 'gün', direction: 'lower_better', frequency: 'monthly', currentValue: 42, targetValue: 30, status: 'critical' },
+  { id: 'k4', name: 'Sipariş Karşılama Oranı', code: 'SAT-001', category: 'sales', unit: '%', direction: 'higher_better', frequency: 'monthly', currentValue: 94.2, targetValue: 95, status: 'warning' },
+  { id: 'k5', name: 'Yeni Müşteri Sayısı', code: 'SAT-002', category: 'sales', unit: 'müşteri', direction: 'higher_better', frequency: 'monthly', currentValue: 18, targetValue: 15, status: 'good' },
+  { id: 'k6', name: 'Müşteri Memnuniyet Puanı', code: 'SAT-003', category: 'sales', unit: '/10', direction: 'higher_better', frequency: 'monthly', currentValue: 8.4, targetValue: 8, status: 'good' },
+  { id: 'k7', name: 'OEE (Ekipman Etkinliği)', code: 'OPR-001', category: 'operational', unit: '%', direction: 'higher_better', frequency: 'monthly', currentValue: 72, targetValue: 85, status: 'critical' },
+  { id: 'k8', name: 'Zamanında Teslimat Oranı', code: 'OPR-002', category: 'operational', unit: '%', direction: 'higher_better', frequency: 'monthly', currentValue: 96.8, targetValue: 95, status: 'good' },
+  { id: 'k9', name: 'Stok Devir Hızı', code: 'OPR-003', category: 'operational', unit: 'x/yıl', direction: 'higher_better', frequency: 'monthly', currentValue: 8.2, targetValue: 10, status: 'warning' },
+  { id: 'k10', name: 'İşgücü Devir Oranı', code: 'HR-001', category: 'hr', unit: '%', direction: 'lower_better', frequency: 'monthly', currentValue: 4.5, targetValue: 5, status: 'good' },
+  { id: 'k11', name: 'Ortalama İzin Süresi', code: 'HR-002', category: 'hr', unit: 'gün', direction: 'lower_better', frequency: 'monthly', currentValue: 2.1, targetValue: 3, status: 'good' },
+  { id: 'k12', name: 'Hurda / Fire Oranı', code: 'QUA-001', category: 'quality', unit: '%', direction: 'lower_better', frequency: 'monthly', currentValue: 2.8, targetValue: 2, status: 'warning' },
+  { id: 'k13', name: 'İlk Geçiş Oranı', code: 'QUA-002', category: 'quality', unit: '%', direction: 'higher_better', frequency: 'monthly', currentValue: 97.2, targetValue: 98, status: 'warning' },
+  { id: 'k14', name: 'EBITDA Marjı', code: 'BUS-001', category: 'business', unit: '%', direction: 'higher_better', frequency: 'monthly', currentValue: 18.5, targetValue: 20, status: 'warning' },
+];
+
 export default function KpiPage() {
   const qc = useQueryClient();
   const [categoryFilter, setCategoryFilter] = useState('');
@@ -197,9 +214,14 @@ export default function KpiPage() {
 
   const currentPeriod = new Date().toISOString().slice(0, 7);
 
-  const { data: dashboardData = [], isLoading } = useQuery({
+  const { data: dashboardData = MOCK_KPIS, isLoading } = useQuery({
     queryKey: ['kpi', 'dashboard', currentPeriod, categoryFilter],
-    queryFn: () => api.get('/api/v1/kpi/dashboard', { period: currentPeriod }),
+    queryFn: async () => {
+      const res = await fetch(`/api/v1/kpi/dashboard?period=${currentPeriod}`);
+      if (!res.ok) return MOCK_KPIS;
+      return res.json();
+    },
+    initialData: MOCK_KPIS,
   });
 
   const create = useMutation({

@@ -85,6 +85,7 @@ const navigation = [
       { label: 'Mizan', href: '/accounting/trial-balance' },
       { label: 'Bilanço', href: '/accounting/balance-sheet' },
       { label: 'Gelir Tablosu', href: '/accounting/income-statement' },
+      { label: 'Dönem Kapanış', href: '/accounting/period-close' },
     ],
   },
   {
