@@ -3,8 +3,9 @@
 import { useState } from 'react';
 import {
   Plus, Copy, Trash2, AlertTriangle, Key, Check, Shield,
-  Clock, Terminal, Eye, EyeOff, X,
+  Clock, Terminal, Eye, EyeOff, X, FileDown,
 } from 'lucide-react';
+import { exportToExcel } from '@/lib/utils/excel-export';
 import { useApiTokens, useCreateApiToken, useRevokeApiToken, useDeleteApiToken } from '@/lib/api/hooks';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -232,10 +233,37 @@ export default function ApiTokensPage() {
           <h1 className="text-2xl font-bold">API Token Yönetimi</h1>
           <p className="text-muted-foreground text-sm mt-1">Harici entegrasyonlar için API token&apos;ları oluşturun ve yönetin</p>
         </div>
-        <button onClick={() => setShowCreate(true)}
-          className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90">
-          <Plus className="h-4 w-4" /> Yeni Token
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => exportToExcel(
+              tokens.map((t) => ({
+                name: t.name ?? '',
+                scopes: Array.isArray(t.scopes) ? (t.scopes as string[]).join(', ') : '',
+                isActive: t.isActive ? 'Aktif' : 'İptal',
+                expiresAt: t.expiresAt ? new Date(t.expiresAt).toLocaleDateString('tr-TR') : 'Süresiz',
+                lastUsedAt: t.lastUsedAt ? new Date(t.lastUsedAt).toLocaleDateString('tr-TR') : '',
+                createdAt: new Date(t.createdAt).toLocaleDateString('tr-TR'),
+              })),
+              [
+                { key: 'name', header: 'Token Adı', width: 24 },
+                { key: 'scopes', header: 'İzinler', width: 24 },
+                { key: 'isActive', header: 'Durum', width: 12 },
+                { key: 'expiresAt', header: 'Son Kullanım', width: 16 },
+                { key: 'lastUsedAt', header: 'Son Kullanıldı', width: 16 },
+                { key: 'createdAt', header: 'Oluşturuldu', width: 14 },
+              ],
+              'api-tokenlar',
+              'API Tokenları'
+            )}
+            className="flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm hover:bg-muted"
+          >
+            <FileDown className="h-4 w-4" /> Excel
+          </button>
+          <button onClick={() => setShowCreate(true)}
+            className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90">
+            <Plus className="h-4 w-4" /> Yeni Token
+          </button>
+        </div>
       </div>
 
       {/* Stats */}

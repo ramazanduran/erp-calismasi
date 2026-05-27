@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { PlusCircle, CheckCircle2, XCircle, Minus, RefreshCw, CreditCard } from 'lucide-react';
+import { PlusCircle, CheckCircle2, XCircle, Minus, RefreshCw, CreditCard, FileDown } from 'lucide-react';
+import { exportToExcel } from '@/lib/utils/excel-export';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api/client';
 import { formatCurrency, cn } from '@/lib/utils';
@@ -285,9 +286,42 @@ export default function BankReconciliationPage() {
           <h1 className="text-2xl font-bold">Banka Mutabakatı</h1>
           <p className="text-muted-foreground mt-1">Banka özetlerini muhasebe kayıtları ile eşleştirin</p>
         </div>
-        <button onClick={() => setShowForm(true)} className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-lg text-sm font-medium">
-          <PlusCircle className="h-4 w-4" />Yeni Özet
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => exportToExcel(
+              stmts.map((s) => ({
+                referenceNumber: s.referenceNumber ?? '',
+                accountName: s.account.name,
+                startDate: new Date(s.startDate).toLocaleDateString('tr-TR'),
+                endDate: new Date(s.endDate).toLocaleDateString('tr-TR'),
+                openingBalance: Number(s.openingBalance),
+                closingBalance: Number(s.closingBalance),
+                currency: s.currency,
+                status: STMT_STATUS[s.status]?.label ?? s.status,
+                lineCount: s._count?.lines ?? 0,
+              })),
+              [
+                { key: 'referenceNumber', header: 'Referans No', width: 18 },
+                { key: 'accountName', header: 'Hesap', width: 24 },
+                { key: 'startDate', header: 'Başlangıç', width: 14 },
+                { key: 'endDate', header: 'Bitiş', width: 14 },
+                { key: 'openingBalance', header: 'Açılış Bakiyesi', width: 16 },
+                { key: 'closingBalance', header: 'Kapanış Bakiyesi', width: 16 },
+                { key: 'currency', header: 'Para Birimi', width: 12 },
+                { key: 'status', header: 'Durum', width: 12 },
+                { key: 'lineCount', header: 'Satır Sayısı', width: 12 },
+              ],
+              'banka-mutabakati',
+              'Banka Mutabakatı'
+            )}
+            className="flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm hover:bg-muted"
+          >
+            <FileDown className="h-4 w-4" /> Excel
+          </button>
+          <button onClick={() => setShowForm(true)} className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-lg text-sm font-medium">
+            <PlusCircle className="h-4 w-4" />Yeni Özet
+          </button>
+        </div>
       </div>
 
       {isLoading ? (

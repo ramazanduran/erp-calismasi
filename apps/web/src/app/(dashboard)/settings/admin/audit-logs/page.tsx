@@ -4,8 +4,9 @@ import { useState, useMemo } from 'react';
 import {
   Search, FileText, Plus, Minus, ChevronDown, ChevronUp, Download,
   Activity, UserCheck, RefreshCw, Trash2, LogIn, LogOut, Shield,
-  X,
+  X, FileDown,
 } from 'lucide-react';
+import { exportToExcel } from '@/lib/utils/excel-export';
 import { useQuery } from '@tanstack/react-query';
 import { useAuditLogs } from '@/lib/api/hooks/use-audit-logs';
 import { api } from '@/lib/api/client';
@@ -364,11 +365,30 @@ export default function AuditLogsPage() {
           <p className="text-sm text-muted-foreground mt-1">Sistemdeki tüm değişikliklerin kaydını görüntüleyin</p>
         </div>
         <button
-          onClick={handleExportCSV}
+          onClick={() => exportToExcel(
+            logs.map((l) => ({
+              date: new Date(l.createdAt).toLocaleString('tr-TR'),
+              user: l.user ? `${l.user.firstName ?? ''} ${l.user.lastName ?? ''}`.trim() : 'Sistem',
+              email: l.user?.email ?? '',
+              action: l.action,
+              entityType: l.entityType ?? '',
+              entityId: l.entityId ?? '',
+            })),
+            [
+              { key: 'date', header: 'Tarih', width: 20 },
+              { key: 'user', header: 'Kullanıcı', width: 22 },
+              { key: 'email', header: 'E-posta', width: 24 },
+              { key: 'action', header: 'İşlem', width: 12 },
+              { key: 'entityType', header: 'Entity', width: 16 },
+              { key: 'entityId', header: 'ID', width: 20 },
+            ],
+            `audit-logs-${new Date().toISOString().slice(0, 10)}`,
+            'Audit Logları'
+          )}
           className="flex items-center gap-2 border border-border px-4 py-2 rounded-lg text-sm font-medium hover:bg-muted transition-colors"
         >
-          <Download className="h-4 w-4" />
-          CSV İndir
+          <FileDown className="h-4 w-4" />
+          Excel
         </button>
       </div>
 

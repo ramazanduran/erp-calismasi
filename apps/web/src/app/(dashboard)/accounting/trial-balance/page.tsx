@@ -2,7 +2,8 @@
 
 import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Scale, Download, TrendingUp, TrendingDown, Wallet, BarChart3, DollarSign, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Scale, Download, TrendingUp, TrendingDown, Wallet, BarChart3, DollarSign, CheckCircle2, AlertCircle, FileDown } from 'lucide-react';
+import { exportToExcel } from '@/lib/utils/excel-export';
 import { api } from '@/lib/api/client';
 
 interface TrialBalanceAccount {
@@ -146,9 +147,31 @@ export default function TrialBalancePage() {
               </option>
             ))}
           </select>
-          <button className="flex items-center gap-2 px-4 py-2 border border-border rounded-lg text-sm font-medium hover:bg-muted transition-colors">
-            <Download className="h-4 w-4" />
-            Dışa Aktar
+          <button
+            onClick={() => exportToExcel(
+              filteredAccounts.map((a) => ({
+                code: a.code,
+                name: a.name,
+                type: TYPE_LABELS[a.type] ?? a.type,
+                debitBalance: Number(a.debitBalance),
+                creditBalance: Number(a.creditBalance),
+                balance: Number(a.balance),
+              })),
+              [
+                { key: 'code', header: 'Hesap Kodu', width: 16 },
+                { key: 'name', header: 'Hesap Adı', width: 30 },
+                { key: 'type', header: 'Tür', width: 14 },
+                { key: 'debitBalance', header: 'Borç', width: 16 },
+                { key: 'creditBalance', header: 'Alacak', width: 16 },
+                { key: 'balance', header: 'Bakiye', width: 16 },
+              ],
+              `mizan-${selectedYear}`,
+              `Mizan ${selectedYear}`
+            )}
+            className="flex items-center gap-2 px-4 py-2 border border-border rounded-lg text-sm font-medium hover:bg-muted transition-colors"
+          >
+            <FileDown className="h-4 w-4" />
+            Excel
           </button>
         </div>
       </div>

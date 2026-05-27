@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { BarChart3, PlusCircle, Play, Save, Trash2, Table } from 'lucide-react';
+import { BarChart3, PlusCircle, Play, Save, Trash2, Table, FileDown } from 'lucide-react';
+import { exportToExcel } from '@/lib/utils/excel-export';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api/client';
 import { cn } from '@/lib/utils';
@@ -130,6 +131,27 @@ export default function CustomReportsPage() {
           <h1 className="text-2xl font-bold">Özel Rapor Oluşturucu</h1>
           <p className="text-muted-foreground mt-1">Esnek raporlar ve görselleştirmeler oluşturun</p>
         </div>
+        <button
+          onClick={() => exportToExcel(
+            reports.map((r) => ({
+              name: r.name,
+              dataSource: r.dataSource,
+              chartType: r.chartType ?? 'table',
+              createdAt: new Date(r.createdAt).toLocaleDateString('tr-TR'),
+            })),
+            [
+              { key: 'name', header: 'Rapor Adı', width: 28 },
+              { key: 'dataSource', header: 'Veri Kaynağı', width: 18 },
+              { key: 'chartType', header: 'Grafik Türü', width: 14 },
+              { key: 'createdAt', header: 'Oluşturuldu', width: 14 },
+            ],
+            'ozel-raporlar',
+            'Özel Raporlar'
+          )}
+          className="flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm hover:bg-muted"
+        >
+          <FileDown className="h-4 w-4" /> Excel
+        </button>
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">

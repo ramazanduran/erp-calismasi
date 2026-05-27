@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { PlusCircle, Webhook, Play, Trash2, Edit2, CheckCircle2, XCircle, Clock } from 'lucide-react';
+import { PlusCircle, Webhook, Play, Trash2, Edit2, CheckCircle2, XCircle, Clock, FileDown } from 'lucide-react';
+import { exportToExcel } from '@/lib/utils/excel-export';
 import { useWebhooks, useCreateWebhook, useUpdateWebhook, useDeleteWebhook, useTestWebhook } from '@/lib/api/hooks';
 import { cn } from '@/lib/utils';
 
@@ -162,13 +163,38 @@ export default function WebhooksPage() {
           <h1 className="text-2xl font-bold">Webhook Entegrasyonları</h1>
           <p className="text-muted-foreground mt-1">Dış sistemlere olay bildirimleri gönderin</p>
         </div>
-        <button
-          onClick={() => setShowForm(true)}
-          className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-lg text-sm font-medium"
-        >
-          <PlusCircle className="h-4 w-4" />
-          Yeni Webhook
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => exportToExcel(
+              (webhooks as WebhookItem[]).map((w) => ({
+                name: w.name,
+                url: w.url,
+                isActive: w.isActive ? 'Aktif' : 'Pasif',
+                events: w.events.join(', '),
+                logCount: w._count?.logs ?? 0,
+              })),
+              [
+                { key: 'name', header: 'Webhook Adı', width: 22 },
+                { key: 'url', header: 'URL', width: 40 },
+                { key: 'isActive', header: 'Durum', width: 10 },
+                { key: 'events', header: 'Olaylar', width: 40 },
+                { key: 'logCount', header: 'Log Sayısı', width: 12 },
+              ],
+              'webhooklar',
+              'Webhooklar'
+            )}
+            className="flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm hover:bg-muted"
+          >
+            <FileDown className="h-4 w-4" /> Excel
+          </button>
+          <button
+            onClick={() => setShowForm(true)}
+            className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-lg text-sm font-medium"
+          >
+            <PlusCircle className="h-4 w-4" />
+            Yeni Webhook
+          </button>
+        </div>
       </div>
 
       {/* Webhook Cards */}

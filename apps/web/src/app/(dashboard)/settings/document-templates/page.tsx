@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { PlusCircle, FileText, Eye, Edit2, Trash2, Download, Plus, X, Loader2 } from 'lucide-react';
+import { PlusCircle, FileText, Eye, Edit2, Trash2, Download, Plus, X, Loader2, FileDown } from 'lucide-react';
+import { exportToExcel } from '@/lib/utils/excel-export';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api/client';
 import { cn } from '@/lib/utils';
@@ -273,12 +274,37 @@ export default function DocumentTemplatesPage() {
           <h1 className="text-2xl font-bold">Doküman Şablonları</h1>
           <p className="text-muted-foreground mt-1">Fatura, sözleşme ve diğer belge şablonları</p>
         </div>
-        <button
-          onClick={handleOpenNew}
-          className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors"
-        >
-          <PlusCircle className="h-4 w-4" />Yeni Şablon
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => exportToExcel(
+              (templates as Template[]).map((t) => ({
+                name: t.name,
+                type: TYPE_LABELS[t.type] ?? t.type,
+                isActive: t.isActive ? 'Aktif' : 'Pasif',
+                description: t.description ?? '',
+                documentCount: t._count?.documents ?? 0,
+              })),
+              [
+                { key: 'name', header: 'Şablon Adı', width: 28 },
+                { key: 'type', header: 'Tür', width: 14 },
+                { key: 'isActive', header: 'Durum', width: 10 },
+                { key: 'description', header: 'Açıklama', width: 30 },
+                { key: 'documentCount', header: 'Belge Sayısı', width: 14 },
+              ],
+              'dokuman-sablonlari',
+              'Doküman Şablonları'
+            )}
+            className="flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm hover:bg-muted"
+          >
+            <FileDown className="h-4 w-4" /> Excel
+          </button>
+          <button
+            onClick={handleOpenNew}
+            className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors"
+          >
+            <PlusCircle className="h-4 w-4" />Yeni Şablon
+          </button>
+        </div>
       </div>
 
       {(defaults as Array<{ type: string; name: string; description: string }>).length > 0 && (
