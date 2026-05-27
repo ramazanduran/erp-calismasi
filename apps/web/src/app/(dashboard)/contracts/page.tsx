@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { PlusCircle, FileText, AlertTriangle, CheckCircle2, Clock, DollarSign } from 'lucide-react';
+import { PlusCircle, FileText, AlertTriangle, CheckCircle2, Clock, DollarSign, FileDown } from 'lucide-react';
+import { exportToExcel } from '@/lib/utils/excel-export';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api/client';
 import { formatCurrency, cn } from '@/lib/utils';
@@ -174,9 +175,44 @@ export default function ContractsPage() {
           <h1 className="text-2xl font-bold">Kontrat Yönetimi</h1>
           <p className="text-muted-foreground mt-1">Müşteri, tedarikçi ve çalışan sözleşmeleri</p>
         </div>
-        <button onClick={() => setShowForm(true)} className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-lg text-sm font-medium">
-          <PlusCircle className="h-4 w-4" />Yeni Kontrat
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => exportToExcel(
+              contracts.map((c) => ({
+                contractNumber: c.contractNumber,
+                title: c.title,
+                type: TYPE_LABELS[c.type] ?? c.type,
+                status: STATUS_CONFIG[c.status]?.label ?? c.status,
+                partyName: c.partyName,
+                value: c.value ?? '',
+                currency: c.currency,
+                startDate: c.startDate ? new Date(c.startDate).toLocaleDateString('tr-TR') : '',
+                endDate: c.endDate ? new Date(c.endDate).toLocaleDateString('tr-TR') : '',
+                autoRenew: c.autoRenew ? 'Evet' : 'Hayır',
+              })),
+              [
+                { key: 'contractNumber', header: 'Kontrat No', width: 14 },
+                { key: 'title', header: 'Başlık', width: 28 },
+                { key: 'type', header: 'Tip', width: 14 },
+                { key: 'status', header: 'Durum', width: 14 },
+                { key: 'partyName', header: 'Taraf', width: 22 },
+                { key: 'value', header: 'Değer', width: 14 },
+                { key: 'currency', header: 'Para Birimi', width: 12 },
+                { key: 'startDate', header: 'Başlangıç', width: 12 },
+                { key: 'endDate', header: 'Bitiş', width: 12 },
+                { key: 'autoRenew', header: 'Otomatik Yenileme', width: 18 },
+              ],
+              'kontratlar',
+              'Kontratlar'
+            )}
+            className="flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm hover:bg-muted"
+          >
+            <FileDown className="h-4 w-4" /> Excel
+          </button>
+          <button onClick={() => setShowForm(true)} className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-lg text-sm font-medium">
+            <PlusCircle className="h-4 w-4" />Yeni Kontrat
+          </button>
+        </div>
       </div>
 
       {stats && (

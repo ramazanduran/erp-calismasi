@@ -14,7 +14,9 @@ import {
   PlusCircle,
   Calendar,
   X,
+  FileDown,
 } from 'lucide-react';
+import { exportToExcel } from '@/lib/utils/excel-export';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api/client';
 import { cn, formatNumber, formatDate } from '@/lib/utils';
@@ -742,13 +744,50 @@ export default function VehiclesPage() {
             Araçları yönetin, bakım ve belge durumlarını takip edin
           </p>
         </div>
-        <button
-          onClick={openNew}
-          className="flex-shrink-0 flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors"
-        >
-          <Plus className="h-4 w-4" />
-          Araç Ekle
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => exportToExcel(
+              vehicles.map((v) => ({
+                plateNumber: v.plateNumber,
+                brand: v.brand,
+                model: v.model,
+                year: v.year,
+                type: TYPE_CONFIG[v.type]?.label ?? v.type,
+                status: STATUS_CONFIG[v.status]?.label ?? v.status,
+                fuelType: v.fuelType,
+                currentMileage: v.currentMileage ?? '',
+                driverName: v.driverName ?? '',
+                insuranceExpiry: v.insuranceExpiry ? new Date(v.insuranceExpiry).toLocaleDateString('tr-TR') : '',
+                inspectionExpiry: v.inspectionExpiry ? new Date(v.inspectionExpiry).toLocaleDateString('tr-TR') : '',
+              })),
+              [
+                { key: 'plateNumber', header: 'Plaka', width: 12 },
+                { key: 'brand', header: 'Marka', width: 12 },
+                { key: 'model', header: 'Model', width: 12 },
+                { key: 'year', header: 'Yıl', width: 8 },
+                { key: 'type', header: 'Tip', width: 12 },
+                { key: 'status', header: 'Durum', width: 12 },
+                { key: 'fuelType', header: 'Yakıt', width: 10 },
+                { key: 'currentMileage', header: 'KM', width: 10 },
+                { key: 'driverName', header: 'Sürücü', width: 18 },
+                { key: 'insuranceExpiry', header: 'Sigorta Bitiş', width: 14 },
+                { key: 'inspectionExpiry', header: 'Muayene Bitiş', width: 14 },
+              ],
+              'araclar',
+              'Araç Filosu'
+            )}
+            className="flex-shrink-0 flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm hover:bg-muted"
+          >
+            <FileDown className="h-4 w-4" /> Excel
+          </button>
+          <button
+            onClick={openNew}
+            className="flex-shrink-0 flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors"
+          >
+            <Plus className="h-4 w-4" />
+            Araç Ekle
+          </button>
+        </div>
       </div>
 
       {/* ── Stats Row ── */}

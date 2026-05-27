@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { Search, Plus, TrendingUp, TrendingDown, Clock, FileText, AlertTriangle, X, Loader2 } from 'lucide-react';
+import { Search, Plus, TrendingUp, TrendingDown, Clock, FileText, AlertTriangle, X, Loader2, FileDown } from 'lucide-react';
+import { exportToExcel } from '@/lib/utils/excel-export';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { api } from '@/lib/api/client';
@@ -147,10 +148,46 @@ export default function FinanceInvoicesPage() {
             Tüm gelir ve gider faturalarını yönetin
           </p>
         </div>
-        <button className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors">
-          <Plus className="h-4 w-4" />
-          Yeni Fatura
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => exportToExcel(
+              invoices.map((i) => {
+                const customer = i.customer as Record<string, unknown> | undefined;
+                return {
+                  invoiceNumber: i.invoiceNumber as string ?? '',
+                  customerName: (customer?.name as string) ?? (i.customerName as string) ?? '',
+                  type: TYPE_LABELS[(i.type as InvoiceType)] ?? i.type as string,
+                  status: STATUS_LABELS[(i.status as InvoiceStatus)] ?? i.status as string,
+                  netAmount: Number(i.netAmount ?? 0),
+                  totalAmount: Number(i.totalAmount ?? 0),
+                  currency: i.currency as string ?? 'TRY',
+                  issueDate: i.issueDate ? new Date(i.issueDate as string).toLocaleDateString('tr-TR') : '',
+                  dueDate: i.dueDate ? new Date(i.dueDate as string).toLocaleDateString('tr-TR') : '',
+                };
+              }),
+              [
+                { key: 'invoiceNumber', header: 'Fatura No', width: 14 },
+                { key: 'customerName', header: 'Müşteri/Tedarikçi', width: 24 },
+                { key: 'type', header: 'Tip', width: 12 },
+                { key: 'status', header: 'Durum', width: 14 },
+                { key: 'netAmount', header: 'Net Tutar', width: 14 },
+                { key: 'totalAmount', header: 'Toplam Tutar', width: 14 },
+                { key: 'currency', header: 'Para Birimi', width: 12 },
+                { key: 'issueDate', header: 'Fatura Tarihi', width: 14 },
+                { key: 'dueDate', header: 'Vade Tarihi', width: 14 },
+              ],
+              'finansal-faturalar',
+              'Finansal Faturalar'
+            )}
+            className="flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm hover:bg-muted"
+          >
+            <FileDown className="h-4 w-4" /> Excel
+          </button>
+          <button className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors">
+            <Plus className="h-4 w-4" />
+            Yeni Fatura
+          </button>
+        </div>
       </div>
 
       {stats.overdueCount > 0 && (

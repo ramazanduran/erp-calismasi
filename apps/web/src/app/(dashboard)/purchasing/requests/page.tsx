@@ -12,7 +12,9 @@ import {
   ChevronRight,
   Trash2,
   AlertTriangle,
+  FileDown,
 } from 'lucide-react';
+import { exportToExcel } from '@/lib/utils/excel-export';
 import { api } from '@/lib/api/client';
 import { cn, formatCurrency, formatDate } from '@/lib/utils';
 import { Modal } from '@/components/modals/modal';
@@ -725,13 +727,46 @@ export default function PurchaseRequestsPage() {
             Satın alma taleplerini yönetin ve onaylayın
           </p>
         </div>
-        <button
-          onClick={() => setModalOpen(true)}
-          className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
-        >
-          <Plus className="h-4 w-4" />
-          Yeni Talep
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => exportToExcel(
+              requests.map((r) => ({
+                requestNumber: r.requestNumber,
+                requestedBy: r.requestedBy ? `${r.requestedBy.firstName} ${r.requestedBy.lastName}` : '',
+                department: r.department?.name ?? '',
+                status: STATUS_LABELS[r.status] ?? r.status,
+                priority: PRIORITY_LABELS[r.priority] ?? r.priority,
+                itemCount: r.items.length,
+                totalEstimated: r.items.reduce((s, i) => s + (i.estimatedPrice ?? 0) * i.quantity, 0),
+                neededBy: r.neededBy ? new Date(r.neededBy).toLocaleDateString('tr-TR') : '',
+                createdAt: new Date(r.createdAt).toLocaleDateString('tr-TR'),
+              })),
+              [
+                { key: 'requestNumber', header: 'Talep No', width: 14 },
+                { key: 'requestedBy', header: 'Talep Eden', width: 20 },
+                { key: 'department', header: 'Departman', width: 16 },
+                { key: 'status', header: 'Durum', width: 16 },
+                { key: 'priority', header: 'Öncelik', width: 10 },
+                { key: 'itemCount', header: 'Kalem Sayısı', width: 12 },
+                { key: 'totalEstimated', header: 'Tahmini Toplam', width: 16 },
+                { key: 'neededBy', header: 'Gereksinim Tarihi', width: 16 },
+                { key: 'createdAt', header: 'Oluşturulma', width: 14 },
+              ],
+              'satin-alma-talepleri',
+              'Satın Alma Talepleri'
+            )}
+            className="flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm hover:bg-muted"
+          >
+            <FileDown className="h-4 w-4" /> Excel
+          </button>
+          <button
+            onClick={() => setModalOpen(true)}
+            className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+          >
+            <Plus className="h-4 w-4" />
+            Yeni Talep
+          </button>
+        </div>
       </div>
 
       {/* Stats */}

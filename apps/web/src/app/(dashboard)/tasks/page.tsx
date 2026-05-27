@@ -14,7 +14,9 @@ import {
   ClipboardList,
   Calendar,
   User,
+  FileDown,
 } from 'lucide-react';
+import { exportToExcel } from '@/lib/utils/excel-export';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTasks, useCompleteTask } from '@/lib/api/hooks';
 import { api } from '@/lib/api/client';
@@ -362,13 +364,40 @@ export default function TasksPage() {
           <h1 className="text-2xl font-bold text-foreground">Görev Yönetimi</h1>
           <p className="text-sm text-muted-foreground mt-1">Tüm görevleri takip edin ve yönetin</p>
         </div>
-        <button
-          onClick={() => setModalOpen(true)}
-          className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors shadow-sm"
-        >
-          <Plus className="h-4 w-4" />
-          Yeni Görev
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => exportToExcel(
+              tasks.map((t) => ({
+                title: t.title,
+                status: STATUS_LABEL[t.status] ?? t.status,
+                priority: PRIORITY_LABEL[t.priority] ?? t.priority,
+                dueDate: t.dueDate ? new Date(t.dueDate).toLocaleDateString('tr-TR') : '',
+                createdAt: t.createdAt ? new Date(t.createdAt).toLocaleDateString('tr-TR') : '',
+                completedAt: t.completedAt ? new Date(t.completedAt).toLocaleDateString('tr-TR') : '',
+              })),
+              [
+                { key: 'title', header: 'Görev', width: 32 },
+                { key: 'status', header: 'Durum', width: 14 },
+                { key: 'priority', header: 'Öncelik', width: 12 },
+                { key: 'dueDate', header: 'Son Tarih', width: 12 },
+                { key: 'createdAt', header: 'Oluşturulma', width: 12 },
+                { key: 'completedAt', header: 'Tamamlanma', width: 12 },
+              ],
+              'gorevler',
+              'Görevler'
+            )}
+            className="flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm hover:bg-muted"
+          >
+            <FileDown className="h-4 w-4" /> Excel
+          </button>
+          <button
+            onClick={() => setModalOpen(true)}
+            className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors shadow-sm"
+          >
+            <Plus className="h-4 w-4" />
+            Yeni Görev
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">

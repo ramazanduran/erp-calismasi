@@ -6,8 +6,9 @@ import { api } from '@/lib/api/client';
 import { cn } from '@/lib/utils';
 import {
   Warehouse, Plus, MapPin, Package, Users, ChevronRight, X,
-  Building2, BarChart3, Layers, PlusCircle, Edit,
+  Building2, BarChart3, Layers, PlusCircle, Edit, FileDown,
 } from 'lucide-react';
+import { exportToExcel } from '@/lib/utils/excel-export';
 
 const TYPE_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
   main:      { label: 'Ana Depo',       color: 'text-blue-700',   bg: 'bg-blue-100' },
@@ -223,9 +224,40 @@ export default function WarehousesPage() {
           <h1 className="text-2xl font-bold">Depo Yönetimi</h1>
           <p className="text-muted-foreground mt-1">Depo ve lokasyon yönetimi</p>
         </div>
-        <button onClick={() => setShowForm(true)} className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-lg text-sm font-medium">
-          <PlusCircle className="h-4 w-4" />Yeni Depo
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => exportToExcel(
+              warehouses.map((w) => ({
+                code: w.code ?? '',
+                name: w.name ?? '',
+                type: TYPE_CONFIG[w.type]?.label ?? w.type ?? '',
+                city: w.city ?? '',
+                address: w.address ?? '',
+                phone: w.phone ?? '',
+                isActive: w.isActive ? 'Aktif' : 'Pasif',
+                productCount: w._count?.locations ?? 0,
+              })),
+              [
+                { key: 'code', header: 'Kod', width: 10 },
+                { key: 'name', header: 'Depo Adı', width: 22 },
+                { key: 'type', header: 'Tip', width: 14 },
+                { key: 'city', header: 'Şehir', width: 14 },
+                { key: 'address', header: 'Adres', width: 28 },
+                { key: 'phone', header: 'Telefon', width: 14 },
+                { key: 'isActive', header: 'Durum', width: 10 },
+                { key: 'productCount', header: 'Lokasyon', width: 10 },
+              ],
+              'depolar',
+              'Depolar'
+            )}
+            className="flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm hover:bg-muted"
+          >
+            <FileDown className="h-4 w-4" /> Excel
+          </button>
+          <button onClick={() => setShowForm(true)} className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-lg text-sm font-medium">
+            <PlusCircle className="h-4 w-4" />Yeni Depo
+          </button>
+        </div>
       </div>
 
       {/* Stats */}

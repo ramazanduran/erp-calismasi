@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { PlusCircle, Package, DollarSign, TrendingDown, Wrench } from 'lucide-react';
+import { PlusCircle, Package, DollarSign, TrendingDown, Wrench, FileDown } from 'lucide-react';
+import { exportToExcel } from '@/lib/utils/excel-export';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api/client';
 import { formatCurrency, cn } from '@/lib/utils';
@@ -125,9 +126,40 @@ export default function AssetsPage() {
           <h1 className="text-2xl font-bold">Demirbaş Yönetimi</h1>
           <p className="text-muted-foreground mt-1">Sabit varlıklar ve amortisman takibi</p>
         </div>
-        <button onClick={() => setShowForm(true)} className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-lg text-sm font-medium">
-          <PlusCircle className="h-4 w-4" />Demirbaş Ekle
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => exportToExcel(
+              (assets as Asset[]).map((a) => ({
+                code: a.code,
+                name: a.name,
+                category: a.category?.name ?? '',
+                status: STATUS_LABELS[a.status] ?? a.status,
+                purchasePrice: Number(a.purchasePrice),
+                currentValue: Number(a.currentValue),
+                purchaseDate: a.purchaseDate ? new Date(a.purchaseDate).toLocaleDateString('tr-TR') : '',
+                warrantyExpiry: a.warrantyExpiry ? new Date(a.warrantyExpiry).toLocaleDateString('tr-TR') : '',
+              })),
+              [
+                { key: 'code', header: 'Kod', width: 12 },
+                { key: 'name', header: 'Demirbaş Adı', width: 26 },
+                { key: 'category', header: 'Kategori', width: 16 },
+                { key: 'status', header: 'Durum', width: 14 },
+                { key: 'purchasePrice', header: 'Alış Fiyatı', width: 14 },
+                { key: 'currentValue', header: 'Net Değer', width: 14 },
+                { key: 'purchaseDate', header: 'Alış Tarihi', width: 12 },
+                { key: 'warrantyExpiry', header: 'Garanti Sonu', width: 12 },
+              ],
+              'demirbaslar',
+              'Demirbaşlar'
+            )}
+            className="flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm hover:bg-muted"
+          >
+            <FileDown className="h-4 w-4" /> Excel
+          </button>
+          <button onClick={() => setShowForm(true)} className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-lg text-sm font-medium">
+            <PlusCircle className="h-4 w-4" />Demirbaş Ekle
+          </button>
+        </div>
       </div>
 
       {/* Summary Cards */}

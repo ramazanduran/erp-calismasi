@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { PlusCircle, Trophy, Target, TrendingUp, Users } from 'lucide-react';
+import { PlusCircle, Trophy, Target, TrendingUp, Users, FileDown } from 'lucide-react';
+import { exportToExcel } from '@/lib/utils/excel-export';
 import { useDealPipeline, useDealStats, useCreateDeal, useUpdateDeal, useDeleteDeal } from '@/lib/api/hooks';
 import { formatCurrency, cn } from '@/lib/utils';
 
@@ -217,6 +218,31 @@ export default function DealsPage() {
               Liste
             </button>
           </div>
+          <button
+            onClick={() => exportToExcel(
+              pipelineColumns.flatMap((col) => col.deals).map((deal) => ({
+                title: deal.title,
+                customer: deal.customer?.name ?? '',
+                value: Number(deal.value),
+                stage: STAGE_CONFIG[deal.stage]?.label ?? deal.stage,
+                probability: `%${deal.probability}`,
+                expectedClose: deal.expectedClose ? new Date(deal.expectedClose).toLocaleDateString('tr-TR') : '',
+              })),
+              [
+                { key: 'title', header: 'Fırsat', width: 28 },
+                { key: 'customer', header: 'Müşteri', width: 22 },
+                { key: 'value', header: 'Değer', width: 16 },
+                { key: 'stage', header: 'Aşama', width: 14 },
+                { key: 'probability', header: 'Olasılık', width: 10 },
+                { key: 'expectedClose', header: 'Kapanış Tarihi', width: 14 },
+              ],
+              'firsatlar',
+              'Satış Fırsatları'
+            )}
+            className="flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm hover:bg-muted"
+          >
+            <FileDown className="h-4 w-4" /> Excel
+          </button>
           <button
             onClick={() => setShowForm(true)}
             className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-lg text-sm font-medium"

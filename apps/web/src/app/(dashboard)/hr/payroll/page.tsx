@@ -14,7 +14,9 @@ import {
   ChevronDown,
   Banknote,
   AlertCircle,
+  FileDown,
 } from 'lucide-react';
+import { exportToExcel } from '@/lib/utils/excel-export';
 import { toast } from 'sonner';
 import { api } from '@/lib/api/client';
 
@@ -490,13 +492,52 @@ export default function PayrollPage() {
             Aylık maaş bordrolarını yönetin ve ödemeleri takip edin
           </p>
         </div>
-        <button
-          onClick={() => setModalOpen(true)}
-          className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors self-start sm:self-auto"
-        >
-          <Plus className="h-4 w-4" />
-          Bordro Oluştur
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => exportToExcel(
+              filtered.map((p) => ({
+                employeeName: `${p.employee.firstName} ${p.employee.lastName}`,
+                employeeNumber: p.employee.employeeNumber,
+                department: p.employee.department?.name ?? '',
+                month: p.month,
+                year: p.year,
+                basicSalary: p.basicSalary,
+                overtimePay: p.overtimePay,
+                bonuses: p.bonuses,
+                deductions: p.deductions,
+                netSalary: p.netSalary,
+                status: STATUS_LABELS[p.status] ?? p.status,
+                payDate: p.payDate ? new Date(p.payDate).toLocaleDateString('tr-TR') : '',
+              })),
+              [
+                { key: 'employeeName', header: 'Çalışan', width: 22 },
+                { key: 'employeeNumber', header: 'Sicil No', width: 12 },
+                { key: 'department', header: 'Departman', width: 18 },
+                { key: 'month', header: 'Ay', width: 6 },
+                { key: 'year', header: 'Yıl', width: 6 },
+                { key: 'basicSalary', header: 'Temel Maaş', width: 14 },
+                { key: 'overtimePay', header: 'Fazla Mesai', width: 14 },
+                { key: 'bonuses', header: 'Prim', width: 12 },
+                { key: 'deductions', header: 'Kesintiler', width: 12 },
+                { key: 'netSalary', header: 'Net Maaş', width: 14 },
+                { key: 'status', header: 'Durum', width: 12 },
+                { key: 'payDate', header: 'Ödeme Tarihi', width: 14 },
+              ],
+              'bordro',
+              'Bordro'
+            )}
+            className="flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm hover:bg-muted self-start sm:self-auto"
+          >
+            <FileDown className="h-4 w-4" /> Excel
+          </button>
+          <button
+            onClick={() => setModalOpen(true)}
+            className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors self-start sm:self-auto"
+          >
+            <Plus className="h-4 w-4" />
+            Bordro Oluştur
+          </button>
+        </div>
       </div>
 
       {/* ── Period selectors ── */}

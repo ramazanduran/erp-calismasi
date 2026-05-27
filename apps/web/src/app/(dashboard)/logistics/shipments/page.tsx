@@ -4,8 +4,9 @@ import { useState, useMemo } from 'react';
 import {
   PlusCircle, Truck, Package, MapPin, CheckCircle2, Clock, XCircle,
   RotateCcw, ChevronDown, ChevronUp, Search, X, Loader2, TrendingUp,
-  DollarSign,
+  DollarSign, FileDown,
 } from 'lucide-react';
+import { exportToExcel } from '@/lib/utils/excel-export';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api/client';
 import { formatCurrency, cn } from '@/lib/utils';
@@ -484,13 +485,48 @@ export default function ShipmentsPage() {
           <h1 className="text-2xl font-bold">Sevkiyat Takibi</h1>
           <p className="text-muted-foreground mt-1 text-sm">Lojistik süreçlerini yönetin</p>
         </div>
-        <button
-          onClick={() => setShowForm(true)}
-          className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors"
-        >
-          <PlusCircle className="h-4 w-4" />
-          Yeni Sevkiyat
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => exportToExcel(
+              (shipments as Shipment[]).map((sh) => ({
+                trackingNumber: sh.trackingNumber,
+                carrier: sh.carrier ?? '',
+                status: STATUS_CONFIG[sh.status]?.label ?? sh.status,
+                customer: sh.customer?.name ?? '',
+                orderNumber: sh.order?.orderNumber ?? '',
+                origin: [sh.origin?.city, sh.origin?.country].filter(Boolean).join(', '),
+                destination: [sh.destination?.city, sh.destination?.country].filter(Boolean).join(', '),
+                shippingCost: Number(sh.shippingCost),
+                estimatedDelivery: sh.estimatedDelivery ? new Date(sh.estimatedDelivery).toLocaleDateString('tr-TR') : '',
+                actualDelivery: sh.actualDelivery ? new Date(sh.actualDelivery).toLocaleDateString('tr-TR') : '',
+              })),
+              [
+                { key: 'trackingNumber', header: 'Takip No', width: 16 },
+                { key: 'carrier', header: 'Taşıyıcı', width: 14 },
+                { key: 'status', header: 'Durum', width: 14 },
+                { key: 'customer', header: 'Müşteri', width: 22 },
+                { key: 'orderNumber', header: 'Sipariş No', width: 14 },
+                { key: 'origin', header: 'Çıkış', width: 18 },
+                { key: 'destination', header: 'Varış', width: 18 },
+                { key: 'shippingCost', header: 'Kargo Ücreti', width: 14 },
+                { key: 'estimatedDelivery', header: 'Tahmini Teslimat', width: 16 },
+                { key: 'actualDelivery', header: 'Fiili Teslimat', width: 14 },
+              ],
+              'sevkiyatlar',
+              'Sevkiyatlar'
+            )}
+            className="flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm hover:bg-muted"
+          >
+            <FileDown className="h-4 w-4" /> Excel
+          </button>
+          <button
+            onClick={() => setShowForm(true)}
+            className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors"
+          >
+            <PlusCircle className="h-4 w-4" />
+            Yeni Sevkiyat
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">

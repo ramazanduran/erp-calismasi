@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { PlusCircle, FolderKanban, Clock, CheckCircle2, AlertCircle, Users, Calendar } from 'lucide-react';
+import { PlusCircle, FolderKanban, Clock, CheckCircle2, AlertCircle, Users, Calendar, FileDown } from 'lucide-react';
+import { exportToExcel } from '@/lib/utils/excel-export';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api/client';
 import { formatCurrency, cn } from '@/lib/utils';
@@ -122,9 +123,42 @@ export default function ProjectsPage() {
           <h1 className="text-2xl font-bold">Proje Yönetimi</h1>
           <p className="text-muted-foreground mt-1">Tüm projelerinizi takip edin</p>
         </div>
-        <button onClick={() => setShowForm(true)} className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-lg text-sm font-medium">
-          <PlusCircle className="h-4 w-4" />Yeni Proje
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => exportToExcel(
+              (projects as Project[]).map((p) => ({
+                code: p.code,
+                name: p.name,
+                status: STATUS_CONFIG[p.status]?.label ?? p.status,
+                priority: p.priority,
+                progress: `${p.progress}%`,
+                customer: p.customer?.name ?? '',
+                budget: p.budget ?? '',
+                startDate: p.startDate ? new Date(p.startDate).toLocaleDateString('tr-TR') : '',
+                endDate: p.endDate ? new Date(p.endDate).toLocaleDateString('tr-TR') : '',
+              })),
+              [
+                { key: 'code', header: 'Kod', width: 10 },
+                { key: 'name', header: 'Proje Adı', width: 30 },
+                { key: 'status', header: 'Durum', width: 14 },
+                { key: 'priority', header: 'Öncelik', width: 12 },
+                { key: 'progress', header: 'İlerleme', width: 10 },
+                { key: 'customer', header: 'Müşteri', width: 22 },
+                { key: 'budget', header: 'Bütçe', width: 14 },
+                { key: 'startDate', header: 'Başlangıç', width: 12 },
+                { key: 'endDate', header: 'Bitiş', width: 12 },
+              ],
+              'projeler',
+              'Projeler'
+            )}
+            className="flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm hover:bg-muted"
+          >
+            <FileDown className="h-4 w-4" /> Excel
+          </button>
+          <button onClick={() => setShowForm(true)} className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-lg text-sm font-medium">
+            <PlusCircle className="h-4 w-4" />Yeni Proje
+          </button>
+        </div>
       </div>
 
       {/* Stats */}
