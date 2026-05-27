@@ -5,8 +5,9 @@ import Link from 'next/link';
 import {
   GitBranch, ToggleLeft, ToggleRight, Plus, ChevronDown, ChevronRight,
   Search, Play, Clock, Zap, Webhook, Calendar, CheckCircle2, XCircle,
-  AlertCircle, Activity, BarChart2,
+  AlertCircle, Activity, BarChart2, FileDown,
 } from 'lucide-react';
+import { exportToExcel } from '@/lib/utils/excel-export';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { useWorkflows, useToggleWorkflow } from '@/lib/api/hooks/use-workflows';
@@ -197,14 +198,43 @@ export default function WorkflowsPage() {
           <h1 className="text-2xl font-bold text-foreground">İş Akışları</h1>
           <p className="text-sm text-muted-foreground mt-1">Otomatik iş akışlarını yönetin ve izleyin</p>
         </div>
-        <button
-          disabled
-          title="Yakında kullanılabilir"
-          className="flex items-center gap-2 rounded-lg bg-primary/50 px-4 py-2 text-sm font-medium text-primary-foreground cursor-not-allowed"
-        >
-          <Plus className="h-4 w-4" />
-          Yeni Workflow
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => exportToExcel(
+              filtered.map((w) => ({
+                name: w.name,
+                description: w.description ?? '',
+                triggerType: TRIGGER_CONFIG[w.triggerType]?.label ?? w.triggerType,
+                isActive: w.isActive ? 'Aktif' : 'Pasif',
+                instanceCount: w._count?.instances ?? 0,
+                lastRunAt: w.lastRunAt ? new Date(w.lastRunAt).toLocaleDateString('tr-TR') : '',
+                lastError: w.lastError ?? '',
+              })),
+              [
+                { key: 'name', header: 'İş Akışı Adı', width: 26 },
+                { key: 'description', header: 'Açıklama', width: 30 },
+                { key: 'triggerType', header: 'Tetikleyici', width: 14 },
+                { key: 'isActive', header: 'Durum', width: 10 },
+                { key: 'instanceCount', header: 'Çalıştırma', width: 12 },
+                { key: 'lastRunAt', header: 'Son Çalışma', width: 14 },
+                { key: 'lastError', header: 'Son Hata', width: 30 },
+              ],
+              'is-akislari',
+              'İş Akışları'
+            )}
+            className="flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm hover:bg-muted"
+          >
+            <FileDown className="h-4 w-4" /> Excel
+          </button>
+          <button
+            disabled
+            title="Yakında kullanılabilir"
+            className="flex items-center gap-2 rounded-lg bg-primary/50 px-4 py-2 text-sm font-medium text-primary-foreground cursor-not-allowed"
+          >
+            <Plus className="h-4 w-4" />
+            Yeni Workflow
+          </button>
+        </div>
       </div>
 
       {/* Stats */}

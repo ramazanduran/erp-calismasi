@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { PlusCircle, TrendingUp, TrendingDown, Minus, Target, BarChart3 } from 'lucide-react';
+import { PlusCircle, TrendingUp, TrendingDown, Minus, Target, BarChart3, FileDown } from 'lucide-react';
+import { exportToExcel } from '@/lib/utils/excel-export';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api/client';
 import { cn } from '@/lib/utils';
@@ -220,9 +221,42 @@ export default function KpiPage() {
           <h1 className="text-2xl font-bold">KPI Takibi</h1>
           <p className="text-muted-foreground mt-1">Anahtar performans göstergeleri — {currentPeriod}</p>
         </div>
-        <button onClick={() => setShowForm(true)} className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-lg text-sm font-medium">
-          <PlusCircle className="h-4 w-4" />Yeni KPI
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => exportToExcel(
+              filtered.map((k) => ({
+                code: k.code,
+                name: k.name,
+                category: CATEGORY_LABELS[k.category] ?? k.category,
+                unit: k.unit ?? '',
+                direction: DIRECTION_LABELS[k.direction] ?? k.direction,
+                frequency: k.frequency,
+                currentValue: k.currentValue ?? '',
+                targetValue: k.targetValue ?? '',
+                status: STATUS_CONFIG[k.status]?.label ?? k.status,
+              })),
+              [
+                { key: 'code', header: 'Kod', width: 18 },
+                { key: 'name', header: 'KPI Adı', width: 30 },
+                { key: 'category', header: 'Kategori', width: 18 },
+                { key: 'unit', header: 'Birim', width: 10 },
+                { key: 'direction', header: 'Yön', width: 18 },
+                { key: 'frequency', header: 'Sıklık', width: 12 },
+                { key: 'currentValue', header: 'Güncel Değer', width: 14 },
+                { key: 'targetValue', header: 'Hedef', width: 14 },
+                { key: 'status', header: 'Durum', width: 12 },
+              ],
+              'kpi-takibi',
+              'KPI Takibi'
+            )}
+            className="flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm hover:bg-muted"
+          >
+            <FileDown className="h-4 w-4" /> Excel
+          </button>
+          <button onClick={() => setShowForm(true)} className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-lg text-sm font-medium">
+            <PlusCircle className="h-4 w-4" />Yeni KPI
+          </button>
+        </div>
       </div>
 
       {/* Status Summary */}
