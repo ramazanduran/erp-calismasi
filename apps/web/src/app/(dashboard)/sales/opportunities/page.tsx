@@ -135,6 +135,28 @@ const SOURCE_LABELS: Record<string, string> = {
   other: 'Diğer',
 };
 
+// ─── Mock Data ───────────────────────────────────────────────────────────────
+
+const MOCK_DEALS: Deal[] = [
+  { id: 'd1', title: 'ERP Lisans — Anadolu Holding', customer: { name: 'Anadolu Holding' }, stage: 'won', value: 1200000, probability: 100, expectedCloseDate: '2026-02-28', assignedTo: { firstName: 'Ahmet', lastName: 'Yılmaz' } },
+  { id: 'd2', title: 'CRM + ERP Entegrasyon Paketi', customer: { name: 'Güney Sanayi A.Ş.' }, stage: 'negotiation', value: 750000, probability: 70, expectedCloseDate: '2026-06-30', assignedTo: { firstName: 'Zeynep', lastName: 'Kaya' } },
+  { id: 'd3', title: 'Üretim Modülü Genişletme', customer: { name: 'Batı Endüstri A.Ş.' }, stage: 'proposal', value: 420000, probability: 50, expectedCloseDate: '2026-07-15', assignedTo: { firstName: 'Ahmet', lastName: 'Yılmaz' } },
+  { id: 'd4', title: 'Depo Yönetim Yazılımı', customer: { name: 'Kuzey Lojistik Ltd.' }, stage: 'qualified', value: 280000, probability: 30, expectedCloseDate: '2026-08-01', assignedTo: { firstName: 'Mehmet', lastName: 'Demir' } },
+  { id: 'd5', title: 'HR Modülü Lisansı', customer: { name: 'Orta Anadolu Tarım' }, stage: 'new', value: 160000, probability: 15, expectedCloseDate: '2026-09-30', assignedTo: null },
+  { id: 'd6', title: 'Finans Entegrasyon Projesi', customer: { name: 'Ege Tekstil A.Ş.' }, stage: 'lost', value: 380000, probability: 0, expectedCloseDate: '2026-04-30', assignedTo: { firstName: 'Zeynep', lastName: 'Kaya' } },
+  { id: 'd7', title: 'Stok Optimizasyon Platformu', customer: { name: 'İstanbul Yazılım Ltd.' }, stage: 'qualified', value: 195000, probability: 35, expectedCloseDate: '2026-07-31', assignedTo: { firstName: 'Mehmet', lastName: 'Demir' } },
+  { id: 'd8', title: 'Kurumsal ERP Yükseltmesi', customer: { name: 'Batı Endüstri A.Ş.' }, stage: 'won', value: 540000, probability: 100, expectedCloseDate: '2026-03-15', assignedTo: { firstName: 'Ahmet', lastName: 'Yılmaz' } },
+];
+
+const MOCK_LEADS: Lead[] = [
+  { id: 'l1', firstName: 'Can', lastName: 'Öztürk', company: 'Mavi Holding A.Ş.', status: 'qualified', source: 'referral', estimatedValue: 500000 },
+  { id: 'l2', firstName: 'Fatma', lastName: 'Şahin', company: 'Şahin Mobilya Ltd.', status: 'contacted', source: 'web', estimatedValue: 80000 },
+  { id: 'l3', firstName: 'Ali', lastName: 'Veli', company: 'Veli Tarım Ürünleri', status: 'new', source: 'cold_call', estimatedValue: 120000 },
+  { id: 'l4', firstName: 'Selin', lastName: 'Arslan', company: 'Arslan İnşaat A.Ş.', status: 'converted', source: 'event', estimatedValue: 750000 },
+  { id: 'l5', firstName: 'Berk', lastName: 'Çelik', company: 'Çelik Enerji Ltd.', status: 'new', source: 'social', estimatedValue: 220000 },
+  { id: 'l6', firstName: 'Nil', lastName: 'Demir', company: 'Demir Teknoloji A.Ş.', status: 'lost', source: 'referral', estimatedValue: 180000 },
+];
+
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function normalizeDealList(raw: unknown): Deal[] {
@@ -475,8 +497,15 @@ export default function OpportunitiesPage() {
     enabled: activeTab === 'leads',
   });
 
-  const allDeals = useMemo(() => normalizeDealList(dealsRaw), [dealsRaw]);
-  const allLeads = useMemo(() => normalizeLeadList(leadsRaw), [leadsRaw]);
+  const allDeals = useMemo(() => {
+    const d = normalizeDealList(dealsRaw);
+    return d.length > 0 ? d : (dealsRaw !== undefined ? [] : MOCK_DEALS);
+  }, [dealsRaw]);
+
+  const allLeads = useMemo(() => {
+    const l = normalizeLeadList(leadsRaw);
+    return l.length > 0 ? l : (leadsRaw !== undefined ? [] : MOCK_LEADS);
+  }, [leadsRaw]);
 
   const deals = useMemo(() => {
     if (!search) return allDeals;

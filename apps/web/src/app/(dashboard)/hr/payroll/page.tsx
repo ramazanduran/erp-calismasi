@@ -75,6 +75,17 @@ interface NewPayrollForm {
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
+const MOCK_PAYROLLS: Payroll[] = [
+  { id: 'pay1', employee: { firstName: 'Ahmet', lastName: 'Yılmaz', employeeNumber: 'EMP-001', department: { name: 'Yazılım Geliştirme' } }, month: 5, year: 2026, basicSalary: 45000, overtimePay: 3200, bonuses: 5000, deductions: 5390, netSalary: 47810, status: 'approved' },
+  { id: 'pay2', employee: { firstName: 'Zeynep', lastName: 'Kaya', employeeNumber: 'EMP-002', department: { name: 'Satış' } }, month: 5, year: 2026, basicSalary: 38000, overtimePay: 0, bonuses: 8000, deductions: 4560, netSalary: 41440, status: 'paid', payDate: '2026-05-25' },
+  { id: 'pay3', employee: { firstName: 'Mehmet', lastName: 'Demir', employeeNumber: 'EMP-003', department: { name: 'Lojistik' } }, month: 5, year: 2026, basicSalary: 32000, overtimePay: 4800, bonuses: 0, deductions: 3696, netSalary: 33104, status: 'draft' },
+  { id: 'pay4', employee: { firstName: 'Fatma', lastName: 'Şahin', employeeNumber: 'EMP-004', department: { name: 'İnsan Kaynakları' } }, month: 5, year: 2026, basicSalary: 35000, overtimePay: 0, bonuses: 2000, deductions: 3700, netSalary: 33300, status: 'paid', payDate: '2026-05-25' },
+  { id: 'pay5', employee: { firstName: 'Can', lastName: 'Öztürk', employeeNumber: 'EMP-005', department: { name: 'Yazılım Geliştirme' } }, month: 5, year: 2026, basicSalary: 52000, overtimePay: 6000, bonuses: 0, deductions: 5800, netSalary: 52200, status: 'approved' },
+  { id: 'pay6', employee: { firstName: 'Selin', lastName: 'Arslan', employeeNumber: 'EMP-006', department: { name: 'Muhasebe' } }, month: 5, year: 2026, basicSalary: 40000, overtimePay: 2000, bonuses: 3000, deductions: 4500, netSalary: 40500, status: 'draft' },
+  { id: 'pay7', employee: { firstName: 'Berk', lastName: 'Çelik', employeeNumber: 'EMP-007', department: { name: 'Üretim' } }, month: 5, year: 2026, basicSalary: 28000, overtimePay: 7000, bonuses: 0, deductions: 3500, netSalary: 31500, status: 'paid', payDate: '2026-05-25' },
+  { id: 'pay8', employee: { firstName: 'Nil', lastName: 'Demir', employeeNumber: 'EMP-008', department: { name: 'Pazarlama' } }, month: 5, year: 2026, basicSalary: 36000, overtimePay: 0, bonuses: 4000, deductions: 4000, netSalary: 36000, status: 'approved' },
+];
+
 const MONTHS = [
   { value: 1, label: 'Ocak' },
   { value: 2, label: 'Şubat' },
@@ -427,7 +438,7 @@ export default function PayrollPage() {
   const queryClient = useQueryClient();
 
   // ── Queries ──
-  const { data: payrollData, isLoading } = useQuery({
+  const { data: payrollData, isLoading: payrollLoading } = useQuery({
     queryKey: ['payroll', month, year],
     queryFn: () =>
       api.get<{ data: Payroll[]; total: number }>('api/v1/hr/payrolls', {
@@ -444,13 +455,45 @@ export default function PayrollPage() {
       api.get<PayrollSummary>('api/v1/hr/payrolls/summary', { month, year }),
   });
 
-  const payrolls: Payroll[] = (payrollData as any)?.data ?? (Array.isArray(payrollData) ? (payrollData as any) : []);
-  const summary = summaryData as unknown as PayrollSummary | undefined;
+  const isLoading = payrollLoading && !payrollData;
+
+  const apiPayrolls: Payroll[] | null = useMemo(() => {
+    if (payrollData === undefined) return null;
+    if ((payrollData as any)?.data) return (payrollData as any).data as Payroll[];
+    if (Array.isArray(payrollData)) return payrollData as Payroll[];
+    return [];
+  }, [payrollData]);
+
+  const [localPayrolls, setLocalPayrolls] = useState<Payroll[]>(MOCK_PAYROLLS);
+
+  const payrolls: Payroll[] = useMemo(() => {
+    return (apiPayrolls ?? localPayrolls).filter((p) => p.month === month && p.year === year);
+  }, [apiPayrolls, localPayrolls, month, year]);
+
+  const summary = useMemo<PayrollSummary>(() => {
+    const apiSum = summaryData as unknown as PayrollSummary | undefined;
+    if (apiSum) return apiSum;
+    const gross = payrolls.reduce((s, p) => s + p.basicSalary + p.overtimePay + p.bonuses, 0);
+    const ded = payrolls.reduce((s, p) => s + p.deductions, 0);
+    return {
+      totalEmployees: payrolls.length,
+      totalGross: gross,
+      totalDeductions: ded,
+      totalNet: payrolls.reduce((s, p) => s + p.netSalary, 0),
+      paid: payrolls.filter((p) => p.status === 'paid').length,
+      pending: payrolls.filter((p) => p.status !== 'paid').length,
+    };
+  }, [summaryData, payrolls]);
 
   // ── Mutations ──
   const markPaidMutation = useMutation({
-    mutationFn: (id: string) =>
-      api.patch(`api/v1/hr/payrolls/${id}`, { status: 'paid' }),
+    mutationFn: (id: string) => {
+      if (!apiPayrolls) {
+        setLocalPayrolls((prev) => prev.map((p) => p.id === id ? { ...p, status: 'paid' as PayrollStatus, payDate: new Date('2026-05-27').toISOString() } : p));
+        return Promise.resolve();
+      }
+      return api.patch(`api/v1/hr/payrolls/${id}`, { status: 'paid' });
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['payroll', month, year] });
       queryClient.invalidateQueries({ queryKey: ['payroll-summary', month, year] });
@@ -460,8 +503,13 @@ export default function PayrollPage() {
   });
 
   const approveMutation = useMutation({
-    mutationFn: (id: string) =>
-      api.patch(`api/v1/hr/payrolls/${id}`, { status: 'approved' }),
+    mutationFn: (id: string) => {
+      if (!apiPayrolls) {
+        setLocalPayrolls((prev) => prev.map((p) => p.id === id ? { ...p, status: 'approved' as PayrollStatus } : p));
+        return Promise.resolve();
+      }
+      return api.patch(`api/v1/hr/payrolls/${id}`, { status: 'approved' });
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['payroll', month, year] });
       queryClient.invalidateQueries({ queryKey: ['payroll-summary', month, year] });

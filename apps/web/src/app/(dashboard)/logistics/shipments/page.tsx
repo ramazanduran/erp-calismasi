@@ -46,6 +46,17 @@ const STATUS_NEXT_LABEL: Record<string, { label: string; icon: React.ComponentTy
 
 const CARRIERS = ['Aras', 'MNG', 'Yurtiçi', 'PTT', 'UPS', 'DHL', 'FedEx'];
 
+const MOCK_SHIPMENTS: Shipment[] = [
+  { id: 'sh1', trackingNumber: 'ARS-2026-00142', carrier: 'Aras', status: 'delivered', shippingCost: 285, estimatedDelivery: '2026-05-10', actualDelivery: '2026-05-09', origin: { city: 'İstanbul', address: 'Pendik Depo' }, destination: { city: 'Ankara', address: 'Çankaya Şubesi' }, customer: { name: 'Anadolu Holding' }, order: { orderNumber: 'SLO-2026-088' }, _count: { items: 3, events: 5 } },
+  { id: 'sh2', trackingNumber: 'MNG-2026-00378', carrier: 'MNG', status: 'in_transit', shippingCost: 420, estimatedDelivery: '2026-05-29', origin: { city: 'İstanbul', address: 'Kadıköy Depo' }, destination: { city: 'İzmir', address: 'Konak Mağaza' }, customer: { name: 'Güney Sanayi A.Ş.' }, order: { orderNumber: 'SLO-2026-112' }, _count: { items: 5, events: 3 } },
+  { id: 'sh3', trackingNumber: 'YIC-2026-01155', carrier: 'Yurtiçi', status: 'out_for_delivery', shippingCost: 185, estimatedDelivery: '2026-05-27', origin: { city: 'Bursa', address: 'OSB Depo' }, destination: { city: 'İstanbul', address: 'Maslak Ofis' }, customer: { name: 'TechSoft A.Ş.' }, _count: { items: 1, events: 4 } },
+  { id: 'sh4', trackingNumber: 'DHL-2026-00092', carrier: 'DHL', status: 'picked_up', shippingCost: 1850, estimatedDelivery: '2026-06-02', origin: { city: 'İstanbul', address: 'Atatürk Havalimanı' }, destination: { city: 'Frankfurt', address: 'DE-60329' }, customer: { name: 'GlobalTech GmbH' }, _count: { items: 2, events: 2 } },
+  { id: 'sh5', trackingNumber: 'ARS-2026-00189', carrier: 'Aras', status: 'pending', shippingCost: 320, estimatedDelivery: '2026-05-30', origin: { city: 'İstanbul', address: 'Esenyurt Depo' }, destination: { city: 'Adana', address: 'Seyhan Depo' }, customer: { name: 'Batı Endüstri A.Ş.' }, order: { orderNumber: 'SLO-2026-118' }, _count: { items: 8, events: 1 } },
+  { id: 'sh6', trackingNumber: 'MNG-2026-00401', carrier: 'MNG', status: 'delivered', shippingCost: 215, estimatedDelivery: '2026-05-20', actualDelivery: '2026-05-21', origin: { city: 'Ankara', address: 'Ostim Depo' }, destination: { city: 'Konya', address: 'Selçuklu Şubesi' }, customer: { name: 'Orta Anadolu Tarım' }, _count: { items: 4, events: 5 } },
+  { id: 'sh7', trackingNumber: 'UPS-2026-00058', carrier: 'UPS', status: 'returned', shippingCost: 650, origin: { city: 'İstanbul', address: 'Merkez Depo' }, destination: { city: 'Antalya', address: 'Konyaaltı Mağaza' }, customer: { name: 'Ege Tekstil A.Ş.' }, order: { orderNumber: 'SLO-2026-095' }, _count: { items: 2, events: 6 } },
+  { id: 'sh8', trackingNumber: 'PTT-2026-00321', carrier: 'PTT', status: 'pending', shippingCost: 125, estimatedDelivery: '2026-05-31', origin: { city: 'Kocaeli', address: 'Gebze OSB' }, destination: { city: 'Samsun', address: 'Merkez Ofis' }, customer: null, _count: { items: 1, events: 1 } },
+];
+
 const STATUS_TABS = [
   { value: '', label: 'Tümü' },
   { value: 'pending', label: 'Beklemede' },
@@ -414,7 +425,7 @@ export default function ShipmentsPage() {
     return p;
   }, [statusFilter, carrierFilter, search]);
 
-  const { data: shipments = [], isLoading } = useQuery({
+  const { data: rawShipments, isLoading: apiLoading } = useQuery({
     queryKey: ['shipments', queryParams],
     queryFn: () => api.get('/api/v1/logistics/shipments', Object.keys(queryParams).length ? queryParams : undefined),
   });
@@ -424,8 +435,33 @@ export default function ShipmentsPage() {
     queryFn: () => api.get('/api/v1/logistics/shipments/stats'),
   });
 
-  const s = stats as ShipmentStats | undefined;
-  const shipmentList = shipments as Shipment[];
+  const apiShipments: Shipment[] | null = rawShipments !== undefined
+    ? (Array.isArray(rawShipments) ? (rawShipments as Shipment[]) : [])
+    : null;
+
+  const isLoading = apiLoading && apiShipments === null;
+
+  const shipmentList = useMemo<Shipment[]>(() => {
+    const base = apiShipments ?? MOCK_SHIPMENTS;
+    return base.filter((sh) => {
+      if (statusFilter && sh.status !== statusFilter) return false;
+      if (carrierFilter && sh.carrier !== carrierFilter) return false;
+      if (search) {
+        const q = search.toLowerCase();
+        if (!sh.trackingNumber.toLowerCase().includes(q) && !sh.customer?.name?.toLowerCase().includes(q) && !sh.order?.orderNumber?.toLowerCase().includes(q)) return false;
+      }
+      return true;
+    });
+  }, [apiShipments, statusFilter, carrierFilter, search]);
+
+  const s = useMemo<ShipmentStats | undefined>(() => {
+    const apiStats = stats as ShipmentStats | undefined;
+    if (apiStats) return apiStats;
+    const base = apiShipments ?? MOCK_SHIPMENTS;
+    const byStatus: Record<string, number> = {};
+    base.forEach((sh) => { byStatus[sh.status] = (byStatus[sh.status] ?? 0) + 1; });
+    return { total: base.length, byStatus, totalCost: base.reduce((s, sh) => s + Number(sh.shippingCost), 0), inTransit: byStatus['in_transit'] ?? 0, pending: byStatus['pending'] ?? 0 };
+  }, [stats, apiShipments]);
 
   const totalVisibleCost = useMemo(
     () => shipmentList.reduce((sum, sh) => sum + Number(sh.shippingCost ?? 0), 0),
