@@ -8,7 +8,7 @@ import {
   Factory, Users, Truck, BarChart3, FolderKanban, FileText, Bell, Settings,
   ChevronDown, ChevronRight, X, GitBranch, CheckSquare, Calculator, Target,
   Layers, ClipboardList, FileSignature, Wrench, TrendingUp, CalendarDays, Cog,
-  FolderOpen, ShieldCheck, Sparkles, Link2, Lightbulb,
+  FolderOpen, ShieldCheck, Sparkles, Link2, Lightbulb, MessageSquare,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { AuthUser } from '@erp/shared-types';
@@ -25,6 +25,9 @@ const navigation = [
       { label: 'Faturalar', href: '/finance/invoices' },
       { label: 'Banka Hesapları', href: '/finance/bank-accounts' },
       { label: 'Banka Mutabakatı', href: '/finance/bank-reconciliation' },
+      { label: 'Nakit Akışı', href: '/finance/cash-flow' },
+      { label: 'Çek / Senet Takibi', href: '/finance/cheques' },
+      { label: 'Vade Analizi', href: '/finance/aging' },
       { label: 'Raporlar', href: '/finance/reports' },
       { label: 'Vergi Yönetimi', href: '/finance/tax' },
     ],
@@ -53,6 +56,8 @@ const navigation = [
       { label: 'Teklifler', href: '/sales/quotes' },
       { label: 'Fırsatlar', href: '/sales/opportunities' },
       { label: 'Servis Talepleri', href: '/sales/service-requests' },
+      { label: 'Kampanyalar', href: '/sales/campaigns' },
+      { label: 'Garanti Takibi', href: '/sales/warranty' },
     ],
   },
   {
@@ -65,6 +70,8 @@ const navigation = [
       { label: 'Talepler', href: '/purchasing/requests' },
       { label: 'Teklif İsteme (RFQ)', href: '/purchasing/rfq' },
       { label: 'İthalat & İhracat', href: '/purchasing/import-export' },
+      { label: 'Otomatik Satın Alma', href: '/purchasing/auto-purchase' },
+      { label: 'Tedarikçi Değerlendirme', href: '/purchasing/supplier-evaluation' },
     ],
   },
   {
@@ -93,6 +100,7 @@ const navigation = [
       { label: 'Eğitim', href: '/hr/training' },
       { label: 'İSG', href: '/hr/health-safety' },
       { label: 'Org Şeması', href: '/hr/org-chart' },
+      { label: 'Vardiya Planlama', href: '/hr/shifts' },
     ],
   },
   {
@@ -170,6 +178,7 @@ const navigation = [
   { id: 'notifications', label: 'Bildirimler', icon: Bell, href: '/notifications' },
   { id: 'documents', label: 'Dokümanlar', icon: FolderOpen, href: '/documents' },
   { id: 'ai', label: 'AI Asistan', icon: Sparkles, href: '/ai' },
+  { id: 'messaging', label: 'Mesajlaşma', icon: MessageSquare, href: '/messaging' },
   {
     id: 'settings-extra',
     label: 'Sistem',
