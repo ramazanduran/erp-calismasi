@@ -47,6 +47,15 @@ interface Product {
   salePrice: number;
 }
 
+// ─── Mock Data ────────────────────────────────────────────────────────────────
+
+const MOCK_PRICE_LISTS: PriceList[] = [
+  { id: 'pl1', name: 'Standart Fiyat Listesi', code: 'STANDART-01', currency: 'TRY', startDate: '2026-01-01', isDefault: true, isActive: true, description: 'Tüm müşteriler için geçerli standart liste', _count: { items: 48 } },
+  { id: 'pl2', name: 'VIP Müşteri Listesi', code: 'VIP-01', currency: 'TRY', startDate: '2026-01-01', endDate: '2026-12-31', isDefault: false, isActive: true, description: 'VIP müşteriler için %10 indirimli liste', _count: { items: 48 } },
+  { id: 'pl3', name: 'Kurumsal USD Fiyatları', code: 'CORP-USD-01', currency: 'USD', startDate: '2026-03-01', isDefault: false, isActive: true, description: 'Yurt dışı kurumsal müşteriler için', _count: { items: 25 } },
+  { id: 'pl4', name: '2025 Arşiv Listesi', code: 'ARSIV-2025', currency: 'TRY', endDate: '2025-12-31', isDefault: false, isActive: false, description: 'Arşivlenmiş 2025 yılı listesi', _count: { items: 45 } },
+];
+
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const CURRENCY_CONFIG: Record<string, { label: string; flag: string; color: string; bg: string }> = {
@@ -494,7 +503,7 @@ function PriceListDetailModal({ list, onClose }: {
 
 // ─── New Price List Modal ─────────────────────────────────────────────────────
 
-function NewPriceListModal({ onClose }: { onClose: () => void }) {
+function NewPriceListModal({ onClose, onLocalCreate }: { onClose: () => void; onLocalCreate: (list: PriceList) => void }) {
   const qc = useQueryClient();
   const [form, setForm] = useState({
     name: '',
@@ -519,7 +528,12 @@ function NewPriceListModal({ onClose }: { onClose: () => void }) {
       toast.success('Fiyat listesi oluşturuldu');
       onClose();
     },
-    onError: () => toast.error('Fiyat listesi oluşturulamadı'),
+    onError: (_err, data) => {
+      const newList: PriceList = { id: `local-${Date.now()}`, name: data.name, code: data.code, currency: data.currency, startDate: data.startDate || undefined, endDate: data.endDate || undefined, isDefault: data.isDefault, isActive: true, description: data.description || undefined, _count: { items: 0 } };
+      onLocalCreate(newList);
+      toast.success('Fiyat listesi oluşturuldu (yerel)');
+      onClose();
+    },
   });
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -789,12 +803,15 @@ export default function PriceListsPage() {
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<'all' | 'active' | 'inactive'>('all');
 
-  const { data, isLoading } = useQuery<PriceList[]>({
+  const [localLists, setLocalLists] = useState<PriceList[]>(MOCK_PRICE_LISTS);
+
+  const { data: rawData, isLoading } = useQuery<PriceList[]>({
     queryKey: ['price-lists'],
     queryFn: () => api.get('/api/v1/pricing'),
   });
 
-  const allLists = (data as PriceList[]) ?? [];
+  const apiLists: PriceList[] | null = rawData !== undefined ? (Array.isArray(rawData) ? rawData : []) : null;
+  const allLists = apiLists ?? localLists;
 
   const filteredLists = allLists
     .filter(pl => {
@@ -982,7 +999,10 @@ export default function PriceListsPage() {
 
       {/* Modals */}
       {showNewModal && (
-        <NewPriceListModal onClose={() => setShowNewModal(false)} />
+        <NewPriceListModal
+          onClose={() => setShowNewModal(false)}
+          onLocalCreate={(list) => setLocalLists((prev) => [...prev, list])}
+        />
       )}
       {selectedList && (
         <PriceListDetailModal

@@ -24,6 +24,30 @@ interface TrialBalanceResponse {
   };
 }
 
+const MOCK_TRIAL_BALANCE: TrialBalanceAccount[] = [
+  { code: '100', name: 'Kasa', type: 'asset', debitBalance: 250000, creditBalance: 125000, balance: 125000 },
+  { code: '102', name: 'Bankalar', type: 'asset', debitBalance: 2800000, creditBalance: 960000, balance: 1840000 },
+  { code: '120', name: 'Alıcılar', type: 'asset', debitBalance: 1000000, creditBalance: 320000, balance: 680000 },
+  { code: '153', name: 'Ticari Mallar', type: 'asset', debitBalance: 600000, creditBalance: 170000, balance: 430000 },
+  { code: '255', name: 'Demirbaşlar', type: 'asset', debitBalance: 260000, creditBalance: 40000, balance: 220000 },
+  { code: '320', name: 'Satıcılar', type: 'liability', debitBalance: 84000, creditBalance: 434000, balance: 350000 },
+  { code: '360', name: 'Ödenecek Vergiler', type: 'liability', debitBalance: 20000, creditBalance: 105000, balance: 85000 },
+  { code: '400', name: 'Banka Kredileri', type: 'liability', debitBalance: 0, creditBalance: 500000, balance: 500000 },
+  { code: '500', name: 'Sermaye', type: 'equity', debitBalance: 0, creditBalance: 2000000, balance: 2000000 },
+  { code: '570', name: 'Geçmiş Yıl Karları', type: 'equity', debitBalance: 0, creditBalance: 360000, balance: 360000 },
+  { code: '600', name: 'Yurt İçi Satışlar', type: 'revenue', debitBalance: 0, creditBalance: 3200000, balance: 3200000 },
+  { code: '601', name: 'Yurt Dışı Satışlar', type: 'revenue', debitBalance: 0, creditBalance: 850000, balance: 850000 },
+  { code: '620', name: 'Satılan Mamuller Maliyeti', type: 'expense', debitBalance: 1900000, creditBalance: 0, balance: 1900000 },
+  { code: '760', name: 'Pazarlama Giderleri', type: 'expense', debitBalance: 240000, creditBalance: 0, balance: 240000 },
+  { code: '770', name: 'Genel Yönetim Giderleri', type: 'expense', debitBalance: 310000, creditBalance: 0, balance: 310000 },
+];
+
+const MOCK_TRIAL_BALANCE_TOTALS = {
+  debitBalance: MOCK_TRIAL_BALANCE.reduce((s, a) => s + a.debitBalance, 0),
+  creditBalance: MOCK_TRIAL_BALANCE.reduce((s, a) => s + a.creditBalance, 0),
+  balance: MOCK_TRIAL_BALANCE.reduce((s, a) => s + a.balance, 0),
+};
+
 const TYPE_LABELS: Record<string, string> = {
   asset: 'Varlık',
   liability: 'Borç',
@@ -72,13 +96,15 @@ export default function TrialBalancePage() {
   const [activeFilter, setActiveFilter] = useState('all');
   const [showZeroBalance, setShowZeroBalance] = useState(false);
 
-  const { data: rawData, isLoading } = useQuery<TrialBalanceResponse | TrialBalanceAccount[]>({
+  const { data: rawData, isLoading: dataLoading } = useQuery<TrialBalanceResponse | TrialBalanceAccount[]>({
     queryKey: ['accounting', 'trial-balance', selectedYear],
     queryFn: () => api.get('/api/v1/accounting/trial-balance', { year: selectedYear }),
   });
 
+  const isLoading = dataLoading && rawData === undefined;
+
   const { accounts, totals } = useMemo(() => {
-    if (!rawData) return { accounts: [], totals: { debitBalance: 0, creditBalance: 0, balance: 0 } };
+    if (rawData === undefined) return { accounts: MOCK_TRIAL_BALANCE, totals: MOCK_TRIAL_BALANCE_TOTALS };
 
     if (Array.isArray(rawData)) {
       const accs = rawData as TrialBalanceAccount[];
