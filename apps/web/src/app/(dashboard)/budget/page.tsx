@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { PlusCircle, TrendingUp, DollarSign, BarChart3, Trash2, Edit2 } from 'lucide-react';
+import { PlusCircle, TrendingUp, DollarSign, BarChart3, Trash2, Edit2, FileDown } from 'lucide-react';
+import { exportToExcel } from '@/lib/utils/excel-export';
 import { useBudgets, useBudgetSummary, useCreateBudget, useUpdateBudget, useDeleteBudget } from '@/lib/api/hooks';
 import { formatCurrency, cn } from '@/lib/utils';
 
@@ -227,13 +228,46 @@ export default function BudgetPage() {
           <h1 className="text-2xl font-bold">Bütçe Yönetimi</h1>
           <p className="text-muted-foreground mt-1">Bütçe planlarını oluşturun ve takip edin</p>
         </div>
-        <button
-          onClick={() => setShowForm(true)}
-          className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-lg text-sm font-medium"
-        >
-          <PlusCircle className="h-4 w-4" />
-          Yeni Bütçe
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => exportToExcel(
+              (budgets as Budget[]).map((b) => ({
+                name: b.name,
+                type: BUDGET_TYPE_LABELS[b.type] ?? b.type,
+                status: b.status,
+                department: b.department?.name ?? '',
+                totalAmount: Number(b.totalAmount),
+                currency: b.currency,
+                lineCount: b.lines.length,
+                startDate: new Date(b.startDate).toLocaleDateString('tr-TR'),
+                endDate: new Date(b.endDate).toLocaleDateString('tr-TR'),
+              })),
+              [
+                { key: 'name', header: 'Bütçe Adı', width: 26 },
+                { key: 'type', header: 'Tip', width: 12 },
+                { key: 'status', header: 'Durum', width: 12 },
+                { key: 'department', header: 'Departman', width: 18 },
+                { key: 'totalAmount', header: 'Toplam', width: 14 },
+                { key: 'currency', header: 'Para Birimi', width: 12 },
+                { key: 'lineCount', header: 'Kalem', width: 8 },
+                { key: 'startDate', header: 'Başlangıç', width: 12 },
+                { key: 'endDate', header: 'Bitiş', width: 12 },
+              ],
+              'butce',
+              'Bütçe Planları'
+            )}
+            className="flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm hover:bg-muted"
+          >
+            <FileDown className="h-4 w-4" /> Excel
+          </button>
+          <button
+            onClick={() => setShowForm(true)}
+            className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-lg text-sm font-medium"
+          >
+            <PlusCircle className="h-4 w-4" />
+            Yeni Bütçe
+          </button>
+        </div>
       </div>
 
       {/* Summary Cards */}

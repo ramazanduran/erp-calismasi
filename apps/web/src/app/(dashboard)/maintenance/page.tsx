@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { PlusCircle, Wrench, AlertTriangle, Clock, CheckCircle2, MessageSquare } from 'lucide-react';
+import { PlusCircle, Wrench, AlertTriangle, Clock, CheckCircle2, MessageSquare, FileDown } from 'lucide-react';
+import { exportToExcel } from '@/lib/utils/excel-export';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api/client';
 import { cn } from '@/lib/utils';
@@ -222,9 +223,50 @@ export default function MaintenancePage() {
           <h1 className="text-2xl font-bold">Bakım İstekleri</h1>
           <p className="text-muted-foreground mt-1">Tesis ve ekipman bakım yönetimi</p>
         </div>
-        <button onClick={() => setShowForm(true)} className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-lg text-sm font-medium">
-          <PlusCircle className="h-4 w-4" />Yeni İstek
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => exportToExcel(
+              requests.map((r) => ({
+                requestNumber: r.requestNumber,
+                title: r.title,
+                category: CATEGORY_LABELS[r.category] ?? r.category,
+                priority: PRIORITY_CONFIG[r.priority]?.label ?? r.priority,
+                status: STATUS_CONFIG[r.status]?.label ?? r.status,
+                location: r.location ?? '',
+                asset: r.asset ? `${r.asset.code} - ${r.asset.name}` : '',
+                requestedBy: r.requestedBy ? `${r.requestedBy.firstName} ${r.requestedBy.lastName}` : '',
+                assignedTo: r.assignedTo ? `${r.assignedTo.firstName} ${r.assignedTo.lastName}` : '',
+                estimatedCost: r.estimatedCost ?? '',
+                actualCost: r.actualCost ?? '',
+                scheduledDate: r.scheduledDate ? new Date(r.scheduledDate).toLocaleDateString('tr-TR') : '',
+                completedAt: r.completedAt ? new Date(r.completedAt).toLocaleDateString('tr-TR') : '',
+              })),
+              [
+                { key: 'requestNumber', header: 'İstek No', width: 12 },
+                { key: 'title', header: 'Başlık', width: 28 },
+                { key: 'category', header: 'Kategori', width: 14 },
+                { key: 'priority', header: 'Öncelik', width: 10 },
+                { key: 'status', header: 'Durum', width: 14 },
+                { key: 'location', header: 'Konum', width: 16 },
+                { key: 'asset', header: 'Varlık', width: 20 },
+                { key: 'requestedBy', header: 'İsteyen', width: 18 },
+                { key: 'assignedTo', header: 'Sorumlu', width: 18 },
+                { key: 'estimatedCost', header: 'Tahmini Maliyet', width: 16 },
+                { key: 'actualCost', header: 'Gerçek Maliyet', width: 14 },
+                { key: 'scheduledDate', header: 'Planlanan Tarih', width: 14 },
+                { key: 'completedAt', header: 'Tamamlanma', width: 14 },
+              ],
+              'bakim-istekleri',
+              'Bakım İstekleri'
+            )}
+            className="flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm hover:bg-muted"
+          >
+            <FileDown className="h-4 w-4" /> Excel
+          </button>
+          <button onClick={() => setShowForm(true)} className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-lg text-sm font-medium">
+            <PlusCircle className="h-4 w-4" />Yeni İstek
+          </button>
+        </div>
       </div>
 
       {stats && (

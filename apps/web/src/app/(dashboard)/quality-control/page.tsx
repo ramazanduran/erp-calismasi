@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { PlusCircle, CheckSquare, XCircle, AlertTriangle, ClipboardList, Eye } from 'lucide-react';
+import { PlusCircle, CheckSquare, XCircle, AlertTriangle, ClipboardList, Eye, FileDown } from 'lucide-react';
+import { exportToExcel } from '@/lib/utils/excel-export';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api/client';
 import { cn } from '@/lib/utils';
@@ -267,9 +268,48 @@ export default function QualityControlPage() {
           <h1 className="text-2xl font-bold">Kalite Kontrol</h1>
           <p className="text-muted-foreground mt-1">Ürün ve süreç kalite muayeneleri</p>
         </div>
-        <button onClick={() => setShowForm(true)} className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-lg text-sm font-medium">
-          <PlusCircle className="h-4 w-4" />Yeni Muayene
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => exportToExcel(
+              inspections.map((i) => ({
+                inspectionNumber: i.inspectionNumber,
+                type: TYPE_LABELS[i.type] ?? i.type,
+                status: STATUS_CONFIG[i.status]?.label ?? i.status,
+                productCode: i.product?.code ?? '',
+                productName: i.product?.name ?? '',
+                inspector: i.inspector ? `${i.inspector.firstName} ${i.inspector.lastName}` : '',
+                passCount: i.passCount,
+                failCount: i.failCount,
+                checkItems: i._count?.checkItems ?? 0,
+                defects: i._count?.defects ?? 0,
+                scheduledAt: i.scheduledAt ? new Date(i.scheduledAt).toLocaleDateString('tr-TR') : '',
+                completedAt: i.completedAt ? new Date(i.completedAt).toLocaleDateString('tr-TR') : '',
+              })),
+              [
+                { key: 'inspectionNumber', header: 'Muayene No', width: 14 },
+                { key: 'type', header: 'Tip', width: 16 },
+                { key: 'status', header: 'Durum', width: 14 },
+                { key: 'productCode', header: 'Ürün Kodu', width: 12 },
+                { key: 'productName', header: 'Ürün Adı', width: 26 },
+                { key: 'inspector', header: 'Muayene Eden', width: 20 },
+                { key: 'passCount', header: 'Geçen', width: 10 },
+                { key: 'failCount', header: 'Başarısız', width: 10 },
+                { key: 'checkItems', header: 'Kontrol', width: 10 },
+                { key: 'defects', header: 'Hata', width: 10 },
+                { key: 'scheduledAt', header: 'Planlanan', width: 12 },
+                { key: 'completedAt', header: 'Tamamlanan', width: 12 },
+              ],
+              'kalite-kontrol',
+              'Kalite Kontrol'
+            )}
+            className="flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm hover:bg-muted"
+          >
+            <FileDown className="h-4 w-4" /> Excel
+          </button>
+          <button onClick={() => setShowForm(true)} className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-lg text-sm font-medium">
+            <PlusCircle className="h-4 w-4" />Yeni Muayene
+          </button>
+        </div>
       </div>
 
       {/* Stats */}

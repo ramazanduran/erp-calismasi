@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { PlusCircle, Factory, Package, Cog, Play, CheckCircle2, BarChart3 } from 'lucide-react';
+import { PlusCircle, Factory, Package, Cog, Play, CheckCircle2, BarChart3, FileDown } from 'lucide-react';
+import { exportToExcel } from '@/lib/utils/excel-export';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api/client';
 import { cn } from '@/lib/utils';
@@ -275,9 +276,46 @@ export default function ManufacturingPage() {
           <p className="text-muted-foreground mt-1">Üretim emirleri, BOM ve iş merkezleri</p>
         </div>
         {activeTab === 'orders' && (
-          <button onClick={() => setShowForm(true)} className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-lg text-sm font-medium">
-            <PlusCircle className="h-4 w-4" />Yeni Üretim Emri
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => exportToExcel(
+                orders.map((o) => ({
+                  orderNumber: o.orderNumber,
+                  productCode: o.product.code,
+                  productName: o.product.name,
+                  status: ORDER_STATUS[o.status]?.label ?? o.status,
+                  priority: o.priority,
+                  quantity: o.quantity,
+                  producedQty: o.producedQty,
+                  scrapQty: o.scrapQty,
+                  unit: o.unit,
+                  scheduledStart: o.scheduledStart ? new Date(o.scheduledStart).toLocaleDateString('tr-TR') : '',
+                  scheduledEnd: o.scheduledEnd ? new Date(o.scheduledEnd).toLocaleDateString('tr-TR') : '',
+                })),
+                [
+                  { key: 'orderNumber', header: 'Emir No', width: 14 },
+                  { key: 'productCode', header: 'Ürün Kodu', width: 12 },
+                  { key: 'productName', header: 'Ürün Adı', width: 26 },
+                  { key: 'status', header: 'Durum', width: 14 },
+                  { key: 'priority', header: 'Öncelik', width: 10 },
+                  { key: 'quantity', header: 'Miktar', width: 10 },
+                  { key: 'producedQty', header: 'Üretilen', width: 10 },
+                  { key: 'scrapQty', header: 'Hurda', width: 10 },
+                  { key: 'unit', header: 'Birim', width: 8 },
+                  { key: 'scheduledStart', header: 'Başlangıç', width: 12 },
+                  { key: 'scheduledEnd', header: 'Bitiş', width: 12 },
+                ],
+                'uretim-emirleri',
+                'Üretim Emirleri'
+              )}
+              className="flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm hover:bg-muted"
+            >
+              <FileDown className="h-4 w-4" /> Excel
+            </button>
+            <button onClick={() => setShowForm(true)} className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-lg text-sm font-medium">
+              <PlusCircle className="h-4 w-4" />Yeni Üretim Emri
+            </button>
+          </div>
         )}
       </div>
 

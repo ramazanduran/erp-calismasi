@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Calculator, X, TrendingUp, TrendingDown, Wallet, DollarSign, BarChart3 } from 'lucide-react';
+import { Plus, Calculator, X, TrendingUp, TrendingDown, Wallet, DollarSign, BarChart3, FileDown } from 'lucide-react';
+import { exportToExcel } from '@/lib/utils/excel-export';
 import { toast } from 'sonner';
 import { api } from '@/lib/api/client';
 
@@ -255,13 +256,42 @@ export default function AccountsPage() {
             </p>
           </div>
         </div>
-        <button
-          onClick={() => setModalOpen(true)}
-          className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors shadow-sm"
-        >
-          <Plus className="h-4 w-4" />
-          Yeni Hesap
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => exportToExcel(
+              filtered.map((a) => ({
+                code: a.code,
+                name: a.name,
+                type: TYPE_LABELS[a.type] ?? a.type,
+                balance: Number(a.balance),
+                currency: a.currency,
+                isActive: a.isActive ? 'Aktif' : 'Pasif',
+                journalLines: a._count?.journalLines ?? 0,
+              })),
+              [
+                { key: 'code', header: 'Hesap Kodu', width: 14 },
+                { key: 'name', header: 'Hesap Adı', width: 28 },
+                { key: 'type', header: 'Tip', width: 14 },
+                { key: 'balance', header: 'Bakiye', width: 16 },
+                { key: 'currency', header: 'Para Birimi', width: 12 },
+                { key: 'isActive', header: 'Durum', width: 10 },
+                { key: 'journalLines', header: 'Kayıt Sayısı', width: 12 },
+              ],
+              'hesap-plani',
+              'Hesap Planı'
+            )}
+            className="flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm hover:bg-muted"
+          >
+            <FileDown className="h-4 w-4" /> Excel
+          </button>
+          <button
+            onClick={() => setModalOpen(true)}
+            className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors shadow-sm"
+          >
+            <Plus className="h-4 w-4" />
+            Yeni Hesap
+          </button>
+        </div>
       </div>
 
       {/* Summary Stats */}
