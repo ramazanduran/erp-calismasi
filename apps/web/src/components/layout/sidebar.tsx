@@ -75,6 +75,8 @@ const navigation = [
       { label: 'Hesap Planı', href: '/accounting/accounts' },
       { label: 'Yevmiye', href: '/accounting/journal' },
       { label: 'Mizan', href: '/accounting/trial-balance' },
+      { label: 'Bilanço', href: '/accounting/balance-sheet' },
+      { label: 'Gelir Tablosu', href: '/accounting/income-statement' },
     ],
   },
   {
@@ -90,6 +92,7 @@ const navigation = [
       { label: 'İşe Alım', href: '/hr/recruitment' },
       { label: 'Eğitim', href: '/hr/training' },
       { label: 'İSG', href: '/hr/health-safety' },
+      { label: 'Org Şeması', href: '/hr/org-chart' },
     ],
   },
   {
@@ -110,6 +113,7 @@ const navigation = [
       { label: 'Genel Bakış', href: '/analytics' },
       { label: 'Raporlar', href: '/analytics/reports' },
       { label: 'Özel Raporlar', href: '/analytics/custom-reports' },
+      { label: 'Dashboard Oluşturucu', href: '/analytics/dashboard-builder' },
     ],
   },
   {
