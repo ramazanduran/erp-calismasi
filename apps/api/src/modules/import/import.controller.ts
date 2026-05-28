@@ -26,4 +26,16 @@ export class ImportController {
   importEmployees(@UploadedFile() file: Express.Multer.File, @CurrentUser() user: any) {
     return this.importService.importEmployees(user.org, file.buffer);
   }
+
+  @Post('suppliers')
+  @UseInterceptors(FileInterceptor('file'))
+  importSuppliers(@UploadedFile() file: Express.Multer.File, @CurrentUser() user: any) {
+    return this.importService.importSuppliers(user.org, file.buffer);
+  }
+
+  @Post('inventory')
+  @UseInterceptors(FileInterceptor('file'))
+  importInventory(@UploadedFile() file: Express.Multer.File, @CurrentUser() user: any) {
+    return this.importService.importInventory(user.org, file.buffer);
+  }
 }

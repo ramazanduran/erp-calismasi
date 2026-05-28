@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useCallback } from 'react';
+import * as XLSX from 'xlsx';
 import {
   Upload, Download, XCircle, CheckCircle2, AlertCircle,
   FileText, Users, Package, Building2, Truck, ClipboardList,
@@ -16,8 +17,10 @@ interface ImportTemplate {
   endpoint: string;
   description: string;
   headers: string[];
+  headerLabels: string[];
   sample: Record<string, string>;
   notes: string[];
+  columnWidths: number[];
 }
 
 const TEMPLATES: Record<string, ImportTemplate> = {
@@ -28,18 +31,22 @@ const TEMPLATES: Record<string, ImportTemplate> = {
     endpoint: 'customers',
     description: 'Müşteri firmalarını toplu olarak içe aktarın',
     headers: ['code', 'name', 'email', 'phone', 'type', 'taxNumber', 'taxOffice', 'address'],
+    headerLabels: ['Müşteri Kodu', 'Müşteri Adı', 'E-posta', 'Telefon', 'Tür', 'Vergi No', 'Vergi Dairesi', 'Adres'],
     sample: { code: 'MUS-001', name: 'Örnek A.Ş.', email: 'ornek@test.com', phone: '05001234567', type: 'corporate', taxNumber: '1234567890', taxOffice: 'Kadıköy', address: 'İstanbul' },
     notes: ['type: individual veya corporate', 'code benzersiz olmalıdır', 'email opsiyoneldir'],
+    columnWidths: [14, 28, 24, 16, 12, 14, 16, 28],
   },
   products: {
     name: 'Ürünler',
     icon: Package,
     color: 'text-green-600 bg-green-100 dark:bg-green-900/30',
     endpoint: 'products',
-    description: 'Ürün kataloğunu CSV ile yükleyin',
+    description: 'Ürün kataloğunu Excel ile yükleyin',
     headers: ['code', 'name', 'unit', 'purchasePrice', 'salePrice', 'vatRate', 'barcode', 'minStock'],
+    headerLabels: ['Ürün Kodu', 'Ürün Adı', 'Birim', 'Alış Fiyatı', 'Satış Fiyatı', 'KDV (%)', 'Barkod', 'Min. Stok'],
     sample: { code: 'PRD-001', name: 'Örnek Ürün', unit: 'adet', purchasePrice: '100', salePrice: '150', vatRate: '18', barcode: '8680000000001', minStock: '10' },
     notes: ['unit: adet, kg, lt, m, m2, m3', 'vatRate: 0, 1, 8, 18, 20', 'purchasePrice ve salePrice sayısal olmalıdır'],
+    columnWidths: [14, 28, 10, 14, 14, 10, 16, 12],
   },
   employees: {
     name: 'Çalışanlar',
@@ -48,8 +55,10 @@ const TEMPLATES: Record<string, ImportTemplate> = {
     endpoint: 'employees',
     description: 'Personel listesini içe aktarın',
     headers: ['employeeNumber', 'firstName', 'lastName', 'email', 'phone', 'position', 'department', 'hireDate', 'baseSalary'],
+    headerLabels: ['Sicil No', 'Ad', 'Soyad', 'E-posta', 'Telefon', 'Pozisyon', 'Departman', 'İşe Başlama', 'Maaş'],
     sample: { employeeNumber: 'EMP-001', firstName: 'Ahmet', lastName: 'Yılmaz', email: 'ahmet@test.com', phone: '05001234567', position: 'Müdür', department: 'Satış', hireDate: '2024-01-15', baseSalary: '30000' },
     notes: ['hireDate: YYYY-MM-DD formatında', 'department: sistemdeki departman adıyla eşleşmeli', 'baseSalary sayısal olmalıdır'],
+    columnWidths: [14, 14, 14, 24, 16, 18, 16, 16, 14],
   },
   suppliers: {
     name: 'Tedarikçiler',
@@ -58,8 +67,10 @@ const TEMPLATES: Record<string, ImportTemplate> = {
     endpoint: 'suppliers',
     description: 'Tedarikçi listesini toplu yükleyin',
     headers: ['code', 'name', 'email', 'phone', 'taxNumber', 'paymentTerms', 'address'],
+    headerLabels: ['Tedarikçi Kodu', 'Tedarikçi Adı', 'E-posta', 'Telefon', 'Vergi No', 'Ödeme Vadesi (Gün)', 'Adres'],
     sample: { code: 'TED-001', name: 'Tedarikçi A.Ş.', email: 'ted@test.com', phone: '02121234567', taxNumber: '9876543210', paymentTerms: '30', address: 'Ankara' },
     notes: ['paymentTerms: gün sayısı (ör: 30, 60, 90)', 'code benzersiz olmalıdır'],
+    columnWidths: [16, 28, 24, 16, 14, 20, 28],
   },
   inventory: {
     name: 'Stok Girişi',
@@ -68,8 +79,10 @@ const TEMPLATES: Record<string, ImportTemplate> = {
     endpoint: 'inventory',
     description: 'Başlangıç stok miktarlarını yükleyin',
     headers: ['productCode', 'warehouseCode', 'quantity', 'unitCost'],
+    headerLabels: ['Ürün Kodu', 'Depo Kodu', 'Miktar', 'Birim Maliyet'],
     sample: { productCode: 'PRD-001', warehouseCode: 'DEP-ANA', quantity: '100', unitCost: '50' },
     notes: ['productCode ve warehouseCode sistemde mevcut olmalıdır', 'quantity ve unitCost sayısal olmalıdır'],
+    columnWidths: [16, 16, 12, 16],
   },
 };
 
@@ -89,8 +102,8 @@ function FieldsPreview({ template }: { template: ImportTemplate }) {
       <table className="w-full text-xs">
         <thead>
           <tr className="border-b border-border">
-            {template.headers.map((h) => (
-              <th key={h} className="px-2 py-1.5 text-left font-mono font-medium text-muted-foreground whitespace-nowrap">{h}</th>
+            {template.headerLabels.map((h) => (
+              <th key={h} className="px-2 py-1.5 text-left font-medium text-muted-foreground whitespace-nowrap">{h}</th>
             ))}
           </tr>
         </thead>
@@ -115,12 +128,16 @@ function DropZone({ onFile, uploading, dragActive, onDragIn, onDragOut }: {
 }) {
   const ref = useRef<HTMLInputElement>(null);
 
+  const isValidExcel = (file: File) =>
+    file.name.endsWith('.xlsx') ||
+    file.type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     onDragOut();
     const file = e.dataTransfer.files[0];
-    if (file && (file.name.endsWith('.csv') || file.type === 'text/csv')) onFile(file);
-    else toast.error('Lütfen bir CSV dosyası seçin');
+    if (file && isValidExcel(file)) onFile(file);
+    else toast.error('Lütfen bir Excel (.xlsx) dosyası seçin');
   };
 
   return (
@@ -134,8 +151,13 @@ function DropZone({ onFile, uploading, dragActive, onDragIn, onDragOut }: {
         dragActive ? 'border-primary bg-primary/5 scale-[1.01]' : 'border-border hover:border-primary/50 hover:bg-muted/30',
       )}
     >
-      <input ref={ref} type="file" accept=".csv,text/csv" className="hidden"
-        onChange={(e) => { const f = e.target.files?.[0]; if (f) onFile(f); e.target.value = ''; }} />
+      <input
+        ref={ref}
+        type="file"
+        accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        className="hidden"
+        onChange={(e) => { const f = e.target.files?.[0]; if (f) onFile(f); e.target.value = ''; }}
+      />
       {uploading ? (
         <div className="flex flex-col items-center gap-3">
           <div className="h-10 w-10 rounded-full border-2 border-primary border-t-transparent animate-spin" />
@@ -147,8 +169,8 @@ function DropZone({ onFile, uploading, dragActive, onDragIn, onDragOut }: {
             <Upload className={cn('h-7 w-7', dragActive ? 'text-primary' : 'text-muted-foreground')} />
           </div>
           <div>
-            <p className="text-sm font-medium text-foreground">CSV dosyasını sürükleyin veya tıklayın</p>
-            <p className="text-xs text-muted-foreground mt-1">Maksimum 10 MB, UTF-8 kodlamalı</p>
+            <p className="text-sm font-medium text-foreground">Excel dosyasını sürükleyin veya tıklayın</p>
+            <p className="text-xs text-muted-foreground mt-1">Sadece .xlsx formatı • Maksimum 10 MB</p>
           </div>
         </div>
       )}
@@ -225,17 +247,66 @@ export default function ImportPage() {
 
   const downloadTemplate = useCallback(() => {
     const t = TEMPLATES[activeTab];
-    const headerRow = t.headers.join(',');
-    const sampleRow = t.headers.map((h) => t.sample[h] ?? '').join(',');
-    const csv = `${headerRow}\n${sampleRow}`;
-    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${activeTab}-sablonu.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
-    toast.success('Şablon indirildi');
+
+    const wb = XLSX.utils.book_new();
+
+    // Header row (Turkish labels) + sample row
+    const wsData = [
+      t.headerLabels,
+      t.headers.map((h) => t.sample[h] ?? ''),
+    ];
+    const ws = XLSX.utils.aoa_to_sheet(wsData);
+
+    // Column widths
+    ws['!cols'] = t.columnWidths.map((w) => ({ wch: w }));
+
+    // Style header row cells (bold + light blue fill)
+    const headerStyle = {
+      font: { bold: true, color: { rgb: 'FFFFFF' } },
+      fill: { patternType: 'solid', fgColor: { rgb: '2563EB' } },
+      alignment: { horizontal: 'center', vertical: 'center', wrapText: true },
+      border: {
+        top: { style: 'thin', color: { rgb: 'CCCCCC' } },
+        bottom: { style: 'thin', color: { rgb: 'CCCCCC' } },
+        left: { style: 'thin', color: { rgb: 'CCCCCC' } },
+        right: { style: 'thin', color: { rgb: 'CCCCCC' } },
+      },
+    };
+    const sampleStyle = {
+      fill: { patternType: 'solid', fgColor: { rgb: 'F0F9FF' } },
+      border: {
+        top: { style: 'thin', color: { rgb: 'CCCCCC' } },
+        bottom: { style: 'thin', color: { rgb: 'CCCCCC' } },
+        left: { style: 'thin', color: { rgb: 'CCCCCC' } },
+        right: { style: 'thin', color: { rgb: 'CCCCCC' } },
+      },
+    };
+
+    t.headers.forEach((_, ci) => {
+      const headerCell = XLSX.utils.encode_cell({ r: 0, c: ci });
+      const sampleCell = XLSX.utils.encode_cell({ r: 1, c: ci });
+      if (ws[headerCell]) ws[headerCell].s = headerStyle;
+      if (ws[sampleCell]) ws[sampleCell].s = sampleStyle;
+    });
+
+    // Add a notes sheet
+    const notesData = [
+      ['Alan Adı (İngilizce)', 'Türkçe Karşılığı', 'Açıklama'],
+      ...t.headers.map((h, i) => [h, t.headerLabels[i], '']),
+      [],
+      ['Önemli Notlar:', '', ''],
+      ...t.notes.map((note) => ['', note, '']),
+      ['', 'İlk satır başlık satırıdır, silmeyiniz', ''],
+      ['', 'Örnek satırı silerek kendi verilerinizi girebilirsiniz', ''],
+    ];
+    const wsNotes = XLSX.utils.aoa_to_sheet(notesData);
+    wsNotes['!cols'] = [{ wch: 24 }, { wch: 24 }, { wch: 40 }];
+
+    XLSX.utils.book_append_sheet(wb, ws, 'Veri');
+    XLSX.utils.book_append_sheet(wb, wsNotes, 'Açıklamalar');
+
+    XLSX.writeFile(wb, `${activeTab}-sablonu.xlsx`);
+    toast.success('Excel şablonu indirildi');
   }, [activeTab]);
 
   const handleFile = async (file: File) => {
@@ -264,7 +335,7 @@ export default function ImportPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-foreground">Veri İçe Aktarma</h1>
-        <p className="text-sm text-muted-foreground mt-1">CSV dosyası ile toplu veri yükleyin</p>
+        <p className="text-sm text-muted-foreground mt-1">Excel dosyası (.xlsx) ile toplu veri yükleyin</p>
       </div>
 
       {/* Entity tabs */}
@@ -307,13 +378,13 @@ export default function ImportPage() {
 
             <button
               onClick={downloadTemplate}
-              className="w-full flex items-center justify-between gap-2 rounded-lg border border-border px-4 py-2.5 text-sm hover:bg-muted transition-colors"
+              className="w-full flex items-center justify-between gap-2 rounded-lg border border-primary/30 bg-primary/5 px-4 py-2.5 text-sm font-medium text-primary hover:bg-primary/10 transition-colors"
             >
               <span className="flex items-center gap-2">
                 <Download className="h-4 w-4" />
-                Şablonu İndir (.csv)
+                Şablonu İndir (.xlsx)
               </span>
-              <FileText className="h-4 w-4 text-muted-foreground" />
+              <FileText className="h-4 w-4" />
             </button>
           </div>
 
@@ -332,11 +403,15 @@ export default function ImportPage() {
               ))}
               <li className="flex items-start gap-2 text-xs text-muted-foreground">
                 <ChevronRight className="h-3.5 w-3.5 shrink-0 mt-0.5 text-primary" />
-                İlk satır başlık satırı olmalıdır
+                İlk satır başlık satırı olmalıdır (şablonda mevcuttur)
               </li>
               <li className="flex items-start gap-2 text-xs text-muted-foreground">
                 <ChevronRight className="h-3.5 w-3.5 shrink-0 mt-0.5 text-primary" />
-                Dosya UTF-8 kodlamalı olmalıdır
+                Şablondaki örnek satırı silerek verilerinizi girin
+              </li>
+              <li className="flex items-start gap-2 text-xs text-muted-foreground">
+                <ChevronRight className="h-3.5 w-3.5 shrink-0 mt-0.5 text-primary" />
+                Sadece .xlsx formatı desteklenmektedir
               </li>
             </ul>
           </div>
@@ -355,13 +430,13 @@ export default function ImportPage() {
         <div className="lg:col-span-2 space-y-4">
           {showFields && (
             <div className="rounded-xl border border-border bg-card p-5">
-              <h3 className="text-sm font-semibold mb-3">Örnek CSV Yapısı — {template.name}</h3>
+              <h3 className="text-sm font-semibold mb-3">Örnek Yapı — {template.name}</h3>
               <FieldsPreview template={template} />
             </div>
           )}
 
           <div className="rounded-xl border border-border bg-card p-5">
-            <h3 className="text-sm font-semibold mb-4">Dosya Yükle</h3>
+            <h3 className="text-sm font-semibold mb-4">Excel Dosyası Yükle</h3>
             <DropZone
               onFile={handleFile}
               uploading={uploading}
