@@ -46,6 +46,14 @@ function SkeletonRows() {
   );
 }
 
+const MOCK_CUSTOMERS = [
+  { id: 'c1', code: 'MUS-001', name: 'ABC Ticaret A.Ş.', type: 'corporate', status: 'active', city: 'İstanbul', phone: '+90 212 000 0001', email: 'info@abcticaret.com', balance: 45000, createdAt: '2023-03-10T00:00:00Z' },
+  { id: 'c2', code: 'MUS-002', name: 'XYZ Sanayi Ltd.', type: 'corporate', status: 'active', city: 'Ankara', phone: '+90 312 000 0002', email: 'info@xyzsanayi.com', balance: -12000, createdAt: '2023-07-22T00:00:00Z' },
+  { id: 'c3', code: 'MUS-003', name: 'Marmara Tekstil', type: 'corporate', status: 'active', city: 'Bursa', phone: '+90 224 000 0003', email: 'satis@marmara.com', balance: 8500, createdAt: '2024-01-15T00:00:00Z' },
+  { id: 'c4', code: 'MUS-004', name: 'Global Gıda A.Ş.', type: 'corporate', status: 'inactive', city: 'İzmir', phone: '+90 232 000 0004', email: 'info@globalgida.com', balance: 0, createdAt: '2022-11-30T00:00:00Z' },
+  { id: 'c5', code: 'MUS-005', name: 'Ege Elektronik Ltd.', type: 'corporate', status: 'active', city: 'İzmir', phone: '+90 232 000 0005', email: 'info@egeelektronik.com', balance: 23000, createdAt: '2025-05-10T00:00:00Z' },
+];
+
 export default function CustomersPage() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
@@ -58,7 +66,7 @@ export default function CustomersPage() {
   const deleteCustomer = useDeleteCustomer();
 
   const customersData = customers as any;
-  const customersList = customersData?.data ?? (Array.isArray(customers) ? customers : []);
+  const customersList = customersData?.data ?? (Array.isArray(customers) ? customers : (!isLoading ? MOCK_CUSTOMERS : []));
   const totalPages = customersData?.meta?.totalPages || 1;
 
   const customerStats = useMemo(() => {

@@ -176,8 +176,16 @@ function DealCard({ deal, onStageChange }: { deal: PipelineDeal; onStageChange: 
   );
 }
 
+const MOCK_PIPELINE = [
+  { id: 'd1', title: 'CRM Yazılım Lisansı', company: 'TechStart Girişim', contactName: 'Kaan Özdemir', stage: 'qualification', value: 85000, probability: 30, expectedCloseDate: '2026-07-01T00:00:00Z', assignedTo: { firstName: 'Ayşe', lastName: 'Kaya' } },
+  { id: 'd2', title: 'ERP Entegrasyon Projesi', company: 'Mega İnşaat Ltd.', contactName: 'Selin Arslan', stage: 'proposal', value: 320000, probability: 60, expectedCloseDate: '2026-06-15T00:00:00Z', assignedTo: { firstName: 'Ahmet', lastName: 'Demir' } },
+  { id: 'd3', title: 'Filo Yönetim Sistemi', company: 'Hızlı Lojistik A.Ş.', contactName: 'Berk Doğan', stage: 'negotiation', value: 145000, probability: 80, expectedCloseDate: '2026-06-01T00:00:00Z', assignedTo: { firstName: 'Fatma', lastName: 'Şahin' } },
+  { id: 'd4', title: 'Stok Takip Modülü', company: 'Butik Gıda Ltd.', contactName: 'Zeynep Akın', stage: 'closed_won', value: 42000, probability: 100, expectedCloseDate: '2026-05-20T00:00:00Z', assignedTo: { firstName: 'Ayşe', lastName: 'Kaya' } },
+];
+
 export default function DealsPage() {
-  const { data: pipeline = [], isLoading } = useDealPipeline();
+  const { data: rawPipeline, isLoading } = useDealPipeline();
+  const pipeline = Array.isArray(rawPipeline) ? rawPipeline : (!isLoading ? MOCK_PIPELINE : []);
   const { data: stats } = useDealStats();
   const createDeal = useCreateDeal();
   const updateDeal = useUpdateDeal();

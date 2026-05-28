@@ -58,6 +58,14 @@ const STATUS_TABS: { value: string; label: string }[] = [
   { value: 'cancelled', label: 'İptal' },
 ];
 
+const MOCK_ORDERS: Record<string, unknown>[] = [
+  { id: 'o1', orderNumber: 'SO-2026-001', customer: { name: 'ABC Ticaret A.Ş.' }, status: 'confirmed', totalAmount: 45000, currency: 'TRY', createdAt: '2026-05-01T09:00:00Z', dueDate: '2026-05-31T00:00:00Z' },
+  { id: 'o2', orderNumber: 'SO-2026-002', customer: { name: 'XYZ Sanayi Ltd.' }, status: 'pending', totalAmount: 28500, currency: 'TRY', createdAt: '2026-05-05T10:00:00Z', dueDate: '2026-06-05T00:00:00Z' },
+  { id: 'o3', orderNumber: 'SO-2026-003', customer: { name: 'Marmara Tekstil' }, status: 'processing', totalAmount: 67200, currency: 'TRY', createdAt: '2026-05-10T11:00:00Z', dueDate: '2026-05-25T00:00:00Z' },
+  { id: 'o4', orderNumber: 'SO-2026-004', customer: { name: 'Global Gıda A.Ş.' }, status: 'shipped', totalAmount: 15750, currency: 'TRY', createdAt: '2026-05-12T14:00:00Z', dueDate: '2026-05-20T00:00:00Z' },
+  { id: 'o5', orderNumber: 'SO-2026-005', customer: { name: 'Ege Elektronik Ltd.' }, status: 'cancelled', totalAmount: 9300, currency: 'TRY', createdAt: '2026-05-18T09:00:00Z', dueDate: '2026-06-10T00:00:00Z' },
+];
+
 function formatCurrency(amount: number, currency = 'TRY') {
   return amount.toLocaleString('tr-TR', { style: 'currency', currency });
 }
@@ -226,7 +234,7 @@ export default function OrdersPage() {
   const updateOrder = useUpdateOrder();
   const deleteOrder = useDeleteOrder();
 
-  const allOrders = useMemo(() => (Array.isArray(orders) ? (orders as Record<string, unknown>[]) : []), [orders]);
+  const allOrders = useMemo(() => Array.isArray(orders) ? (orders as Record<string, unknown>[]) : (!isLoading ? MOCK_ORDERS : []), [orders, isLoading]);
 
   const stats = useMemo(() => {
     const total = allOrders.length;

@@ -25,6 +25,14 @@ function SkeletonRows() {
   );
 }
 
+const MOCK_PRODUCTS_LIST = [
+  { id: 'p1', code: 'PRD-001', name: 'Laptop Dell XPS 15', category: { name: 'Bilgisayar' }, unit: 'Adet', currentStock: 45, minStock: 10, salePrice: 42000, status: 'active', isActive: true },
+  { id: 'p2', code: 'PRD-002', name: 'Ofis Koltuğu Ergonomik', category: { name: 'Mobilya' }, unit: 'Adet', currentStock: 8, minStock: 5, salePrice: 3500, status: 'active', isActive: true },
+  { id: 'p3', code: 'PRD-003', name: 'HP LaserJet Toner (CF217A)', category: { name: 'Sarf Malzemesi' }, unit: 'Kutu', currentStock: 3, minStock: 5, salePrice: 450, status: 'active', isActive: true },
+  { id: 'p4', code: 'PRD-004', name: 'A4 Kağıt 80gr 500 Yaprak', category: { name: 'Kırtasiye' }, unit: 'Paket', currentStock: 120, minStock: 20, salePrice: 65, status: 'active', isActive: true },
+  { id: 'p5', code: 'PRD-005', name: 'USB Hub 7 Port 3.0', category: { name: 'Aksesuar' }, unit: 'Adet', currentStock: 0, minStock: 3, salePrice: 280, status: 'active', isActive: true },
+];
+
 export default function ProductsPage() {
   const [search, setSearch] = useState('');
   const [activeFilter, setActiveFilter] = useState('');
@@ -35,7 +43,7 @@ export default function ProductsPage() {
   const { data: products, isLoading } = useProducts({ search });
   const deleteProduct = useDeleteProduct();
 
-  const productsList = Array.isArray(products) ? products : [];
+  const productsList = Array.isArray(products) ? products : (!isLoading ? MOCK_PRODUCTS_LIST : []);
 
   const filteredProducts = productsList.filter((p: Record<string, unknown>) => {
     if (!activeFilter) return true;

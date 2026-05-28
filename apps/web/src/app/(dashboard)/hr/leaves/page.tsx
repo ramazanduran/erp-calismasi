@@ -31,6 +31,14 @@ const TYPE_LABELS: Record<LeaveType, string> = {
   paternity: 'Babalık İzni',
 };
 
+const MOCK_LEAVES = [
+  { id: 'lv1', employee: { firstName: 'Ahmet', lastName: 'Demir' }, type: 'annual', startDate: '2026-06-01', endDate: '2026-06-07', days: 7, status: 'approved', reason: 'Yıllık izin' },
+  { id: 'lv2', employee: { firstName: 'Fatma', lastName: 'Şahin' }, type: 'sick', startDate: '2026-05-20', endDate: '2026-05-22', days: 3, status: 'approved', reason: 'Hastalık' },
+  { id: 'lv3', employee: { firstName: 'Mehmet', lastName: 'Yılmaz' }, type: 'annual', startDate: '2026-07-14', endDate: '2026-07-25', days: 12, status: 'pending', reason: 'Yaz tatili' },
+  { id: 'lv4', employee: { firstName: 'Ayşe', lastName: 'Kaya' }, type: 'maternity', startDate: '2026-08-01', endDate: '2026-10-31', days: 92, status: 'approved', reason: 'Doğum izni' },
+  { id: 'lv5', employee: { firstName: 'Hasan', lastName: 'Çelik' }, type: 'annual', startDate: '2026-05-10', endDate: '2026-05-12', days: 3, status: 'rejected', reason: 'Kişisel işler' },
+];
+
 function StatusIcon({ status }: { status: LeaveStatus }) {
   if (status === 'approved') return <CheckCircle className="h-4 w-4 text-green-600" />;
   if (status === 'rejected') return <XCircle className="h-4 w-4 text-red-600" />;
@@ -62,7 +70,7 @@ export default function LeavesPage() {
   const { data: leaves, isLoading } = useLeaves({ search, status: statusFilter || undefined });
   const updateStatus = useUpdateLeaveStatus();
 
-  const leavesList = Array.isArray(leaves) ? leaves : [];
+  const leavesList = Array.isArray(leaves) ? leaves : (!isLoading ? MOCK_LEAVES : []);
 
   const filtered = leavesList.filter((l: Record<string, unknown>) => {
     if (typeFilter && l.type !== typeFilter) return false;

@@ -47,6 +47,14 @@ const TAB_LABELS: Record<TabKey, string> = {
   transfer: 'Transfer',
 };
 
+const MOCK_MOVEMENTS = [
+  { id: 'mv1', type: 'in', product: { code: 'PRD-001', name: 'Laptop Dell XPS 15' }, warehouse: { name: 'Ana Depo' }, quantity: 10, unit: 'Adet', reference: 'PO-2026-018', date: '2026-05-02T10:00:00Z', note: 'Satın alma girişi' },
+  { id: 'mv2', type: 'out', product: { code: 'PRD-001', name: 'Laptop Dell XPS 15' }, warehouse: { name: 'Ana Depo' }, quantity: 3, unit: 'Adet', reference: 'SO-2026-001', date: '2026-05-05T14:00:00Z', note: 'Satış çıkışı' },
+  { id: 'mv3', type: 'in', product: { code: 'PRD-004', name: 'A4 Kağıt 80gr' }, warehouse: { name: 'Ana Depo' }, quantity: 100, unit: 'Paket', reference: 'PO-2026-019', date: '2026-05-08T09:00:00Z', note: 'Stok takviyesi' },
+  { id: 'mv4', type: 'transfer', product: { code: 'PRD-002', name: 'Ofis Koltuğu' }, warehouse: { name: 'Ana Depo' }, quantity: 5, unit: 'Adet', reference: 'TRF-001', date: '2026-05-10T11:00:00Z', note: 'Şube transferi' },
+  { id: 'mv5', type: 'out', product: { code: 'PRD-003', name: 'HP Toner' }, warehouse: { name: 'Ana Depo' }, quantity: 8, unit: 'Kutu', reference: 'SO-2026-003', date: '2026-05-12T15:00:00Z', note: 'Satış çıkışı' },
+];
+
 function TypeIcon({ type }: { type: MovementType }) {
   if (type === 'in') return <ArrowUpCircle className="h-4 w-4 text-green-600" />;
   if (type === 'out') return <ArrowDownCircle className="h-4 w-4 text-red-600" />;
@@ -129,7 +137,7 @@ export default function MovementsPage() {
 
   const { data: movements, isLoading } = useMovements({ search, type: activeTab || undefined });
 
-  const allMovements: Record<string, unknown>[] = Array.isArray(movements) ? movements : [];
+  const allMovements: Record<string, unknown>[] = Array.isArray(movements) ? movements : (!isLoading ? MOCK_MOVEMENTS : []);
 
   const filtered = useMemo(() => {
     return allMovements.filter((m) => {

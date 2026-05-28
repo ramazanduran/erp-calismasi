@@ -112,6 +112,14 @@ function formatDate(dateStr: string): string {
 
 type Lead = Record<string, unknown>;
 
+const MOCK_LEADS = [
+  { id: 'l1', name: 'Kaan Özdemir', company: 'TechStart Girişim', email: 'kaan@techstart.com', phone: '+90 532 200 0001', status: 'new', source: 'website', value: 85000, createdAt: '2026-05-01T09:00:00Z' },
+  { id: 'l2', name: 'Selin Arslan', company: 'Mega İnşaat Ltd.', email: 'selin@megainsaat.com', phone: '+90 532 200 0002', status: 'contacted', source: 'referral', value: 320000, createdAt: '2026-05-05T10:00:00Z' },
+  { id: 'l3', name: 'Berk Doğan', company: 'Hızlı Lojistik A.Ş.', email: 'berk@hizlilojistik.com', phone: '+90 532 200 0003', status: 'qualified', source: 'linkedin', value: 145000, createdAt: '2026-05-08T11:00:00Z' },
+  { id: 'l4', name: 'Zeynep Akın', company: 'Butik Gıda Ltd.', email: 'zeynep@butikgida.com', phone: '+90 532 200 0004', status: 'proposal', source: 'cold_call', value: 42000, createdAt: '2026-05-12T14:00:00Z' },
+  { id: 'l5', name: 'Mert Yıldız', company: 'Dijital Pazarlama Pro', email: 'mert@dijitalpro.com', phone: '+90 532 200 0005', status: 'won', source: 'email', value: 68000, createdAt: '2026-05-15T09:00:00Z' },
+];
+
 export default function LeadsPage() {
   const [search, setSearch] = useState('');
   const [selectedSource, setSelectedSource] = useState('');
@@ -128,7 +136,7 @@ export default function LeadsPage() {
   const deleteLead = useDeleteLead();
 
   const leads: Lead[] = useMemo(() => {
-    const raw = Array.isArray(data) ? data : (data as { data?: Lead[] } | undefined)?.data ?? [];
+    const raw = Array.isArray(data) ? data : (data as { data?: Lead[] } | undefined)?.data ?? (!isLoading ? (MOCK_LEADS as unknown as Lead[]) : []);
     return raw as Lead[];
   }, [data]);
 

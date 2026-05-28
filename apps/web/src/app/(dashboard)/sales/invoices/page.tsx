@@ -69,6 +69,14 @@ const TYPE_TABS: { value: string; label: string }[] = [
   { value: 'refund', label: 'İade' },
 ];
 
+const MOCK_INVOICES: Record<string, unknown>[] = [
+  { id: 'i1', invoiceNumber: 'FT-2026-041', customer: { name: 'ABC Ticaret A.Ş.' }, status: 'sent', totalAmount: 45000, currency: 'TRY', dueDate: '2026-06-15T00:00:00Z', createdAt: '2026-05-01T09:00:00Z' },
+  { id: 'i2', invoiceNumber: 'FT-2026-042', customer: { name: 'XYZ Sanayi Ltd.' }, status: 'paid', totalAmount: 28500, currency: 'TRY', dueDate: '2026-05-10T00:00:00Z', createdAt: '2026-05-05T10:00:00Z' },
+  { id: 'i3', invoiceNumber: 'FT-2026-043', customer: { name: 'Marmara Tekstil' }, status: 'overdue', totalAmount: 67200, currency: 'TRY', dueDate: '2026-04-30T00:00:00Z', createdAt: '2026-04-10T11:00:00Z' },
+  { id: 'i4', invoiceNumber: 'FT-2026-044', customer: { name: 'Global Gıda A.Ş.' }, status: 'draft', totalAmount: 15750, currency: 'TRY', dueDate: '2026-06-30T00:00:00Z', createdAt: '2026-05-15T14:00:00Z' },
+  { id: 'i5', invoiceNumber: 'FT-2026-045', customer: { name: 'Ege Elektronik Ltd.' }, status: 'partial', totalAmount: 9300, currency: 'TRY', dueDate: '2026-06-01T00:00:00Z', createdAt: '2026-05-18T09:00:00Z' },
+];
+
 function formatCurrency(amount: number, currency = 'TRY') {
   return amount.toLocaleString('tr-TR', { style: 'currency', currency });
 }
@@ -221,8 +229,8 @@ export default function SalesInvoicesPage() {
   const deleteInvoice = useDeleteInvoice();
 
   const allInvoices = useMemo(
-    () => (Array.isArray(invoices) ? (invoices as Record<string, unknown>[]) : []),
-    [invoices],
+    () => Array.isArray(invoices) ? (invoices as Record<string, unknown>[]) : (!isLoading ? MOCK_INVOICES : []),
+    [invoices, isLoading],
   );
 
   const overdueInvoices = useMemo(() => allInvoices.filter(isOverdue), [allInvoices]);

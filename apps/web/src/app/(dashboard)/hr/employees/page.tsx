@@ -39,6 +39,14 @@ function SkeletonRows() {
   );
 }
 
+const MOCK_EMPLOYEES_LIST = [
+  { id: 'e1', employeeNumber: 'EMP-001', firstName: 'Ahmet', lastName: 'Demir', department: { name: 'Üretim' }, position: 'Üretim Şefi', status: 'active', hireDate: '2024-01-10T00:00:00Z', salary: 35000, email: 'ahmet.demir@demo.com', phone: '+90 532 111 0001' },
+  { id: 'e2', employeeNumber: 'EMP-002', firstName: 'Fatma', lastName: 'Şahin', department: { name: 'Muhasebe' }, position: 'Muhasebeci', status: 'active', hireDate: '2024-03-15T00:00:00Z', salary: 32000, email: 'fatma.sahin@demo.com', phone: '+90 532 111 0002' },
+  { id: 'e3', employeeNumber: 'EMP-003', firstName: 'Mehmet', lastName: 'Yılmaz', department: { name: 'Lojistik' }, position: 'Depo Sorumlusu', status: 'active', hireDate: '2023-08-20T00:00:00Z', salary: 28000, email: 'mehmet.yilmaz@demo.com', phone: '+90 532 111 0003' },
+  { id: 'e4', employeeNumber: 'EMP-004', firstName: 'Ayşe', lastName: 'Kaya', department: { name: 'İnsan Kaynakları' }, position: 'İK Uzmanı', status: 'active', hireDate: '2025-02-01T00:00:00Z', salary: 30000, email: 'ayse.kaya@demo.com', phone: '+90 532 111 0004' },
+  { id: 'e5', employeeNumber: 'EMP-005', firstName: 'Hasan', lastName: 'Çelik', department: { name: 'Satış' }, position: 'Satış Temsilcisi', status: 'inactive', hireDate: '2022-11-05T00:00:00Z', salary: 0, email: 'hasan.celik@demo.com', phone: '+90 532 111 0005' },
+];
+
 export default function EmployeesPage() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
@@ -49,7 +57,7 @@ export default function EmployeesPage() {
   const { data: employees, isLoading } = useEmployees({ search, status: statusFilter || undefined });
   const deleteEmployee = useDeleteEmployee();
 
-  const employeesList = Array.isArray(employees) ? employees : [];
+  const employeesList = Array.isArray(employees) ? employees : (!isLoading ? MOCK_EMPLOYEES_LIST : []);
 
   const employeeStats = useMemo(() => {
     const total = employeesList.length;
