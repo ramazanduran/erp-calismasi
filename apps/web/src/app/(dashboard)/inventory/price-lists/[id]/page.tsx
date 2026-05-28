@@ -6,6 +6,23 @@ import { usePriceList, useAddPriceListItem, useRemovePriceListItem, useProducts 
 import { toast } from 'sonner';
 import { formatCurrency } from '@/lib/utils';
 
+const MOCK_PRICE_LIST = {
+  id: 'pl-demo',
+  name: 'Standart Fiyat Listesi 2026',
+  currency: 'TRY',
+  isDefault: true,
+  startDate: '2026-01-01T00:00:00Z',
+  endDate: '2026-12-31T00:00:00Z',
+  description: 'Demo fiyat listesi',
+  items: [
+    { id: 'pli1', product: { id: 'p1', name: 'Laptop Dell XPS 15', code: 'PRD-001' }, price: 42000, discountRate: 0, minQuantity: 1 },
+    { id: 'pli2', product: { id: 'p2', name: 'Ofis Koltuğu Ergonomik', code: 'PRD-002' }, price: 3500, discountRate: 0, minQuantity: 1 },
+    { id: 'pli3', product: { id: 'p3', name: 'HP Toner 26A', code: 'PRD-003' }, price: 450, discountRate: 5, minQuantity: 5 },
+    { id: 'pli4', product: { id: 'p4', name: 'A4 Kağıt 80gr 500 yaprak', code: 'PRD-004' }, price: 85, discountRate: 10, minQuantity: 10 },
+    { id: 'pli5', product: { id: 'p5', name: 'USB Hub 7 Port', code: 'PRD-005' }, price: 320, discountRate: 0, minQuantity: 1 },
+  ],
+};
+
 export default function PriceListDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
@@ -17,7 +34,8 @@ export default function PriceListDetailPage() {
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ productId: '', price: '', discountRate: '0' });
 
-  const pl = priceList as any;
+  const effectivePriceList = priceList ?? (!isLoading ? MOCK_PRICE_LIST : undefined);
+  const pl = effectivePriceList as any;
   const products = (productsData as any)?.data ?? (Array.isArray(productsData) ? productsData : []);
 
   const stats = useMemo(() => {

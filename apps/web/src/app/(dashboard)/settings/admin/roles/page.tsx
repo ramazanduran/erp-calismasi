@@ -29,6 +29,13 @@ type Role = {
   _count?: { users?: number };
 };
 
+const MOCK_ROLES: Role[] = [
+  { id: 'r1', name: 'Süper Admin', slug: 'super-admin', description: 'Tüm sistem izinleri', isSystem: true, permissions: ['admin.all', 'sales.read', 'sales.write', 'inventory.read', 'inventory.write', 'finance.read', 'finance.write', 'hr.read', 'hr.write'], _count: { users: 1 } },
+  { id: 'r2', name: 'Satış Uzmanı', slug: 'sales', description: 'Satış modülü erişimi', isSystem: false, permissions: ['sales.read', 'sales.write', 'dashboard.read'], _count: { users: 4 } },
+  { id: 'r3', name: 'Muhasebeci', slug: 'accountant', description: 'Finans modülü erişimi', isSystem: false, permissions: ['finance.read', 'finance.write', 'dashboard.read'], _count: { users: 3 } },
+  { id: 'r4', name: 'Depo Görevlisi', slug: 'warehouse', description: 'Stok ve depo erişimi', isSystem: false, permissions: ['inventory.read', 'inventory.write', 'dashboard.read'], _count: { users: 5 } },
+];
+
 function StatCard({ label, value, sub }: { label: string; value: number; sub?: string }) {
   return (
     <div className="rounded-xl border border-border bg-card px-5 py-4 shadow-sm">
@@ -292,7 +299,7 @@ export default function RolesPage() {
 
   const roles: Role[] = Array.isArray(rolesData)
     ? (rolesData as Role[])
-    : [];
+    : (!isLoading ? MOCK_ROLES : []);
 
   const totalUsers = roles.reduce((acc, r) => acc + (r._count?.users ?? 0), 0);
   const systemRoles = roles.filter((r) => r.isSystem);

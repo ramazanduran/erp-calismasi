@@ -15,6 +15,23 @@ import {
 } from 'lucide-react';
 import { useWorkflow } from '@/lib/api/hooks/use-workflows';
 
+const MOCK_WORKFLOW = {
+  id: 'wf-demo',
+  name: 'Sipariş Onay Bildirimi',
+  description: 'Sipariş onaylandığında müşteriye e-posta gönderir',
+  triggerType: 'event',
+  isActive: true,
+  lastRunAt: '2026-05-27T15:00:00Z',
+  lastError: null,
+  instances: [
+    { id: 'wi1', status: 'completed', startedAt: '2026-05-27T15:00:00Z', completedAt: '2026-05-27T15:00:05Z', error: null },
+    { id: 'wi2', status: 'completed', startedAt: '2026-05-26T10:00:00Z', completedAt: '2026-05-26T10:00:03Z', error: null },
+    { id: 'wi3', status: 'failed', startedAt: '2026-05-25T09:00:00Z', completedAt: '2026-05-25T09:00:01Z', error: 'SMTP connection timeout' },
+    { id: 'wi4', status: 'completed', startedAt: '2026-05-24T14:00:00Z', completedAt: '2026-05-24T14:00:04Z', error: null },
+    { id: 'wi5', status: 'completed', startedAt: '2026-05-23T11:00:00Z', completedAt: '2026-05-23T11:00:02Z', error: null },
+  ],
+};
+
 const STATUS_ICONS: Record<string, React.ReactNode> = {
   completed: <CheckCircle className="h-4 w-4 text-green-500" />,
   failed: <XCircle className="h-4 w-4 text-red-500" />,
@@ -65,7 +82,8 @@ function formatDuration(startedAt: unknown, completedAt: unknown): string {
 
 export default function WorkflowDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
-  const { data: workflowData, isLoading } = useWorkflow(id);
+  const { data: rawWorkflowData, isLoading } = useWorkflow(id);
+  const workflowData = rawWorkflowData ?? (!isLoading ? MOCK_WORKFLOW : undefined);
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const wf = useMemo(

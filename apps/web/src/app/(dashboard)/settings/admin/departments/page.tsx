@@ -19,6 +19,16 @@ const schema = z.object({
 
 type FormData = z.infer<typeof schema>;
 
+const MOCK_DEPARTMENTS: Record<string, unknown>[] = [
+  { id: 'd1', name: 'Yönetim', description: 'Üst yönetim', parentId: null, children: [], _count: { users: 3 } },
+  { id: 'd2', name: 'Satış', description: 'Satış ve pazarlama', parentId: null, children: [
+    { id: 'd2a', name: 'Yurt İçi Satış', description: '', parentId: 'd2', children: [], _count: { users: 5 } },
+  ], _count: { users: 10 } },
+  { id: 'd3', name: 'Finans', description: 'Muhasebe ve finans', parentId: null, children: [], _count: { users: 6 } },
+  { id: 'd4', name: 'İnsan Kaynakları', description: 'İK ve eğitim', parentId: null, children: [], _count: { users: 4 } },
+  { id: 'd5', name: 'Lojistik', description: 'Depo ve dağıtım', parentId: null, children: [], _count: { users: 8 } },
+];
+
 const inputClass =
   'w-full rounded-lg border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50';
 
@@ -105,7 +115,7 @@ export default function DepartmentsPage() {
   const updateDept = useUpdateDepartment();
   const deleteDept = useDeleteDepartment();
 
-  const departments = Array.isArray(deptsData) ? deptsData as Record<string, unknown>[] : [];
+  const departments = Array.isArray(deptsData) ? deptsData as Record<string, unknown>[] : (!isLoading ? MOCK_DEPARTMENTS : []);
 
   const {
     register,

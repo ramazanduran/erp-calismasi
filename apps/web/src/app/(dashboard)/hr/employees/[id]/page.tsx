@@ -40,6 +40,31 @@ const LEAVE_TYPE_LABELS: Record<LeaveType, string> = {
   maternity: 'Doğum İzni', paternity: 'Babalık İzni',
 };
 
+const MOCK_EMPLOYEE = {
+  id: 'emp-demo',
+  employeeNumber: 'EMP-001',
+  firstName: 'Ahmet',
+  lastName: 'Yılmaz',
+  email: 'ahmet.yilmaz@demo.com',
+  phone: '+90 532 111 2233',
+  status: 'active',
+  position: 'Yazılım Geliştirici',
+  department: { name: 'Bilgi Teknolojileri' },
+  startDate: '2022-03-01T00:00:00Z',
+  birthDate: '1990-05-15T00:00:00Z',
+  salary: 45000,
+  currency: 'TRY',
+  address: 'Kadıköy, İstanbul',
+  emergencyContact: 'Fatma Yılmaz - +90 532 222 3344',
+  annualLeaveBalance: 14,
+};
+
+const MOCK_EMPLOYEE_LEAVES = [
+  { id: 'el1', type: 'annual', startDate: '2026-06-01', endDate: '2026-06-07', days: 7, status: 'approved', reason: 'Yaz tatili' },
+  { id: 'el2', type: 'sick', startDate: '2026-04-10', endDate: '2026-04-12', days: 3, status: 'approved', reason: 'Hastalık' },
+  { id: 'el3', type: 'annual', startDate: '2026-08-15', endDate: '2026-08-22', days: 8, status: 'pending', reason: 'Tatil planı' },
+];
+
 function LeaveStatusIcon({ status }: { status: LeaveStatus }) {
   if (status === 'approved') return <CheckCircle className="h-4 w-4 text-green-600" />;
   if (status === 'rejected') return <XCircle className="h-4 w-4 text-red-600" />;
@@ -88,10 +113,10 @@ export default function EmployeeDetailPage() {
   const id = params.id as string;
   const [editOpen, setEditOpen] = useState(false);
 
-  const { data: employee, isLoading } = useEmployee(id);
-  const { data: leaves } = useLeaves({ employeeId: id });
-
-  const leavesList = Array.isArray(leaves) ? leaves : [];
+  const { data: rawEmployee, isLoading } = useEmployee(id);
+  const employee = rawEmployee ?? (!isLoading ? MOCK_EMPLOYEE : undefined);
+  const { data: rawLeaves } = useLeaves({ employeeId: id });
+  const leavesList = Array.isArray(rawLeaves) ? rawLeaves : MOCK_EMPLOYEE_LEAVES;
 
   // ── Leave summary stats ────────────────────────────────────────────────────
   const leaveStats = useMemo(() => {

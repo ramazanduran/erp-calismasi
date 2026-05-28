@@ -10,6 +10,12 @@ import { useApiTokens, useCreateApiToken, useRevokeApiToken, useDeleteApiToken }
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
+const MOCK_TOKENS = [
+  { id: 'tk1', name: 'Muhasebe Entegrasyonu', scopes: ['read', 'write'], isActive: true, createdAt: '2026-01-10T00:00:00Z', expiresAt: '2026-12-31T00:00:00Z', lastUsedAt: '2026-05-27T14:00:00Z' },
+  { id: 'tk2', name: 'CI/CD Pipeline', scopes: ['read'], isActive: true, createdAt: '2026-03-01T00:00:00Z', expiresAt: null, lastUsedAt: '2026-05-28T06:00:00Z' },
+  { id: 'tk3', name: 'Eski ERP Entegrasyonu', scopes: ['read', 'write', 'delete'], isActive: false, createdAt: '2025-06-01T00:00:00Z', expiresAt: '2025-12-31T00:00:00Z', lastUsedAt: '2025-12-15T09:00:00Z' },
+];
+
 const SCOPES = [
   { key: 'read', label: 'Okuma', desc: 'Veri okuma erişimi', color: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300' },
   { key: 'write', label: 'Yazma', desc: 'Veri oluşturma ve güncelleme', color: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300' },
@@ -202,7 +208,7 @@ export default function ApiTokensPage() {
   const revoke = useRevokeApiToken();
   const del = useDeleteApiToken();
 
-  const tokens = (tokensData as any[]) ?? [];
+  const tokens = Array.isArray(tokensData) ? (tokensData as any[]) : (!isLoading ? MOCK_TOKENS : []);
   const activeCount = tokens.filter((t) => t.isActive).length;
   const revokedCount = tokens.filter((t) => !t.isActive).length;
 

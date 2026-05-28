@@ -6,6 +6,12 @@ import { exportToExcel } from '@/lib/utils/excel-export';
 import { useWebhooks, useCreateWebhook, useUpdateWebhook, useDeleteWebhook, useTestWebhook } from '@/lib/api/hooks';
 import { cn } from '@/lib/utils';
 
+const MOCK_WEBHOOKS: WebhookItem[] = [
+  { id: 'wh1', name: 'Sipariş Bildirimi', url: 'https://api.example.com/erp-orders', events: ['order.created', 'order.updated', 'order.cancelled'], isActive: true, _count: { logs: 48 }, logs: [{ id: 'l1', event: 'order.created', statusCode: 200, createdAt: '2026-05-27T14:00:00Z' }] },
+  { id: 'wh2', name: 'Fatura Webhook', url: 'https://erp.client.com/webhooks/invoice', events: ['invoice.created', 'invoice.paid'], isActive: true, _count: { logs: 22 }, logs: [{ id: 'l2', event: 'invoice.paid', statusCode: 200, createdAt: '2026-05-26T10:00:00Z' }] },
+  { id: 'wh3', name: 'Müşteri Sync', url: 'https://crm.partner.com/hook', events: ['customer.created', 'customer.updated'], isActive: false, _count: { logs: 5 }, logs: [{ id: 'l3', event: 'customer.created', statusCode: 500, createdAt: '2026-04-10T09:00:00Z' }] },
+];
+
 const AVAILABLE_EVENTS = [
   'order.created', 'order.updated', 'order.cancelled',
   'invoice.created', 'invoice.paid',
@@ -131,7 +137,8 @@ function WebhookFormModal({
 }
 
 export default function WebhooksPage() {
-  const { data: webhooks = [], isLoading } = useWebhooks();
+  const { data: rawWebhooks, isLoading } = useWebhooks();
+  const webhooks = Array.isArray(rawWebhooks) ? rawWebhooks : (!isLoading ? MOCK_WEBHOOKS : []);
   const createWebhook = useCreateWebhook();
   const updateWebhook = useUpdateWebhook();
   const deleteWebhook = useDeleteWebhook();

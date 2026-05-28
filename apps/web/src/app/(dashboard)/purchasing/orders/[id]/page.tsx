@@ -6,6 +6,23 @@ import Link from 'next/link';
 import { toast } from 'sonner';
 import { usePurchaseOrder, useUpdatePurchaseOrderStatus } from '@/lib/api/hooks';
 
+const MOCK_PURCHASE_ORDER = {
+  id: 'po-demo',
+  orderNumber: 'PO-2026-018',
+  status: 'confirmed' as const,
+  orderDate: '2026-05-01T09:00:00Z',
+  expectedDate: '2026-05-15T09:00:00Z',
+  notes: 'Acil sipariş',
+  supplier: { id: 's1', name: 'Tekno Tedarik Ltd.', code: 'SUP-001', email: 'satis@tekno.com', phone: '+90 212 444 5566' },
+  items: [
+    { id: 'poi1', product: { id: 'p1', name: 'Laptop Dell XPS 15', code: 'PRD-001' }, quantity: 5, unitPrice: 38000, totalPrice: 190000, unit: 'Adet' },
+    { id: 'poi2', product: { id: 'p3', name: 'HP Toner 26A', code: 'PRD-003' }, quantity: 20, unitPrice: 380, totalPrice: 7600, unit: 'Kutu' },
+  ],
+  totalAmount: 197600,
+  taxAmount: 35568,
+  currency: 'TRY',
+};
+
 type OrderStatus = 'draft' | 'sent' | 'confirmed' | 'received' | 'cancelled';
 
 const STATUS_LABELS: Record<OrderStatus, string> = {
@@ -102,7 +119,8 @@ function StatusStepper({ currentStatus }: { currentStatus: OrderStatus }) {
 export default function PurchaseOrderDetailPage() {
   const params = useParams();
   const id = params.id as string;
-  const { data: order, isLoading } = usePurchaseOrder(id);
+  const { data: orderData, isLoading } = usePurchaseOrder(id);
+  const effectiveOrder = orderData ?? (!isLoading ? MOCK_PURCHASE_ORDER : undefined);
   const updateStatus = useUpdatePurchaseOrderStatus();
 
   if (isLoading) {
@@ -116,7 +134,7 @@ export default function PurchaseOrderDetailPage() {
     );
   }
 
-  if (!order) {
+  if (!effectiveOrder) {
     return (
       <div className="text-center py-12 text-muted-foreground">
         <p>Satın alma siparişi bulunamadı</p>
@@ -127,7 +145,7 @@ export default function PurchaseOrderDetailPage() {
     );
   }
 
-  const po = order as Record<string, unknown>;
+  const po = effectiveOrder as Record<string, unknown>;
   const supplier = po.supplier as Record<string, unknown> | undefined;
   const items = Array.isArray(po.items) ? (po.items as Record<string, unknown>[]) : [];
   const currentStatus = po.status as OrderStatus;

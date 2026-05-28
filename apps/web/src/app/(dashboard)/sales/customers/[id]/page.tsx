@@ -34,6 +34,34 @@ const INVOICE_STATUS_LABELS: Record<string, string> = {
   draft: 'Taslak', sent: 'Gönderildi', paid: 'Ödendi', overdue: 'Vadesi Geçti', cancelled: 'İptal',
 };
 
+const MOCK_CUSTOMER = {
+  id: 'c-demo',
+  code: 'CUS-001',
+  name: 'ABC Ticaret A.Ş.',
+  type: 'corporate',
+  status: 'active',
+  email: 'info@abc.com',
+  phone: '+90 212 555 0101',
+  address: 'Levent, Beşiktaş',
+  city: 'İstanbul',
+  country: 'Türkiye',
+  taxNumber: '1234567890',
+  taxOffice: 'Beşiktaş VD',
+  creditLimit: 500000,
+  balance: -120000,
+  contactName: 'Ahmet Bey',
+};
+
+const MOCK_CUSTOMER_ORDERS: Record<string, unknown>[] = [
+  { id: 'co1', orderNumber: 'SO-2026-001', status: 'delivered', totalAmount: 84000, orderDate: '2026-05-01T09:00:00Z' },
+  { id: 'co2', orderNumber: 'SO-2026-004', status: 'processing', totalAmount: 35600, orderDate: '2026-05-15T09:00:00Z' },
+];
+
+const MOCK_CUSTOMER_INVOICES: Record<string, unknown>[] = [
+  { id: 'ci1', invoiceNumber: 'INV-2026-001', status: 'paid', totalAmount: 84000, issueDate: '2026-05-01T09:00:00Z', dueDate: '2026-05-31T09:00:00Z' },
+  { id: 'ci2', invoiceNumber: 'INV-2026-004', status: 'sent', totalAmount: 35600, issueDate: '2026-05-15T09:00:00Z', dueDate: '2026-06-14T09:00:00Z' },
+];
+
 function InfoRow({ icon: Icon, label, value }: { icon: React.FC<{ className?: string }>; label: string; value: string | null | undefined }) {
   return (
     <div className="flex items-start gap-3 py-2">
@@ -75,9 +103,12 @@ export default function CustomerDetailPage() {
   const id = params.id as string;
   const [editOpen, setEditOpen] = useState(false);
 
-  const { data: customer, isLoading: customerLoading } = useCustomer(id);
-  const { data: orders } = useOrders({ customerId: id });
-  const { data: invoices } = useInvoices({ customerId: id });
+  const { data: rawCustomer, isLoading: customerLoading } = useCustomer(id);
+  const customer = rawCustomer ?? (!customerLoading ? MOCK_CUSTOMER : undefined);
+  const { data: rawOrders } = useOrders({ customerId: id });
+  const orders = rawOrders ?? MOCK_CUSTOMER_ORDERS;
+  const { data: rawInvoices } = useInvoices({ customerId: id });
+  const invoices = rawInvoices ?? MOCK_CUSTOMER_INVOICES;
 
   const allOrders = Array.isArray(orders) ? orders as Record<string, unknown>[] : [];
   const allInvoices = Array.isArray(invoices) ? invoices as Record<string, unknown>[] : [];

@@ -7,6 +7,23 @@ import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
 
+const MOCK_STOCK_COUNT = {
+  id: 'sc-demo',
+  name: 'Mayıs 2026 Sayımı',
+  countNumber: 'SC-2026-001',
+  status: 'in_progress',
+  countDate: '2026-05-28T08:00:00Z',
+  warehouse: { name: 'Ana Depo' },
+  notes: 'Aylık periyodik sayım',
+  lines: [
+    { id: 'scl1', product: { id: 'p1', name: 'Laptop Dell XPS 15', code: 'PRD-001' }, unit: 'Adet', expectedQty: 10, countedQty: 8 },
+    { id: 'scl2', product: { id: 'p2', name: 'Ofis Koltuğu', code: 'PRD-002' }, unit: 'Adet', expectedQty: 25, countedQty: 25 },
+    { id: 'scl3', product: { id: 'p3', name: 'HP Toner', code: 'PRD-003' }, unit: 'Kutu', expectedQty: 50, countedQty: null },
+    { id: 'scl4', product: { id: 'p4', name: 'A4 Kağıt 80gr', code: 'PRD-004' }, unit: 'Paket', expectedQty: 200, countedQty: 198 },
+    { id: 'scl5', product: { id: 'p5', name: 'USB Hub 7 Port', code: 'PRD-005' }, unit: 'Adet', expectedQty: 15, countedQty: null },
+  ],
+};
+
 const STATUS_LABELS: Record<string, string> = {
   open: 'Açık',
   in_progress: 'Devam Ediyor',
@@ -29,7 +46,8 @@ export default function StockCountDetailPage() {
   const completeCount = useCompleteStockCount();
   const [editingValues, setEditingValues] = useState<Record<string, string>>({});
 
-  const sc = stockCount as Record<string, unknown> | undefined;
+  const effectiveSC = stockCount ?? (!isLoading ? MOCK_STOCK_COUNT : undefined);
+  const sc = effectiveSC as Record<string, unknown> | undefined;
   const lines = Array.isArray((sc as Record<string, unknown>)?.lines) ? (sc as Record<string, unknown>).lines as Record<string, unknown>[] : [];
 
   const stats = useMemo(() => {

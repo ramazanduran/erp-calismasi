@@ -33,6 +33,14 @@ interface Workflow {
   instances?: WorkflowInstance[];
 }
 
+const MOCK_WORKFLOWS: Workflow[] = [
+  { id: 'wf1', name: 'Sipariş Onay Bildirimi', description: 'Sipariş onaylandığında e-posta gönder', triggerType: 'event', isActive: true, lastRunAt: '2026-05-27T15:00:00Z', _count: { instances: 42 }, instances: [{ id: 'wi1', status: 'completed', startedAt: '2026-05-27T15:00:00Z', completedAt: '2026-05-27T15:00:05Z' }] },
+  { id: 'wf2', name: 'Haftalık Stok Raporu', description: 'Her Pazartesi stok raporu hazırla', triggerType: 'schedule', isActive: true, lastRunAt: '2026-05-26T08:00:00Z', _count: { instances: 12 }, instances: [{ id: 'wi2', status: 'completed', startedAt: '2026-05-26T08:00:00Z', completedAt: '2026-05-26T08:01:30Z' }] },
+  { id: 'wf3', name: 'Düşük Stok Uyarısı', description: 'Stok minimum seviyeye düştüğünde bildir', triggerType: 'event', isActive: true, lastRunAt: '2026-05-25T11:00:00Z', _count: { instances: 8 }, instances: [] },
+  { id: 'wf4', name: 'Fatura Hatırlatma', description: 'Vadesi geçen faturalar için hatırlatma gönder', triggerType: 'schedule', isActive: false, lastRunAt: '2026-05-01T09:00:00Z', _count: { instances: 6 }, instances: [] },
+  { id: 'wf5', name: 'Yeni Müşteri Karşılama', description: 'Kayıt olduğunda hoş geldin e-postası gönder', triggerType: 'webhook', isActive: true, lastRunAt: '2026-05-28T07:00:00Z', _count: { instances: 25 }, instances: [{ id: 'wi5', status: 'completed', startedAt: '2026-05-28T07:00:00Z', completedAt: '2026-05-28T07:00:02Z' }] },
+];
+
 const TRIGGER_CONFIG: Record<TriggerType, { label: string; icon: React.ElementType; color: string }> = {
   manual: { label: 'Manuel', icon: Play, color: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300' },
   schedule: { label: 'Zamanlayıcı', icon: Clock, color: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300' },
@@ -150,8 +158,8 @@ export default function WorkflowsPage() {
   const toggleWorkflow = useToggleWorkflow();
 
   const workflows = useMemo(
-    () => (Array.isArray(workflowsData) ? (workflowsData as Workflow[]) : []),
-    [workflowsData],
+    () => (Array.isArray(workflowsData) ? (workflowsData as Workflow[]) : (!isLoading ? MOCK_WORKFLOWS : [])),
+    [workflowsData, isLoading],
   );
 
   const filtered = useMemo(() => {

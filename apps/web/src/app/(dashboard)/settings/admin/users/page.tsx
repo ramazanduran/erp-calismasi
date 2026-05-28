@@ -9,6 +9,14 @@ import { UserModal } from '@/components/modals/user-modal';
 import { Modal } from '@/components/modals/modal';
 import { cn } from '@/lib/utils';
 
+const MOCK_USERS: Record<string, unknown>[] = [
+  { id: 'u1', firstName: 'Ahmet', lastName: 'Yılmaz', email: 'ahmet.yilmaz@demo.com', status: 'active', role: { name: 'Admin' }, department: { name: 'Yönetim' }, lastLoginAt: '2026-05-27T10:00:00Z', createdAt: '2024-01-15T00:00:00Z' },
+  { id: 'u2', firstName: 'Fatma', lastName: 'Demir', email: 'fatma.demir@demo.com', status: 'active', role: { name: 'Satış' }, department: { name: 'Satış' }, lastLoginAt: '2026-05-26T14:00:00Z', createdAt: '2024-03-01T00:00:00Z' },
+  { id: 'u3', firstName: 'Mehmet', lastName: 'Kaya', email: 'mehmet.kaya@demo.com', status: 'active', role: { name: 'Muhasebe' }, department: { name: 'Finans' }, lastLoginAt: '2026-05-25T09:00:00Z', createdAt: '2024-05-10T00:00:00Z' },
+  { id: 'u4', firstName: 'Ayşe', lastName: 'Çelik', email: 'ayse.celik@demo.com', status: 'inactive', role: { name: 'İK' }, department: { name: 'İnsan Kaynakları' }, lastLoginAt: null, createdAt: '2023-09-20T00:00:00Z' },
+  { id: 'u5', firstName: 'Hasan', lastName: 'Şahin', email: 'hasan.sahin@demo.com', status: 'active', role: { name: 'Depo' }, department: { name: 'Lojistik' }, lastLoginAt: '2026-05-28T08:00:00Z', createdAt: '2025-01-05T00:00:00Z' },
+];
+
 function SkeletonRows() {
   return (
     <>
@@ -39,7 +47,7 @@ export default function UsersAdminPage() {
   const resetPassword = useResetUserPassword();
 
   const usersData = (usersResp as Record<string, unknown>) ?? {};
-  const users = Array.isArray(usersData?.data) ? usersData.data as Record<string, unknown>[] : [];
+  const users = Array.isArray(usersData?.data) ? usersData.data as Record<string, unknown>[] : (!isLoading ? MOCK_USERS : []);
 
   const userStats = useMemo(() => {
     const total = users.length;

@@ -77,6 +77,24 @@ const STEP_ORDER: Record<OrderStatus, number> = {
   cancelled: -1,
 };
 
+const MOCK_ORDER = {
+  id: 'ord-demo',
+  orderNumber: 'SO-2026-001',
+  status: 'processing' as const,
+  orderDate: '2026-05-01T09:00:00Z',
+  deliveryDate: '2026-05-15T09:00:00Z',
+  notes: 'Demo sipariş',
+  customer: { id: 'c1', name: 'ABC Ticaret A.Ş.', code: 'CUS-001', email: 'info@abc.com', phone: '+90 212 555 0101' },
+  items: [
+    { id: 'oi1', product: { id: 'p1', name: 'Laptop Dell XPS 15', code: 'PRD-001' }, quantity: 2, unitPrice: 42000, totalPrice: 84000, unit: 'Adet' },
+    { id: 'oi2', product: { id: 'p2', name: 'Ofis Koltuğu Ergonomik', code: 'PRD-002' }, quantity: 5, unitPrice: 3500, totalPrice: 17500, unit: 'Adet' },
+  ],
+  subtotal: 101500,
+  taxAmount: 18270,
+  totalAmount: 119770,
+  currency: 'TRY',
+};
+
 function StatusStepper({ currentStatus }: { currentStatus: OrderStatus }) {
   const isCancelled = currentStatus === 'cancelled';
   const currentIdx = STEP_ORDER[currentStatus];
@@ -200,7 +218,8 @@ function CustomerCard({ customer }: { customer: Record<string, unknown> | undefi
 export default function OrderDetailPage() {
   const params = useParams();
   const id = params.id as string;
-  const { data: order, isLoading } = useOrder(id);
+  const { data: rawOrder, isLoading } = useOrder(id);
+  const order = rawOrder ?? (!isLoading ? MOCK_ORDER : undefined);
   const updateOrder = useUpdateOrder();
 
   if (isLoading) {

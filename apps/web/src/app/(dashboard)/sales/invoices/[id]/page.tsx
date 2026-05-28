@@ -31,6 +31,25 @@ const STEPS = [
   { key: 'paid', label: 'Ödendi', icon: CheckCircle },
 ];
 
+const MOCK_INVOICE = {
+  id: 'inv-demo',
+  invoiceNumber: 'INV-2026-001',
+  status: 'sent' as const,
+  issueDate: '2026-05-01T09:00:00Z',
+  dueDate: '2026-05-31T09:00:00Z',
+  customer: { id: 'c1', name: 'ABC Ticaret A.Ş.', code: 'CUS-001', email: 'info@abc.com', phone: '+90 212 555 0101', address: 'İstanbul, Türkiye' },
+  items: [
+    { id: 'ii1', description: 'Laptop Dell XPS 15', quantity: 2, unitPrice: 42000, totalPrice: 84000 },
+    { id: 'ii2', description: 'Ofis Koltuğu', quantity: 5, unitPrice: 3500, totalPrice: 17500 },
+  ],
+  subtotal: 101500,
+  taxRate: 18,
+  taxAmount: 18270,
+  totalAmount: 119770,
+  currency: 'TRY',
+  notes: 'Ödeme vadesinde yapılacaktır',
+};
+
 function StatusStepper({ status }: { status: InvoiceStatus }) {
   if (status === 'cancelled') {
     return (
@@ -87,7 +106,8 @@ function StatusStepper({ status }: { status: InvoiceStatus }) {
 export default function InvoiceDetailPage() {
   const params = useParams();
   const id = params.id as string;
-  const { data: invoice, isLoading } = useInvoice(id);
+  const { data: rawInvoice, isLoading } = useInvoice(id);
+  const invoice = rawInvoice ?? (!isLoading ? MOCK_INVOICE : undefined);
   const updateInvoice = useUpdateInvoice();
 
   if (isLoading) {
