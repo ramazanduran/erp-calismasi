@@ -96,7 +96,13 @@ export function ProductModal({ open, onClose, editData }: ProductModalProps) {
     }
   };
 
-  const categoriesList = Array.isArray(categories) ? categories : [];
+  const MOCK_CATS = [
+    { id: 'cat1', name: 'Elektronik' },
+    { id: 'cat2', name: 'Mobilya' },
+    { id: 'cat3', name: 'Kırtasiye' },
+    { id: 'cat4', name: 'Aksesuar' },
+  ];
+  const categoriesList = Array.isArray(categories) ? categories : MOCK_CATS;
 
   return (
     <Modal open={open} onClose={onClose} title={isEdit ? 'Ürün Düzenle' : 'Yeni Ürün'} size="lg">

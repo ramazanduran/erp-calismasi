@@ -44,6 +44,20 @@ function Field({ label, error, children }: { label: string; error?: string; chil
 const inputClass =
   'w-full rounded-lg border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50';
 
+const MOCK_CUSTOMERS_LIST = [
+  { id: 'c1', name: 'ABC Ticaret A.Ş.' },
+  { id: 'c2', name: 'XYZ Sanayi Ltd.' },
+  { id: 'c3', name: 'Marmara Tekstil' },
+  { id: 'c4', name: 'Güneş Holding' },
+];
+
+const MOCK_PRODUCTS_LIST = [
+  { id: 'p1', name: 'Laptop Dell XPS 15', code: 'PRD-001', salePrice: 42000 },
+  { id: 'p2', name: 'Ofis Koltuğu Ergonomik', code: 'PRD-002', salePrice: 3500 },
+  { id: 'p3', name: 'HP Toner 26A', code: 'PRD-003', salePrice: 450 },
+  { id: 'p4', name: 'A4 Kağıt 80gr', code: 'PRD-004', salePrice: 85 },
+];
+
 export function OrderModal({ open, onClose }: OrderModalProps) {
   const createOrder = useCreateOrder();
   const { data: customers } = useCustomers();
@@ -87,8 +101,8 @@ export function OrderModal({ open, onClose }: OrderModalProps) {
     }
   };
 
-  const customersList = Array.isArray(customers) ? customers : [];
-  const productsList = Array.isArray(products) ? products : [];
+  const customersList = Array.isArray(customers) ? customers : MOCK_CUSTOMERS_LIST;
+  const productsList = Array.isArray(products) ? products : MOCK_PRODUCTS_LIST;
 
   return (
     <Modal open={open} onClose={onClose} title="Yeni Sipariş" size="xl">

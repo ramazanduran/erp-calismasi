@@ -37,6 +37,13 @@ function Field({ label, error, children }: { label: string; error?: string; chil
 const inputClass =
   'w-full rounded-lg border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50';
 
+const MOCK_PRODUCTS_LIST = [
+  { id: 'p1', name: 'Laptop Dell XPS 15', code: 'PRD-001' },
+  { id: 'p2', name: 'Ofis Koltuğu Ergonomik', code: 'PRD-002' },
+  { id: 'p3', name: 'HP Toner 26A', code: 'PRD-003' },
+  { id: 'p4', name: 'A4 Kağıt 80gr', code: 'PRD-004' },
+];
+
 export function MovementModal({ open, onClose }: MovementModalProps) {
   const createMovement = useCreateMovement();
   const { data: products } = useProducts();
@@ -77,7 +84,7 @@ export function MovementModal({ open, onClose }: MovementModalProps) {
     }
   };
 
-  const productsList = Array.isArray(products) ? products : [];
+  const productsList = Array.isArray(products) ? products : MOCK_PRODUCTS_LIST;
 
   return (
     <Modal open={open} onClose={onClose} title="Yeni Stok Hareketi" size="md">

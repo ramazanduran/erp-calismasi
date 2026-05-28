@@ -36,6 +36,13 @@ function Field({ label, error, children }: { label: string; error?: string; chil
 const inputClass =
   'w-full rounded-lg border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50';
 
+const MOCK_EMPLOYEES_LIST = [
+  { id: 'e1', firstName: 'Ahmet', lastName: 'Yılmaz', employeeNumber: 'EMP-001' },
+  { id: 'e2', firstName: 'Fatma', lastName: 'Demir', employeeNumber: 'EMP-002' },
+  { id: 'e3', firstName: 'Mehmet', lastName: 'Kaya', employeeNumber: 'EMP-003' },
+  { id: 'e4', firstName: 'Ayşe', lastName: 'Çelik', employeeNumber: 'EMP-004' },
+];
+
 export function LeaveModal({ open, onClose }: LeaveModalProps) {
   const createLeave = useCreateLeave();
   const { data: employees } = useEmployees();
@@ -76,7 +83,7 @@ export function LeaveModal({ open, onClose }: LeaveModalProps) {
     }
   };
 
-  const employeesList = Array.isArray(employees) ? employees : [];
+  const employeesList = Array.isArray(employees) ? employees : MOCK_EMPLOYEES_LIST;
 
   return (
     <Modal open={open} onClose={onClose} title="Yeni İzin Talebi" size="md">

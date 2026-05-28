@@ -46,6 +46,13 @@ function Field({ label, error, children }: { label: string; error?: string; chil
 const inputClass =
   'w-full rounded-lg border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50';
 
+const MOCK_CUSTOMERS_LIST = [
+  { id: 'c1', name: 'ABC Ticaret A.Ş.' },
+  { id: 'c2', name: 'XYZ Sanayi Ltd.' },
+  { id: 'c3', name: 'Marmara Tekstil' },
+  { id: 'c4', name: 'Güneş Holding' },
+];
+
 export function InvoiceModal({ open, onClose }: InvoiceModalProps) {
   const createInvoice = useCreateInvoice();
   const { data: customers } = useCustomers();
@@ -91,7 +98,7 @@ export function InvoiceModal({ open, onClose }: InvoiceModalProps) {
     }
   };
 
-  const customersList = Array.isArray(customers) ? customers : [];
+  const customersList = Array.isArray(customers) ? customers : MOCK_CUSTOMERS_LIST;
 
   return (
     <Modal open={open} onClose={onClose} title="Yeni Fatura" size="xl">

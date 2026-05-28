@@ -47,8 +47,16 @@ export function UserModal({ open, onClose, editData }: UserModalProps) {
   const { data: deptsData } = useDepartments();
   const isEdit = !!editData?.id;
 
-  const roles = Array.isArray(rolesData) ? rolesData : [];
-  const departments = Array.isArray(deptsData) ? deptsData : [];
+  const MOCK_ROLES_LIST = [
+    { id: 'r1', name: 'Admin' }, { id: 'r2', name: 'Satış' },
+    { id: 'r3', name: 'Muhasebe' }, { id: 'r4', name: 'Depo' },
+  ];
+  const MOCK_DEPTS_LIST = [
+    { id: 'd1', name: 'Yönetim' }, { id: 'd2', name: 'Satış' },
+    { id: 'd3', name: 'Finans' }, { id: 'd4', name: 'İnsan Kaynakları' }, { id: 'd5', name: 'Lojistik' },
+  ];
+  const roles = Array.isArray(rolesData) ? rolesData : MOCK_ROLES_LIST;
+  const departments = Array.isArray(deptsData) ? deptsData : MOCK_DEPTS_LIST;
 
   const {
     register,

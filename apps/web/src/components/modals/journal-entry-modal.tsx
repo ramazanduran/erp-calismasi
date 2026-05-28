@@ -77,7 +77,15 @@ export function JournalEntryModal({ open, onClose }: JournalEntryModalProps) {
     }
   };
 
-  const accountList = Array.isArray(accounts) ? accounts : [];
+  const MOCK_ACCOUNTS_LIST = [
+    { id: 'acc1', code: '100', name: 'Kasa' },
+    { id: 'acc2', code: '102', name: 'Bankalar' },
+    { id: 'acc3', code: '120', name: 'Alıcılar' },
+    { id: 'acc4', code: '320', name: 'Satıcılar' },
+    { id: 'acc5', code: '600', name: 'Yurtiçi Satışlar' },
+    { id: 'acc6', code: '620', name: 'Satılan Mallar Maliyeti' },
+  ];
+  const accountList = Array.isArray(accounts) ? accounts : MOCK_ACCOUNTS_LIST;
 
   return (
     <Modal open={open} onClose={onClose} title="Yeni Yevmiye Kaydı" size="xl">

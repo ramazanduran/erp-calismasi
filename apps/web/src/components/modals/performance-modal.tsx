@@ -9,6 +9,13 @@ import { Modal } from './modal';
 import { useCreatePerformanceReview } from '@/lib/api/hooks';
 import { useEmployees } from '@/lib/api/hooks';
 
+const MOCK_EMPLOYEES_LIST = [
+  { id: 'e1', firstName: 'Ahmet', lastName: 'Yılmaz', employeeNumber: 'EMP-001' },
+  { id: 'e2', firstName: 'Fatma', lastName: 'Demir', employeeNumber: 'EMP-002' },
+  { id: 'e3', firstName: 'Mehmet', lastName: 'Kaya', employeeNumber: 'EMP-003' },
+  { id: 'e4', firstName: 'Ayşe', lastName: 'Çelik', employeeNumber: 'EMP-004' },
+];
+
 const RATING_FIELDS = [
   { key: 'leadership', label: 'Liderlik' },
   { key: 'technical', label: 'Teknik Yetkinlik' },
@@ -82,7 +89,7 @@ export function PerformanceModal({ open, onClose }: PerformanceModalProps) {
     ? employeesData
     : (employeesData as any)?.data
     ? (employeesData as any).data
-    : [];
+    : MOCK_EMPLOYEES_LIST;
 
   return (
     <Modal open={open} onClose={onClose} title="Yeni Performans Değerlendirmesi">

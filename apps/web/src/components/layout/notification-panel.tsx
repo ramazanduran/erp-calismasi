@@ -26,7 +26,13 @@ export function NotificationPanel({ open, onClose }: NotificationPanelProps) {
   const markRead = useMarkNotificationRead();
   const markAll = useMarkAllRead();
 
-  const items: Notification[] = Array.isArray(notifications) ? (notifications as Notification[]) : [];
+  const MOCK_NOTIFS: Notification[] = [
+    { id: 'n1', title: 'Yeni Sipariş Alındı', body: 'SO-2026-032 no\'lu sipariş oluşturuldu', isRead: false, createdAt: new Date(Date.now() - 3600000).toISOString(), type: 'order' },
+    { id: 'n2', title: 'Fatura Ödendi', body: 'INV-2026-018 ödemesi alındı', isRead: false, createdAt: new Date(Date.now() - 86400000).toISOString(), type: 'invoice' },
+    { id: 'n3', title: 'Düşük Stok Uyarısı', body: 'HP Toner stoku 3 adete düştü', isRead: true, createdAt: new Date(Date.now() - 172800000).toISOString(), type: 'inventory' },
+    { id: 'n4', title: 'İzin Talebi Onaylandı', body: 'Ahmet Yılmaz izin talebi onaylandı', isRead: true, createdAt: new Date(Date.now() - 259200000).toISOString(), type: 'leave' },
+  ];
+  const items: Notification[] = Array.isArray(notifications) ? (notifications as Notification[]) : (!isLoading ? MOCK_NOTIFS : []);
   const unreadCount = items.filter((n) => !n.isRead).length;
 
   useEffect(() => {

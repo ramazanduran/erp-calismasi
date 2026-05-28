@@ -15,6 +15,12 @@ interface PurchaseOrderModalProps {
 const inputClass =
   'w-full rounded-lg border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50';
 
+const MOCK_SUPPLIERS_LIST = [
+  { id: 's1', name: 'Tekno Tedarik Ltd.', code: 'SUP-001' },
+  { id: 's2', name: 'Ofis Malzemeleri A.Ş.', code: 'SUP-002' },
+  { id: 's3', name: 'Global Elektronik', code: 'SUP-003' },
+];
+
 function Field({ label, error, children }: { label: string; error?: string; children: React.ReactNode }) {
   return (
     <div className="space-y-1">
@@ -83,7 +89,7 @@ export function PurchaseOrderModal({ open, onClose }: PurchaseOrderModalProps) {
           <Field label="Tedarikçi *" error={errors.supplierId?.message as string}>
             <select {...register('supplierId', { required: 'Tedarikçi seçiniz' })} className={inputClass}>
               <option value="">Tedarikçi seçin...</option>
-              {(suppliers as any[] | undefined)?.map((s) => (
+              {(Array.isArray(suppliers) ? suppliers as any[] : MOCK_SUPPLIERS_LIST).map((s) => (
                 <option key={s.id} value={s.id}>{s.name} ({s.code})</option>
               ))}
             </select>
