@@ -10,6 +10,14 @@ const MONTHS = [
   'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık',
 ];
 
+const MOCK_CALENDAR_LEAVES = [
+  { id: 'cl1', employee: { firstName: 'Ahmet', lastName: 'Yılmaz' }, type: 'annual', startDate: '2026-05-05', endDate: '2026-05-09', status: 'approved' },
+  { id: 'cl2', employee: { firstName: 'Fatma', lastName: 'Demir' }, type: 'sick', startDate: '2026-05-12', endDate: '2026-05-14', status: 'approved' },
+  { id: 'cl3', employee: { firstName: 'Mehmet', lastName: 'Kaya' }, type: 'annual', startDate: '2026-05-19', endDate: '2026-05-23', status: 'pending' },
+  { id: 'cl4', employee: { firstName: 'Ayşe', lastName: 'Çelik' }, type: 'annual', startDate: '2026-05-26', endDate: '2026-05-30', status: 'approved' },
+  { id: 'cl5', employee: { firstName: 'Hasan', lastName: 'Şahin' }, type: 'maternity', startDate: '2026-06-01', endDate: '2026-08-31', status: 'approved' },
+];
+
 const STATUS_COLORS: Record<string, string> = {
   approved: 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300',
   pending: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-300',
@@ -40,7 +48,7 @@ export default function LeaveCalendarPage() {
   const [month, setMonth] = useState(today.getMonth());
 
   const { data: leavesData, isLoading } = useLeaves();
-  const leavesList = Array.isArray(leavesData) ? leavesData as Record<string, unknown>[] : [];
+  const leavesList = Array.isArray(leavesData) ? leavesData as Record<string, unknown>[] : (!isLoading ? MOCK_CALENDAR_LEAVES : []);
 
   const prevMonth = () => {
     if (month === 0) { setYear((y) => y - 1); setMonth(11); }

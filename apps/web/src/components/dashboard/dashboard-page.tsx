@@ -10,6 +10,45 @@ import { useDashboardAnalytics, useSalesAnalytics, useInventoryAnalytics } from 
 
 const COLORS = ['#6366f1', '#22c55e', '#f59e0b', '#ef4444', '#8b5cf6'];
 
+const MOCK_DASH_DATA = {
+  thisMonthRevenue: 430000,
+  revenueChange: 10.3,
+  activeOrders: 32,
+  totalProducts: 284,
+  totalCustomers: 148,
+};
+
+const MOCK_SALES_DATA = {
+  monthlySales: [
+    { month: 'Oca', amount: 280000, count: 18 },
+    { month: 'Şub', amount: 310000, count: 21 },
+    { month: 'Mar', amount: 350000, count: 24 },
+    { month: 'Nis', amount: 390000, count: 28 },
+    { month: 'May', amount: 430000, count: 32 },
+    { month: 'Haz', amount: 0, count: 0 },
+  ],
+  orderStatusDistribution: [
+    { status: 'delivered', count: 98 },
+    { status: 'processing', count: 32 },
+    { status: 'confirmed', count: 18 },
+    { status: 'cancelled', count: 8 },
+  ],
+  topCustomers: [
+    { customerId: 'c1', customerName: 'ABC Ticaret A.Ş.', totalAmount: 520000, orderCount: 12 },
+    { customerId: 'c2', customerName: 'XYZ Sanayi Ltd.', totalAmount: 380000, orderCount: 9 },
+    { customerId: 'c3', customerName: 'Marmara Tekstil', totalAmount: 290000, orderCount: 7 },
+    { customerId: 'c4', customerName: 'Güneş Holding', totalAmount: 210000, orderCount: 5 },
+    { customerId: 'c5', customerName: 'Delta İnşaat', totalAmount: 175000, orderCount: 4 },
+  ],
+};
+
+const MOCK_INVENTORY_DATA = {
+  lowStockProducts: [
+    { id: 'p1', name: 'HP Toner 26A', code: 'PRD-003', currentStock: 3, minStock: 10, unit: 'Kutu' },
+    { id: 'p2', name: 'USB Hub 7 Port', code: 'PRD-005', currentStock: 2, minStock: 5, unit: 'Adet' },
+  ],
+};
+
 const ORDER_STATUS_LABELS: Record<string, string> = {
   draft: 'Taslak',
   confirmed: 'Onaylı',
@@ -80,9 +119,12 @@ function OrderStatusPieChart({ data }: { data: Array<{ status: string; count: nu
 }
 
 export function DashboardPage() {
-  const { data: dashData, isLoading: dashLoading } = useDashboardAnalytics();
-  const { data: salesData, isLoading: salesLoading } = useSalesAnalytics('6months');
-  const { data: inventoryData } = useInventoryAnalytics();
+  const { data: rawDashData, isLoading: dashLoading } = useDashboardAnalytics();
+  const dashData = rawDashData ?? (!dashLoading ? MOCK_DASH_DATA : undefined);
+  const { data: rawSalesData, isLoading: salesLoading } = useSalesAnalytics('6months');
+  const salesData = rawSalesData ?? (!salesLoading ? MOCK_SALES_DATA : undefined);
+  const { data: rawInventoryData } = useInventoryAnalytics();
+  const inventoryData = rawInventoryData ?? MOCK_INVENTORY_DATA;
 
   const kpiCards = [
     {
